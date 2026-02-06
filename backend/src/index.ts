@@ -240,87 +240,292 @@ app.patch('/api/orders/:id/status', async (c) => {
 app.post('/api/seed', async (c) => {
     // Check if vendors exist
     const v = await db.select().from(vendors);
-    let v1, v2;
 
     if (v.length > 0) {
         console.log("Vendors already seeded. Checking users...");
-        v1 = v[0];
-        // Try to get second vendor if exists, otherwise fallback to first or null (safeguard)
-        v2 = v.length > 1 ? v[1] : v[0];
 
         // Check if users exist
         const u = await db.select().from(users);
         if (u.length > 0) {
             return c.json({ message: 'Already seeded (Full)' });
         }
-    } else {
-        // Seed Vendors
-        const [newV1] = await db.insert(vendors).values({
-            name: "UMKM Radar Selatan",
-            lat: -6.261493,
-            lng: 106.810600,
+
+        // Seed users for existing vendors
+        const adminExists = await db.select().from(users).where(eq(users.email, 'admin@umkmradar.com'));
+        if (adminExists.length === 0) {
+            await db.insert(users).values([
+                {
+                    email: 'admin@umkmradar.com',
+                    password: 'admin',
+                    role: 'admin',
+                    name: 'Super Admin',
+                    vendorId: null
+                },
+                {
+                    email: 'mitra1@umkmradar.com',
+                    password: 'mitra',
+                    role: 'vendor',
+                    name: 'Owner Warung Betawi',
+                    vendorId: v[0].id
+                }
+            ]);
+        }
+
+        await redis.del('vendors_list');
+        return c.json({ message: 'Users seeded for existing vendors' });
+    }
+
+    // Seed Vendors based on Figma design - Kuliner near MRT Senayan
+    const vendorData = [
+        {
+            name: "Warung Betawi Babeh Patal Senayan",
+            lat: -6.2273,
+            lng: 106.8021,
             whatsapp: "6281234567890",
-            address: "Jl. Kemang Raya No. 10",
-            rating: 4.8
-        }).returning();
-        v1 = newV1;
+            address: "Jalan Patal Senayan No. 7",
+            image: "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=400&h=400&fit=crop",
+            schedule: { days: ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"], open: "07:00", close: "12:00" },
+            status: "approved",
+            category: "Kuliner",
+            rating: 4.8,
+            locationTags: "Dekat MRT Senayan, Patal Senayan",
+            description: "Nasi uduk, Ketupat sayur, Lontong, Ketan, Gorengan"
+        },
+        {
+            name: "Tenda Bang Jali",
+            lat: -6.2268,
+            lng: 106.8015,
+            whatsapp: "6281234567891",
+            address: "Blok C 28",
+            image: "https://images.unsplash.com/photo-1547573854-74d2a71d0826?w=400&h=400&fit=crop",
+            schedule: { days: ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"], open: "06:00", close: "10:00" },
+            status: "approved",
+            category: "Kuliner",
+            rating: 4.7,
+            locationTags: "Dekat MRT Senayan",
+            description: "Nasi uduk, Ketupat sayur, Lontong, Ketan, Gorengan"
+        },
+        {
+            name: "Warung Padang Uni Ami",
+            lat: -6.2271,
+            lng: 106.8018,
+            whatsapp: "6281234567892",
+            address: "Blok D 12",
+            image: "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=400&h=400&fit=crop",
+            schedule: { days: ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"], open: "06:00", close: "10:00" },
+            status: "approved",
+            category: "Kuliner",
+            rating: 4.9,
+            locationTags: "Dekat MRT Senayan",
+            description: "Ketupat padang, gorengan, kripik, bubur kampiun"
+        },
+        {
+            name: "Mie Ayam Gaul Senayan",
+            lat: -6.2280,
+            lng: 106.8028,
+            whatsapp: "6281234567893",
+            address: "Area Sudirman, arah pintu FX Sudirman dari MRT Senayan",
+            image: "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=400&h=400&fit=crop",
+            schedule: { days: ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"], open: "06:00", close: "16:00" },
+            status: "approved",
+            category: "Kuliner",
+            rating: 4.6,
+            locationTags: "FX Sudirman, MRT Senayan",
+            description: "Mie Ayam toping lengkap"
+        },
+        {
+            name: "Bubur Ayam Jakarta",
+            lat: -6.2275,
+            lng: 106.8025,
+            whatsapp: "6281234567894",
+            address: "Sekitar kawasan FX Sudirman, jalur pejalan kaki dari MRT",
+            image: "https://images.unsplash.com/photo-1584269600519-112d071b35e6?w=400&h=400&fit=crop",
+            schedule: { days: ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"], open: "06:00", close: "10:00" },
+            status: "approved",
+            category: "Kuliner",
+            rating: 4.5,
+            locationTags: "FX Sudirman, MRT Senayan",
+            description: "Bubur biasa & spesial. Topping sate, telur, ampela, usus, ati"
+        },
+        {
+            name: "Sedjuk Bakmi & Kopi",
+            lat: -6.2282,
+            lng: 106.8022,
+            whatsapp: "6281234567895",
+            address: "Koridor Sudirman–Senayan, dekat akses pejalan kaki MRT",
+            image: "https://images.unsplash.com/photo-1555126634-323283e090fa?w=400&h=400&fit=crop",
+            schedule: { days: ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"], open: "06:00", close: "21:00" },
+            status: "approved",
+            category: "Kuliner",
+            rating: 4.7,
+            locationTags: "Koridor Sudirman, MRT Senayan",
+            description: "Bakmi & Kopi"
+        },
+        {
+            name: "Indomaret Point",
+            lat: -6.2278,
+            lng: 106.8030,
+            whatsapp: "6281234567896",
+            address: "Blok B 45",
+            image: "https://images.unsplash.com/photo-1604719312566-8912e9227c6a?w=400&h=400&fit=crop",
+            schedule: { days: ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"], open: "05:00", close: "22:00" },
+            status: "approved",
+            category: "Convenience Store",
+            rating: 4.3,
+            locationTags: "Dekat MRT Senayan",
+            description: "Roti tawar & Isi, onigiri, Sosis, Salad buah"
+        },
+        {
+            name: "Lawson",
+            lat: -6.2285,
+            lng: 106.8035,
+            whatsapp: "6281234567897",
+            address: "Blok B 82",
+            image: "https://images.unsplash.com/photo-1604719312566-8912e9227c6a?w=400&h=400&fit=crop",
+            schedule: { days: ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"], open: "05:30", close: "22:00" },
+            status: "approved",
+            category: "Convenience Store",
+            rating: 4.4,
+            locationTags: "Dekat MRT Senayan",
+            description: "Roti tawar & Isi, onigiri, Sosis, Salad buah"
+        },
+        {
+            name: "Family Mart",
+            lat: -6.2290,
+            lng: 106.8040,
+            whatsapp: "6281234567898",
+            address: "Blok A 12",
+            image: "https://images.unsplash.com/photo-1604719312566-8912e9227c6a?w=400&h=400&fit=crop",
+            schedule: { days: ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"], open: "05:00", close: "22:00" },
+            status: "approved",
+            category: "Convenience Store",
+            rating: 4.2,
+            locationTags: "Dekat MRT Senayan",
+            description: "Roti tawar & Isi, onigiri, Sosis, Salad buah"
+        }
+    ];
 
-        const [newV2] = await db.insert(vendors).values({
-            name: "Berkah Sayur Mayur",
-            lat: -6.175110,
-            lng: 106.865039,
-            whatsapp: "6281298765432",
-            address: "Jl. Rawamangun Muka No. 5",
-            rating: 4.9
-        }).returning();
-        v2 = newV2;
-
-        // Seed Products
-        await db.insert(products).values([
-            { vendorId: v1.id, name: "Apel Fuji Premium Import", price: 45000, category: "Buah", image: "https://images.unsplash.com/photo-1619566636858-adf3ef46400b?w=400&h=400&fit=crop" },
-            { vendorId: v1.id, name: "Brokoli Hijau Segar", price: 25500, category: "Sayuran", image: "https://images.unsplash.com/photo-1590301157890-4810ed352733?w=400&h=400&fit=crop" },
-            { vendorId: v2.id, name: "Bayam Organik Ikat", price: 5000, category: "Sayuran", image: "https://images.unsplash.com/photo-1576045057995-568f588f82fb?w=400&h=400&fit=crop" }
-        ]);
+    // Insert vendors
+    const insertedVendors = [];
+    for (const vendor of vendorData) {
+        const [newVendor] = await db.insert(vendors).values(vendor as any).returning();
+        insertedVendors.push(newVendor);
     }
 
-    // Seed Users (Safe Insert)
-    // We try to insert. If email collision, it will fail (API returns 500), but that means user exists.
-    // Or we can check existence first.
+    // Seed Products for each vendor
+    const productData = [
+        // Warung Betawi Babeh
+        { vendorId: insertedVendors[0].id, name: "Nasi Uduk Komplit", price: 18000, category: "Nasi", image: "https://images.unsplash.com/photo-1547573854-74d2a71d0826?w=400&h=400&fit=crop", description: "Nasi uduk dengan lauk lengkap" },
+        { vendorId: insertedVendors[0].id, name: "Ketupat Sayur", price: 15000, category: "Ketupat", image: "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=400&h=400&fit=crop", description: "Ketupat dengan kuah sayur khas Betawi" },
+        { vendorId: insertedVendors[0].id, name: "Lontong Sayur", price: 15000, category: "Lontong", image: "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=400&h=400&fit=crop", description: "Lontong dengan kuah santan gurih" },
+        { vendorId: insertedVendors[0].id, name: "Gorengan (5 pcs)", price: 10000, category: "Gorengan", image: "https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?w=400&h=400&fit=crop", description: "Aneka gorengan renyah" },
 
-    const adminExists = await db.select().from(users).where(eq(users.email, 'admin@umkmradar.com'));
-    if (adminExists.length === 0) {
-        await db.insert(users).values([
-            {
-                email: 'admin@umkmradar.com',
-                password: 'admin',
-                role: 'admin',
-                name: 'Super Admin',
-                vendorId: null
-            },
-            {
-                email: 'mitra1@umkmradar.com',
-                password: 'mitra',
-                role: 'vendor',
-                name: 'Owner Selatan',
-                vendorId: v1.id
-            },
-            {
-                email: 'mitra2@umkmradar.com',
-                password: 'mitra',
-                role: 'vendor',
-                name: 'Owner Rawamangun',
-                vendorId: v2.id
-            }
-        ]);
+        // Tenda Bang Jali
+        { vendorId: insertedVendors[1].id, name: "Nasi Uduk Spesial", price: 20000, category: "Nasi", image: "https://images.unsplash.com/photo-1547573854-74d2a71d0826?w=400&h=400&fit=crop", description: "Nasi uduk dengan ayam goreng" },
+        { vendorId: insertedVendors[1].id, name: "Ketan Serundeng", price: 8000, category: "Ketan", image: "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=400&h=400&fit=crop", description: "Ketan dengan serundeng kelapa" },
 
-        await redis.del('vendors_list'); // Invalidate cache
+        // Warung Padang Uni Ami  
+        { vendorId: insertedVendors[2].id, name: "Ketupat Sayur Padang", price: 18000, category: "Ketupat", image: "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=400&h=400&fit=crop", description: "Ketupat dengan kuah padang" },
+        { vendorId: insertedVendors[2].id, name: "Bubur Kampiun", price: 12000, category: "Bubur", image: "https://images.unsplash.com/photo-1584269600519-112d071b35e6?w=400&h=400&fit=crop", description: "Bubur manis khas Padang" },
+        { vendorId: insertedVendors[2].id, name: "Gorengan Mix", price: 12000, category: "Gorengan", image: "https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?w=400&h=400&fit=crop", description: "Aneka gorengan bakwan, tahu, tempe" },
 
-        return c.json({ message: 'Users seeded successfully' });
+        // Mie Ayam Gaul Senayan
+        { vendorId: insertedVendors[3].id, name: "Mie Ayam Biasa", price: 15000, category: "Mie", image: "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=400&h=400&fit=crop", description: "Mie ayam dengan bakso" },
+        { vendorId: insertedVendors[3].id, name: "Mie Ayam Komplit", price: 22000, category: "Mie", image: "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=400&h=400&fit=crop", description: "Mie ayam dengan topping lengkap" },
+        { vendorId: insertedVendors[3].id, name: "Mie Ayam Jumbo", price: 25000, category: "Mie", image: "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=400&h=400&fit=crop", description: "Porsi jumbo untuk yang lapar" },
+
+        // Bubur Ayam Jakarta
+        { vendorId: insertedVendors[4].id, name: "Bubur Ayam Biasa", price: 12000, category: "Bubur", image: "https://images.unsplash.com/photo-1584269600519-112d071b35e6?w=400&h=400&fit=crop", description: "Bubur ayam dengan cakue" },
+        { vendorId: insertedVendors[4].id, name: "Bubur Ayam Spesial", price: 18000, category: "Bubur", image: "https://images.unsplash.com/photo-1584269600519-112d071b35e6?w=400&h=400&fit=crop", description: "Bubur dengan sate, telur, ampela, usus, ati" },
+        { vendorId: insertedVendors[4].id, name: "Bubur Ayam Komplit", price: 25000, category: "Bubur", image: "https://images.unsplash.com/photo-1584269600519-112d071b35e6?w=400&h=400&fit=crop", description: "Bubur dengan semua topping" },
+
+        // Sedjuk Bakmi & Kopi
+        { vendorId: insertedVendors[5].id, name: "Bakmi Ayam", price: 18000, category: "Bakmi", image: "https://images.unsplash.com/photo-1555126634-323283e090fa?w=400&h=400&fit=crop", description: "Bakmi dengan ayam kecap" },
+        { vendorId: insertedVendors[5].id, name: "Bakmi Pangsit", price: 22000, category: "Bakmi", image: "https://images.unsplash.com/photo-1555126634-323283e090fa?w=400&h=400&fit=crop", description: "Bakmi dengan pangsit goreng" },
+        { vendorId: insertedVendors[5].id, name: "Kopi Susu", price: 15000, category: "Minuman", image: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=400&h=400&fit=crop", description: "Kopi susu gula aren" },
+        { vendorId: insertedVendors[5].id, name: "Es Kopi", price: 18000, category: "Minuman", image: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=400&h=400&fit=crop", description: "Es kopi susu segar" },
+
+        // Indomaret Point
+        { vendorId: insertedVendors[6].id, name: "Onigiri Salmon", price: 12000, category: "Snack", image: "https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?w=400&h=400&fit=crop", description: "Nasi kepal isi salmon" },
+        { vendorId: insertedVendors[6].id, name: "Roti Isi Coklat", price: 8500, category: "Roti", image: "https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?w=400&h=400&fit=crop", description: "Roti tawar isi coklat" },
+        { vendorId: insertedVendors[6].id, name: "Salad Buah", price: 15000, category: "Snack", image: "https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?w=400&h=400&fit=crop", description: "Salad buah segar dengan yogurt" },
+
+        // Lawson
+        { vendorId: insertedVendors[7].id, name: "Onigiri Tuna", price: 13000, category: "Snack", image: "https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?w=400&h=400&fit=crop", description: "Nasi kepal isi tuna mayo" },
+        { vendorId: insertedVendors[7].id, name: "Oden Set", price: 25000, category: "Snack", image: "https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?w=400&h=400&fit=crop", description: "Aneka oden Jepang" },
+        { vendorId: insertedVendors[7].id, name: "Sosis Panggang", price: 12000, category: "Snack", image: "https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?w=400&h=400&fit=crop", description: "Sosis panggang crispy" },
+
+        // Family Mart
+        { vendorId: insertedVendors[8].id, name: "Famichiki", price: 16000, category: "Snack", image: "https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?w=400&h=400&fit=crop", description: "Ayam goreng crispy signature" },
+        { vendorId: insertedVendors[8].id, name: "Onigiri Teriyaki", price: 12000, category: "Snack", image: "https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?w=400&h=400&fit=crop", description: "Nasi kepal isi teriyaki" },
+        { vendorId: insertedVendors[8].id, name: "Salad Sayur", price: 18000, category: "Snack", image: "https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?w=400&h=400&fit=crop", description: "Salad sayuran segar" }
+    ];
+
+    for (const product of productData) {
+        await db.insert(products).values(product as any);
     }
 
-    await redis.del('vendors_list'); // Invalidate cache just in case
+    // Seed Users
+    await db.insert(users).values([
+        {
+            email: 'admin@umkmradar.com',
+            password: 'admin',
+            role: 'admin',
+            name: 'Super Admin',
+            vendorId: null
+        },
+        {
+            email: 'babeh@umkmradar.com',
+            password: 'mitra',
+            role: 'vendor',
+            name: 'Owner Warung Betawi Babeh',
+            vendorId: insertedVendors[0].id
+        },
+        {
+            email: 'bangjali@umkmradar.com',
+            password: 'mitra',
+            role: 'vendor',
+            name: 'Owner Tenda Bang Jali',
+            vendorId: insertedVendors[1].id
+        },
+        {
+            email: 'uniami@umkmradar.com',
+            password: 'mitra',
+            role: 'vendor',
+            name: 'Owner Warung Padang Uni Ami',
+            vendorId: insertedVendors[2].id
+        },
+        {
+            email: 'mieayam@umkmradar.com',
+            password: 'mitra',
+            role: 'vendor',
+            name: 'Owner Mie Ayam Gaul',
+            vendorId: insertedVendors[3].id
+        },
+        {
+            email: 'buburayam@umkmradar.com',
+            password: 'mitra',
+            role: 'vendor',
+            name: 'Owner Bubur Ayam Jakarta',
+            vendorId: insertedVendors[4].id
+        },
+        {
+            email: 'sedjuk@umkmradar.com',
+            password: 'mitra',
+            role: 'vendor',
+            name: 'Owner Sedjuk Bakmi & Kopi',
+            vendorId: insertedVendors[5].id
+        }
+    ]);
 
-    return c.json({ message: 'Seeding completed' });
+    await redis.del('vendors_list');
+
+    return c.json({
+        message: 'Seeding completed successfully!',
+        vendors: insertedVendors.length,
+        products: productData.length,
+        users: 7
+    });
 });
 
 

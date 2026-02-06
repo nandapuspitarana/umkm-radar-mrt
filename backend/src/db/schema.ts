@@ -13,6 +13,7 @@ export const vendors = pgTable('vendors', {
     category: text('category').default('Umum'), // Umum, Sayur, Buah, Daging, etc.
     rating: doublePrecision('rating').default(0),
     locationTags: text('location_tags'), // e.g. "Dekat MRT BNI, Dukuh Atas"
+    description: text('description'), // e.g. "Nasi uduk, Ketupat sayur, Lontong"
 });
 
 export const products = pgTable('products', {

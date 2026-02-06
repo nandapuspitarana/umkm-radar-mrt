@@ -43,7 +43,6 @@ export default function Home({ vendors, onSelectVendor }) {
     const [loading, setLoading] = useState(true);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
-    const [activeCategory, setActiveCategory] = useState('rekomen');
     const [selectedStory, setSelectedStory] = useState(null);
     const [isSearchOpen, setIsSearchOpen] = useState(false);
 
@@ -201,8 +200,7 @@ export default function Home({ vendors, onSelectVendor }) {
             <div className="flex flex-1 overflow-hidden">
                 {/* Left Sidebar */}
                 <CategorySidebar
-                    activeCategory={activeCategory}
-                    onCategoryChange={setActiveCategory}
+                    activeCategory="rekomen"
                 />
 
                 {/* Main Content Area */}
