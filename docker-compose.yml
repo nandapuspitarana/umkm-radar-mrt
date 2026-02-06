@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  # Database Service
+  db:
+    image: postgres:15-alpine
+    container_name: freshmart_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: freshmart
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # Backend API Service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: freshmart/backend:1.0.0
+    container_name: freshmart_backend
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgres://postgres:password@db:5432/freshmart
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - db
+      - redis
+    restart: on-failure
+
+  redis:
+    image: redis:alpine
+    container_name: freshmart_redis
+    ports:
+      - "6379:6379"
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.9
+    container_name: freshmart_es
+    environment:
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    image: freshmart/client:1.0.0
+    container_name: freshmart_client
+    ports:
+      - "8082:80"
+    depends_on:
+      - backend
+
+  # Dashboard (Admin Web)
+  dashboard:
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
+    image: freshmart/dashboard:1.0.0
+    container_name: freshmart_dashboard
+    ports:
+      - "8083:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
