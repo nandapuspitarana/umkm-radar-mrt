@@ -1,27 +1,61 @@
 import React, { useState, useEffect } from 'react';
-import { MapPin, ShoppingCart, Search, Menu, X, HelpCircle, User, ShoppingBag } from 'lucide-react';
+import { MapPin, Search, Menu, X, HelpCircle, User, ShoppingBag } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import CategorySidebar from '../components/CategorySidebar';
+import TransportLinks from '../components/TransportLinks';
+import ContentSection, { ContentCard } from '../components/ContentSection';
+import StoryModal from '../components/StoryModal';
+
+// Story banner data
+const storyBanners = [
+    { id: 1, image: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=400&h=600&fit=crop', title: 'Kopi Kenangan', subtitle: 'Black Aren' },
+    { id: 2, image: 'https://images.unsplash.com/photo-1534040385115-33dcb3acba5b?w=400&h=600&fit=crop', title: 'FamiCafe', subtitle: 'New Americano' },
+    { id: 3, image: 'https://images.unsplash.com/photo-1604719312566-8912e9227c6a?w=400&h=600&fit=crop', title: 'Alfamart', subtitle: 'Promo Spesial' },
+];
+
+// Quick access content
+const quickAccessContent = [
+    { id: 1, image: 'https://images.unsplash.com/photo-1504754524776-8f4f37790ca0?w=400&h=400&fit=crop', title: 'Buat yang', subtitle: 'Belum Sarapan' },
+    { id: 2, image: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400&h=400&fit=crop', title: 'Butuh Ngopi', subtitle: 'Takeaway' },
+    { id: 3, image: 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=400&h=400&fit=crop', title: 'Parkir Seharian', subtitle: 'Tarif Flat' },
+    { id: 4, image: 'https://images.unsplash.com/photo-1584551246679-0daf3d275d0f?w=400&h=400&fit=crop', title: 'Masjid/', subtitle: 'Mushala' },
+    { id: 5, image: 'https://images.unsplash.com/photo-1601597111158-2fceff292cdc?w=400&h=400&fit=crop', title: 'ATM &', subtitle: 'Topup' },
+];
+
+// WFA content
+const wfaContent = [
+    { id: 1, image: 'https://images.unsplash.com/photo-1521017432531-fbd92d768814?w=400&h=300&fit=crop', title: 'Cafe Nyaman', subtitle: 'Free Wifi' },
+    { id: 2, image: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=400&h=300&fit=crop', title: 'Co-working', subtitle: 'Space' },
+    { id: 3, image: 'https://images.unsplash.com/photo-1585320806297-9794b3e4eeae?w=400&h=300&fit=crop', title: 'Taman /', subtitle: 'Ruang Publik' },
+    { id: 4, image: 'https://images.unsplash.com/photo-1529543544277-750ee00a0b68?w=400&h=300&fit=crop', title: 'Kulineran', subtitle: 'Aja Yuk!' },
+];
+
+// Favorite places
+const favoritePlaces = [
+    { id: 1, image: 'https://images.unsplash.com/photo-1571068316344-75bc76f77890?w=400&h=300&fit=crop', title: 'GBK (Gelora Bung Karno)', distance: '300 m' },
+    { id: 2, image: 'https://images.unsplash.com/photo-1555529669-e69e7aa0ba9a?w=400&h=300&fit=crop', title: 'FX Sudirman', distance: '150 m' },
+    { id: 3, image: 'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?w=400&h=300&fit=crop', title: 'Plaza Senayan', distance: '700 m' },
+    { id: 4, image: 'https://images.unsplash.com/photo-1567521464027-f127ff144326?w=400&h=300&fit=crop', title: 'Senayan City', distance: '900 m' },
+];
 
 export default function Home({ vendors, onSelectVendor }) {
     const [sortedVendors, setSortedVendors] = useState([]);
-    const [visibleCount, setVisibleCount] = useState(3); // Start with 3
     const [loading, setLoading] = useState(true);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
-    const [selectedCategory, setSelectedCategory] = useState('Semua');
+    const [activeCategory, setActiveCategory] = useState('rekomen');
+    const [selectedStory, setSelectedStory] = useState(null);
+    const [isSearchOpen, setIsSearchOpen] = useState(false);
 
-    // Extract unique categories from vendors with safety check
+    // Safety check for vendors
     const safeVendors = Array.isArray(vendors) ? vendors : [];
-    const categories = ['Semua', ...new Set(safeVendors.map(v => v.category).filter(Boolean))];
 
     // Logic to get location and sort
     useEffect(() => {
         let isMounted = true;
 
-        // Safety timeout: stop loading after 5s even if geo hangs
         const timer = setTimeout(() => {
             if (isMounted && loading) {
-                console.log("Geo timeout, showing unsorted");
                 setSortedVendors(Array.isArray(vendors) ? vendors : []);
                 setLoading(false);
             }
@@ -37,12 +71,11 @@ export default function Home({ vendors, onSelectVendor }) {
                 },
                 (error) => {
                     if (!isMounted) return;
-                    console.error("Geo error:", error);
                     setSortedVendors(Array.isArray(vendors) ? vendors : []);
                     setLoading(false);
                     clearTimeout(timer);
                 },
-                { timeout: 5000, enableHighAccuracy: false } // Add timeout option
+                { timeout: 5000, enableHighAccuracy: false }
             );
         } else {
             setSortedVendors(Array.isArray(vendors) ? vendors : []);
@@ -59,7 +92,6 @@ export default function Home({ vendors, onSelectVendor }) {
     const sortVendors = (lat, lng) => {
         if (!Array.isArray(vendors)) return;
         const sorted = [...vendors].map(v => {
-            // Safety check for location data
             if (!v.location || !v.location.lat || !v.location.lng) {
                 return { ...v, distance: null };
             }
@@ -68,7 +100,6 @@ export default function Home({ vendors, onSelectVendor }) {
                 distance: calculateDistance(lat, lng, v.location.lat, v.location.lng)
             };
         }).sort((a, b) => {
-            // Put vendors without distance at the end
             if (a.distance === null) return 1;
             if (b.distance === null) return -1;
             return a.distance - b.distance;
@@ -80,8 +111,7 @@ export default function Home({ vendors, onSelectVendor }) {
     const filteredVendors = sortedVendors.filter(v => {
         const matchesSearch = v.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
             v.address.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesCategory = selectedCategory === 'Semua' || v.category === selectedCategory;
-        return matchesSearch && matchesCategory;
+        return matchesSearch;
     });
 
     const calculateDistance = (lat1, lon1, lat2, lon2) => {
@@ -98,153 +128,206 @@ export default function Home({ vendors, onSelectVendor }) {
 
     const deg2rad = (deg) => deg * (Math.PI / 180);
 
-    const checkShopStatus = (schedule) => {
-        if (!schedule) return { isOpen: true, text: 'Buka', color: 'text-green-600' };
-
-        const now = new Date();
-        const day = now.getDay(); // 0 = Sunday
-        const hours = now.getHours();
-        const minutes = now.getMinutes();
-        const currentTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-
-        if (schedule.days && !schedule.days.includes(day)) {
-            return { isOpen: false, text: 'Tutup (Hari Libur)', color: 'text-red-500' };
-        }
-
-        if (schedule.openTime && schedule.closeTime) {
-            if (currentTime < schedule.openTime || currentTime > schedule.closeTime) {
-                return { isOpen: false, text: 'Tutup', color: 'text-red-500' };
-            }
-        }
-
-        return { isOpen: true, text: 'Buka', color: 'text-green-600' };
-    };
-
     return (
-        <div className="min-h-screen bg-bg pb-20">
+        <div className="min-h-screen bg-white flex flex-col">
             {/* Header */}
-            <header className="sticky top-0 z-50 bg-white shadow-sm">
-                <div className="max-w-md mx-auto px-4 py-3 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 bg-gradient-to-br from-green-700 to-green-500 rounded-lg flex items-center justify-center text-white text-lg">
-                            🥬
+            <header className="bg-white z-50">
+                {/* Main Header Bar */}
+                <div className="flex items-center justify-between px-4 py-3 gap-4">
+                    {/* MRT Logo & Station Info */}
+                    <div className="flex items-center gap-3">
+                        {/* MRT Icon */}
+                        <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-blue-800 rounded-xl flex items-center justify-center">
+                            <span className="text-white text-2xl font-bold">M</span>
                         </div>
-                        <span className="font-serif font-bold text-xl text-primary">UMKM Radar</span>
+                        {/* Station Name */}
+                        <div className="flex flex-col">
+                            <h1 className="font-display text-lg uppercase tracking-tight text-black leading-tight">
+                                Senayan Mastercard
+                            </h1>
+                            <p className="text-highlight-blue font-semibold text-sm capitalize">
+                                Jakarta Pusat
+                            </p>
+                        </div>
                     </div>
-                    <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-200 transition-colors" onClick={() => { console.log('Menu clicked'); setIsMenuOpen(true); }}>
-                        <Menu size={18} className="text-gray-600" />
-                    </div>
-                </div>
 
-                {/* Search */}
-                <div className="max-w-md mx-auto px-4 pb-4">
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                        <input
-                            type="text"
-                            placeholder="Cari toko terdekat..."
-                            className="w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-sans text-sm"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                        />
-                    </div>
-                </div>
-
-                {/* Category Filter */}
-                <div className="max-w-md mx-auto px-4 pb-3">
-                    <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-                        {categories.map(category => (
-                            <button
-                                key={category}
-                                onClick={() => setSelectedCategory(category)}
-                                className={`px-4 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${selectedCategory === category
-                                    ? 'bg-primary text-white shadow-md'
-                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                    }`}
-                            >
-                                {category}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            </header>
-
-            {/* Main Content */}
-            <main className="max-w-md mx-auto px-4 py-6">
-                <div className="flex items-center justify-between mb-4">
-                    <h2 className="font-serif font-bold text-xl text-gray-800">Toko Sekitarmu</h2>
-                    <span className="text-xs font-bold text-primary bg-green-50 px-2 py-1 rounded-lg">
-                        📍 Sesuai Lokasi
-                    </span>
-                </div>
-
-                {loading ? (
-                    <div className="space-y-4">
-                        {[1, 2, 3].map(i => (
-                            <div key={i} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 h-24 animate-pulse"></div>
-                        ))}
-                    </div>
-                ) : (
-                    <div className="space-y-4">
-
-
-
-                        {filteredVendors.slice(0, visibleCount).map(vendor => {
-                            const status = checkShopStatus(vendor.schedule);
-                            return (
-                                <motion.div
-                                    key={vendor.id}
-                                    // ... props
-                                    className={`bg-white p-4 rounded-2xl shadow-sm border border-gray-100 cursor-pointer transition-colors flex gap-4 ${!status.isOpen ? 'opacity-75 grayscale-[0.5]' : 'hover:border-primary/50'}`}
-                                    onClick={() => onSelectVendor(vendor)} // click handler
-                                >
-                                    {/* ... Image ... */}
-                                    <div className="w-16 h-16 bg-gray-100 rounded-xl overflow-hidden flex-shrink-0 border border-gray-100">
-                                        {vendor.image ? (
-                                            <img src={vendor.image} alt={vendor.name} className="w-full h-full object-cover" />
-                                        ) : (
-                                            <div className="w-full h-full flex items-center justify-center text-2xl bg-blue-50">🏪</div>
-                                        )}
-                                    </div>
-
-                                    <div className="flex-1">
-                                        <h3 className="font-bold text-gray-800 mb-1">{vendor.name}</h3>
-                                        <div className="flex items-center gap-1 text-xs text-gray-500 mb-2">
-                                            <MapPin size={12} />
-                                            <span className="truncate max-w-[200px]">{vendor.locationTags || vendor.address}</span>
-                                        </div>
-                                        <div className="flex items-center gap-1 text-xs">
-                                            <span className="text-orange-500">★ {vendor.rating}</span>
-                                            {vendor.distance && (
-                                                <>
-                                                    <span className="text-gray-300">•</span>
-                                                    <span className="font-bold text-primary">{vendor.distance.toFixed(1)} km</span>
-                                                </>
-                                            )}
-                                            <span className="text-gray-300">•</span>
-                                            <span className={`${status.color} font-medium`}>{status.text}</span>
-                                            {!status.isOpen && vendor.schedule?.openTime && (
-                                                <span className="text-gray-400 ml-1">Buka {vendor.schedule.openTime}</span>
-                                            )}
-                                        </div>
-                                    </div>
-                                </motion.div>
-                            );
-                        })}
-                    </div>
-                )}
-
-                {!loading && visibleCount < sortedVendors.length && (
-                    <div className="mt-6 text-center">
+                    {/* Right actions */}
+                    <div className="flex items-center gap-4">
+                        {/* Search Button */}
                         <button
-                            onClick={() => setVisibleCount(prev => prev + 3)}
-                            className="text-sm font-bold text-green-700 bg-green-50 px-6 py-3 rounded-xl hover:bg-green-100 transition-colors w-full"
+                            onClick={() => setIsSearchOpen(!isSearchOpen)}
+                            className="w-10 h-10 border border-grey-300 rounded-full flex items-center justify-center hover:bg-grey-100 transition-colors"
                         >
-                            Load More
+                            <Search size={18} className="text-grey-600" />
+                        </button>
+                        {/* Menu Dots */}
+                        <button
+                            onClick={() => setIsMenuOpen(true)}
+                            className="flex flex-col gap-1 p-2"
+                        >
+                            <div className="w-1.5 h-1.5 bg-grey-600 rounded-full" />
+                            <div className="w-1.5 h-1.5 bg-grey-600 rounded-full" />
+                            <div className="w-1.5 h-1.5 bg-grey-600 rounded-full" />
                         </button>
                     </div>
-                )}
-            </main>
+                </div>
+
+                {/* Search Bar (expandable) */}
+                <AnimatePresence>
+                    {isSearchOpen && (
+                        <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            className="overflow-hidden px-4 pb-3"
+                        >
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-grey-300" size={18} />
+                                <input
+                                    type="text"
+                                    placeholder="Cari toko, tempat, atau fasilitas..."
+                                    className="w-full bg-grey-100 border border-grey-200 rounded-xl py-2.5 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-highlight-blue/20 transition-all text-sm"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    autoFocus
+                                />
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </header>
+
+            {/* Main Layout */}
+            <div className="flex flex-1 overflow-hidden">
+                {/* Left Sidebar */}
+                <CategorySidebar
+                    activeCategory={activeCategory}
+                    onCategoryChange={setActiveCategory}
+                />
+
+                {/* Main Content Area */}
+                <main className="flex-1 bg-grey-100 rounded-tl-3xl overflow-y-auto">
+                    {/* Story Banners */}
+                    <div className="overflow-x-auto no-scrollbar pt-3 px-2.5">
+                        <div className="flex gap-1.5 pb-2">
+                            {storyBanners.map((story) => (
+                                <div
+                                    key={story.id}
+                                    onClick={() => setSelectedStory(story)}
+                                    className="w-44 h-72 rounded-2xl overflow-hidden flex-shrink-0 cursor-pointer relative group"
+                                >
+                                    <img
+                                        src={story.image}
+                                        alt={story.title}
+                                        className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                                    />
+                                    <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/50" />
+                                    <div className="absolute bottom-4 left-4 right-4">
+                                        <p className="text-white font-bold text-sm">{story.title}</p>
+                                        <p className="text-white/80 text-xs">{story.subtitle}</p>
+                                    </div>
+                                </div>
+                            ))}
+                            {/* Placeholder banners */}
+                            {[1, 2].map((i) => (
+                                <div
+                                    key={`placeholder-${i}`}
+                                    className="w-44 h-72 rounded-2xl bg-grey-200 flex-shrink-0 flex items-center justify-center"
+                                >
+                                    <span className="text-4xl opacity-30">📷</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Transport Links Section */}
+                    <TransportLinks />
+
+                    {/* Quick Access Section */}
+                    <ContentSection title="Butuh Cepat Dan Dekat">
+                        {quickAccessContent.map((item) => (
+                            <ContentCard
+                                key={item.id}
+                                image={item.image}
+                                title={item.title}
+                                subtitle={item.subtitle}
+                                size="medium"
+                            />
+                        ))}
+                    </ContentSection>
+
+                    {/* WFA Section */}
+                    <ContentSection title="Nunggu Sekalian WFA">
+                        {wfaContent.map((item) => (
+                            <ContentCard
+                                key={item.id}
+                                image={item.image}
+                                title={item.title}
+                                subtitle={item.subtitle}
+                                size="large"
+                            />
+                        ))}
+                    </ContentSection>
+
+                    {/* Favorite Places Section */}
+                    <ContentSection title="Tempat Favorit">
+                        {favoritePlaces.map((item) => (
+                            <ContentCard
+                                key={item.id}
+                                image={item.image}
+                                title={item.title}
+                                distance={item.distance}
+                                size="small"
+                            />
+                        ))}
+                    </ContentSection>
+
+                    {/* Vendor List - if search is active */}
+                    {searchQuery && (
+                        <ContentSection title={`Hasil Pencarian "${searchQuery}"`}>
+                            {filteredVendors.length > 0 ? (
+                                filteredVendors.map(vendor => (
+                                    <div
+                                        key={vendor.id}
+                                        onClick={() => onSelectVendor(vendor)}
+                                        className="w-48 flex-shrink-0 bg-white p-3 rounded-xl cursor-pointer hover:shadow-md transition-shadow"
+                                    >
+                                        <div className="w-full h-24 bg-grey-100 rounded-lg mb-2 overflow-hidden">
+                                            {vendor.image ? (
+                                                <img src={vendor.image} alt={vendor.name} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center text-2xl">🏪</div>
+                                            )}
+                                        </div>
+                                        <h4 className="font-bold text-sm text-black truncate">{vendor.name}</h4>
+                                        <div className="flex items-center gap-1 text-xs text-grey-600">
+                                            <MapPin size={12} />
+                                            <span className="truncate">{vendor.address}</span>
+                                        </div>
+                                        {vendor.distance && (
+                                            <p className="text-xs font-bold text-primary mt-1">{vendor.distance.toFixed(1)} km</p>
+                                        )}
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="w-full py-8 text-center text-grey-600">
+                                    Tidak ada hasil ditemukan
+                                </div>
+                            )}
+                        </ContentSection>
+                    )}
+
+                    {/* Bottom Padding */}
+                    <div className="h-24" />
+                </main>
+            </div>
+
+            {/* Story Modal */}
+            <StoryModal
+                isOpen={!!selectedStory}
+                onClose={() => setSelectedStory(null)}
+                story={selectedStory}
+            />
 
             {/* Sidebar Drawer */}
             <AnimatePresence>
@@ -265,39 +348,41 @@ export default function Home({ vendors, onSelectVendor }) {
                             className="fixed top-0 left-0 bottom-0 w-64 bg-white z-[60] shadow-2xl p-6"
                         >
                             <div className="flex justify-between items-center mb-8">
-                                <span className="font-serif font-bold text-xl text-primary">UMKM Radar</span>
-                                <button onClick={() => setIsMenuOpen(false)} className="p-1 hover:bg-gray-100 rounded-full">
-                                    <X size={20} className="text-gray-500" />
+                                <span className="font-display text-lg text-black uppercase">UMKM Radar</span>
+                                <button onClick={() => setIsMenuOpen(false)} className="p-1 hover:bg-grey-100 rounded-full">
+                                    <X size={20} className="text-grey-600" />
                                 </button>
                             </div>
 
                             <nav className="space-y-2">
-                                <a href="#" className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-green-50 hover:text-green-700 rounded-xl transition-colors">
+                                <a href="#" className="flex items-center gap-3 px-4 py-3 text-grey-600 hover:bg-grey-100 hover:text-primary rounded-xl transition-colors">
                                     <User size={20} />
                                     <span className="font-medium">Akun Saya</span>
                                 </a>
-                                <a href="#" className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-green-50 hover:text-green-700 rounded-xl transition-colors">
+                                <a href="#" className="flex items-center gap-3 px-4 py-3 text-grey-600 hover:bg-grey-100 hover:text-primary rounded-xl transition-colors">
                                     <ShoppingBag size={20} />
                                     <span className="font-medium">Pesanan Saya</span>
                                 </a>
-                                <a href="/about" className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-green-50 hover:text-green-700 rounded-xl transition-colors">
+                                <a href="/about" className="flex items-center gap-3 px-4 py-3 text-grey-600 hover:bg-grey-100 hover:text-primary rounded-xl transition-colors">
                                     <HelpCircle size={20} />
                                     <span className="font-medium">Tentang Kami</span>
                                 </a>
                             </nav>
 
                             <div className="absolute bottom-6 left-6 right-6">
-                                <div className="bg-green-50 p-4 rounded-xl">
-                                    <p className="text-xs text-green-800 font-bold mb-1">Butuh Bantuan?</p>
-                                    <p className="text-[10px] text-green-600 mb-3">Hubungi CS kami jika ada kendala pemesanan.</p>
-                                    <button className="w-full bg-green-600 text-white text-xs font-bold py-2 rounded-lg hover:bg-green-700">Chat CS</button>
+                                <div className="bg-primary/10 p-4 rounded-xl">
+                                    <p className="text-xs text-primary font-bold mb-1">Butuh Bantuan?</p>
+                                    <p className="text-[10px] text-primary/70 mb-3">Hubungi CS kami jika ada kendala pemesanan.</p>
+                                    <button className="w-full bg-primary text-white text-xs font-bold py-2 rounded-lg hover:bg-primary-dark transition-colors">
+                                        Chat CS
+                                    </button>
                                 </div>
-                                <p className="text-[10px] text-gray-400 text-center mt-4">v1.0.0 UMKM Radar</p>
+                                <p className="text-[10px] text-grey-300 text-center mt-4">v1.0.0 UMKM Radar MRT</p>
                             </div>
                         </motion.div>
                     </>
                 )}
             </AnimatePresence>
-        </div >
+        </div>
     );
 }
