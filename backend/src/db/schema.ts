@@ -86,3 +86,16 @@ export const assets = pgTable('assets', {
     uploadedBy: integer('uploaded_by').references(() => users.id),
     createdAt: timestamp('created_at').defaultNow(),
 });
+
+// Categories - For vendor/product categorization
+export const categories = pgTable('categories', {
+    id: serial('id').primaryKey(),
+    name: text('name').notNull(), // e.g. "Ngopi", "Kuliner", "ATM & Belanja"
+    slug: text('slug').notNull().unique(), // e.g. "ngopi", "kuliner", "atm-belanja"
+    icon: text('icon'), // Icon name or URL
+    color: text('color').default('#0969da'), // Hex color for UI
+    description: text('description'),
+    isActive: boolean('is_active').default(true),
+    sortOrder: integer('sort_order').default(0), // For ordering in UI
+    createdAt: timestamp('created_at').defaultNow(),
+});

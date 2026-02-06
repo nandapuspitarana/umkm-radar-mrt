@@ -8,7 +8,8 @@ import {
     Package,
     Ticket,
     Store,
-    Image
+    Image,
+    Tag
 } from 'lucide-react';
 
 export default function Sidebar() {
@@ -69,6 +70,15 @@ export default function Sidebar() {
                         label="Assets"
                         active={location.pathname === '/assets'}
                         onClick={() => navigate('/assets')}
+                    />
+                )}
+
+                {auth.role === 'admin' && (
+                    <SidebarItem
+                        icon={<Tag size={20} />}
+                        label="Kategori"
+                        active={location.pathname === '/categories'}
+                        onClick={() => navigate('/categories')}
                     />
                 )}
 
