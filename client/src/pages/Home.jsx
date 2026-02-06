@@ -129,7 +129,7 @@ export default function Home({ vendors, onSelectVendor }) {
                         <div className="w-8 h-8 bg-gradient-to-br from-green-700 to-green-500 rounded-lg flex items-center justify-center text-white text-lg">
                             🥬
                         </div>
-                        <span className="font-serif font-bold text-xl text-primary">FreshMart</span>
+                        <span className="font-serif font-bold text-xl text-primary">UMKM Radar</span>
                     </div>
                     <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-200 transition-colors" onClick={() => { console.log('Menu clicked'); setIsMenuOpen(true); }}>
                         <Menu size={18} className="text-gray-600" />
@@ -265,7 +265,7 @@ export default function Home({ vendors, onSelectVendor }) {
                             className="fixed top-0 left-0 bottom-0 w-64 bg-white z-[60] shadow-2xl p-6"
                         >
                             <div className="flex justify-between items-center mb-8">
-                                <span className="font-serif font-bold text-xl text-primary">FreshMart</span>
+                                <span className="font-serif font-bold text-xl text-primary">UMKM Radar</span>
                                 <button onClick={() => setIsMenuOpen(false)} className="p-1 hover:bg-gray-100 rounded-full">
                                     <X size={20} className="text-gray-500" />
                                 </button>
@@ -292,7 +292,7 @@ export default function Home({ vendors, onSelectVendor }) {
                                     <p className="text-[10px] text-green-600 mb-3">Hubungi CS kami jika ada kendala pemesanan.</p>
                                     <button className="w-full bg-green-600 text-white text-xs font-bold py-2 rounded-lg hover:bg-green-700">Chat CS</button>
                                 </div>
-                                <p className="text-[10px] text-gray-400 text-center mt-4">v1.0.0 FreshMart</p>
+                                <p className="text-[10px] text-gray-400 text-center mt-4">v1.0.0 UMKM Radar</p>
                             </div>
                         </motion.div>
                     </>

@@ -23,7 +23,7 @@ import Redis from 'ioredis';
 
 // Database Connection
 const pool = new Pool({
-    connectionString: process.env.DATABASE_URL || 'postgres://postgres:password@localhost:5432/freshmart',
+    connectionString: process.env.DATABASE_URL || 'postgres://postgres:password@localhost:5432/umkmradar',
 });
 
 const db = drizzle(pool);
@@ -256,7 +256,7 @@ app.post('/api/seed', async (c) => {
     } else {
         // Seed Vendors
         const [newV1] = await db.insert(vendors).values({
-            name: "FreshMart Cabang Selatan",
+            name: "UMKM Radar Selatan",
             lat: -6.261493,
             lng: 106.810600,
             whatsapp: "6281234567890",
@@ -287,25 +287,25 @@ app.post('/api/seed', async (c) => {
     // We try to insert. If email collision, it will fail (API returns 500), but that means user exists.
     // Or we can check existence first.
 
-    const adminExists = await db.select().from(users).where(eq(users.email, 'admin@freshmart.com'));
+    const adminExists = await db.select().from(users).where(eq(users.email, 'admin@umkmradar.com'));
     if (adminExists.length === 0) {
         await db.insert(users).values([
             {
-                email: 'admin@freshmart.com',
+                email: 'admin@umkmradar.com',
                 password: 'admin',
                 role: 'admin',
                 name: 'Super Admin',
                 vendorId: null
             },
             {
-                email: 'mitra1@freshmart.com',
+                email: 'mitra1@umkmradar.com',
                 password: 'mitra',
                 role: 'vendor',
                 name: 'Owner Selatan',
                 vendorId: v1.id
             },
             {
-                email: 'mitra2@freshmart.com',
+                email: 'mitra2@umkmradar.com',
                 password: 'mitra',
                 role: 'vendor',
                 name: 'Owner Rawamangun',

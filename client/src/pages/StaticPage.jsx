@@ -28,7 +28,7 @@ export default function StaticPage({ title, pageKey }) {
                         <ArrowLeft size={20} />
                         <span className="font-bold">Kembali</span>
                     </a>
-                    <span className="font-serif font-bold text-xl text-primary">FreshMart</span>
+                    <span className="font-serif font-bold text-xl text-primary">UMKM Radar</span>
                 </div>
             </header>
 

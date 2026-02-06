@@ -191,7 +191,7 @@ export default function AdminVendors() {
                                     className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-green-500 outline-none"
                                     value={formData.name}
                                     onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                    placeholder="Contoh: FreshMart Dukuh Atas"
+                                    placeholder="Contoh: UMKM Radar Dukuh Atas"
                                 />
                             </div>
 

@@ -426,7 +426,7 @@ export default function Settings() {
                                 className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-green-500 outline-none transition-shadow"
                                 value={settings.footer_text}
                                 onChange={(e) => setSettings({ ...settings, footer_text: e.target.value })}
-                                placeholder="Contoh: © 2024 FreshMart. All rights reserved."
+                                placeholder="Contoh: © 2024 UMKM Radar. All rights reserved."
                             />
                         </div>
 

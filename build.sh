@@ -1,14 +1,14 @@
 #!/bin/bash
 
-# FreshMart Docker Build Script
+# UMKM Radar Docker Build Script
 # Version: 1.0.0
 
 set -e
 
 VERSION="1.0.0"
-REGISTRY="freshmart"
+REGISTRY="umkmradar"
 
-echo "🚀 Building FreshMart Docker Images - Version $VERSION"
+echo "🚀 Building UMKM Radar Docker Images - Version $VERSION"
 echo "=================================================="
 
 # Build Backend

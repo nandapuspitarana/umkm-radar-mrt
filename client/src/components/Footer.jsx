@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 
 export default function Footer() {
     const [settings, setSettings] = useState({
-        footer_text: '© 2024 FreshMart',
+        footer_text: '© 2024 UMKM Radar',
         footer_links: []
     });
 
@@ -12,7 +12,7 @@ export default function Footer() {
             .then(data => {
                 if (data.footer_text || data.footer_links) {
                     setSettings({
-                        footer_text: data.footer_text || '© 2024 FreshMart',
+                        footer_text: data.footer_text || '© 2024 UMKM Radar',
                         footer_links: data.footer_links || []
                     });
                 }

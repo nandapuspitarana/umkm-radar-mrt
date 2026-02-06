@@ -1,6 +1,6 @@
 # GrocGrocery Multivendor
 
-Platform Grocery Multivendor (FreshMart) yang menghubungkan pelanggan dengan toko sayur/buah terdekat menggunakan Geolocation.
+Platform Grocery Multivendor (UMKM Radar) yang menghubungkan pelanggan dengan toko sayur/buah terdekat menggunakan Geolocation.
 
 ## 🚀 Tech Stack
 
@@ -52,9 +52,9 @@ chmod +x build.sh
 ```
 
 Images yang dibuat:
-- `freshmart/backend:1.0.0`
-- `freshmart/client:1.0.0`
-- `freshmart/dashboard:1.0.0`
+- `umkmradar/backend:1.0.0`
+- `umkmradar/client:1.0.0`
+- `umkmradar/dashboard:1.0.0`
 
 ## 🛠 Cara Menjalankan (Manual)
 
@@ -111,9 +111,9 @@ Setelah seeding, gunakan akun berikut untuk login di [Dashboard](http://localhos
 
 | Role | Email | Password | Keterangan |
 | :--- | :--- | :--- | :--- |
-| **Admin** | `admin@freshmart.com` | `admin` | Akses Penuh (Global Settings) |
-| **Mitra** | `mitra1@freshmart.com` | `mitra` | Toko: FreshMart Selatan |
-| **Mitra** | `mitra2@freshmart.com` | `mitra` | Toko: Berkah Sayur Mayur |
+| **Admin** | `admin@umkmradar.com` | `admin` | Akses Penuh (Global Settings) |
+| **Mitra** | `mitra1@umkmradar.com` | `mitra` | Toko: UMKM Radar Selatan |
+| **Mitra** | `mitra2@umkmradar.com` | `mitra` | Toko: Berkah Sayur Mayur |
 
 ## 📱 Fitur Utama
 

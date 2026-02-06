@@ -1,7 +1,7 @@
 export const vendors = [
     {
         id: 1,
-        name: "FreshMart Cabang Selatan",
+        name: "UMKM Radar Selatan",
         location: { lat: -6.261493, lng: 106.810600 },
         whatsapp: "6281234567890",
         address: "Jl. Kemang Raya No. 10",

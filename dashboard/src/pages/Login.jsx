@@ -41,7 +41,7 @@ export default function Login() {
                     <div className="w-12 h-12 bg-green-100 text-green-700 rounded-xl flex items-center justify-center mb-3">
                         <Store size={24} />
                     </div>
-                    <h1 className="text-2xl font-serif font-bold text-gray-800">GrocGrocery Dashboard</h1>
+                    <h1 className="text-2xl font-serif font-bold text-gray-800">UMKM Radar Dashboard</h1>
                     <p className="text-gray-500">Masuk untuk mengelola pesanan</p>
                 </div>
 
@@ -107,8 +107,8 @@ export default function Login() {
 
                 <div className="mt-6 text-center text-sm text-gray-500">
                     Kredit Login (Demo):<br />
-                    Admin: admin@freshmart.com / admin<br />
-                    Mitra: mitra1@freshmart.com / mitra
+                    Admin: admin@umkmradar.com / admin<br />
+                    Mitra: mitra1@umkmradar.com / mitra
                 </div>
             </div>
         </div>

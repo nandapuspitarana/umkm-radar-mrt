@@ -1,10 +1,10 @@
-# FreshMart Docker Build Script
+# UMKM Radar Docker Build Script
 # Version: 1.0.0
 
 $VERSION = "1.0.0"
-$REGISTRY = "freshmart"
+$REGISTRY = "umkmradar"
 
-Write-Host "🚀 Building FreshMart Docker Images - Version $VERSION" -ForegroundColor Green
+Write-Host "🚀 Building UMKM Radar Docker Images - Version $VERSION" -ForegroundColor Green
 Write-Host "==================================================" -ForegroundColor Green
 
 # Build Backend

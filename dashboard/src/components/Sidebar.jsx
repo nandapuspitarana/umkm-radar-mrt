@@ -25,7 +25,7 @@ export default function Sidebar() {
         <aside className="w-64 bg-white border-r border-gray-200 flex flex-col fixed h-full z-10">
             <div className="p-6 border-b border-gray-100 flex items-center gap-3">
                 <div className="w-8 h-8 bg-green-100 text-green-700 rounded-lg flex items-center justify-center font-bold">G</div>
-                <span className="font-serif font-bold text-xl text-green-800">FreshMart</span>
+                <span className="font-serif font-bold text-xl text-green-800">UMKM Radar</span>
             </div>
 
             <nav className="flex-1 p-4 space-y-2">
