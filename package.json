@@ -1,0 +1,11 @@
+{
+    "name": "umkm-radar-mrt",
+    "version": "1.0.0",
+    "description": "UMKM Radar MRT - Monorepo Dev Scripts",
+    "scripts": {
+        "dev:backend": "npm run dev --prefix backend",
+        "dev:client": "npm run dev --prefix client",
+        "dev:dashboard": "npm run dev --prefix dashboard",
+        "dev": "node dev.mjs"
+    }
+}

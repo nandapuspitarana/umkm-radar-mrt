@@ -57,6 +57,27 @@ Images yang dibuat:
 - `umkmradar/client:1.0.0`
 - `umkmradar/dashboard:1.0.0`
 
+## 🛠 Cara Menjalankan (Development Mode)
+
+Untuk menjalankan seluruh aplikasi (Backend, Client, dan Dashboard) dengan satu perintah:
+
+1.  Pastikan infrastruktur (DB, Redis, MinIO) sudah berjalan:
+    ```bash
+    docker-compose up -d db redis minio imgproxy
+    ```
+2.  Jalankan perintah berikut di root folder:
+    ```bash
+    npm run dev
+    ```
+    
+    **Catatan**: Script ini akan:
+    - Menjalankan Backend terlebih dahulu
+    - Menunggu Backend siap (health check)
+    - Baru menjalankan Client dan Dashboard
+    - Mencegah error koneksi saat startup
+
+---
+
 ## 🛠 Cara Menjalankan (Manual)
 
 Jika ingin menjalankan satu per satu secara lokal untuk development.

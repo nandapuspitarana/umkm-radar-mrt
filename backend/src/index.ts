@@ -55,6 +55,11 @@ redis.on('connect', () => {
 
 // Routes
 
+// Health Check
+app.get('/api/health', (c) => {
+    return c.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
 // 0. Login
 app.post('/api/login', async (c) => {
     try {
@@ -1385,8 +1390,8 @@ app.post('/api/assets/upload', async (c) => {
             alt: alt,
         }).returning();
 
-        // Generate URLs
-        const directUrl = `${MINIO_PUBLIC_URL}/${MINIO_BUCKET}/${storagePath}`;
+        // Generate URLs - use /api/files/ proxy for external access
+        const directUrl = `/api/files/${MINIO_BUCKET}/${storagePath}`;
         const imgproxyUrl = generateImgproxyUrl(storagePath);
         const thumbnailUrl = generateImgproxyUrl(storagePath, { width: 200, height: 200, resize: 'fill', format: 'webp' });
 
@@ -1420,7 +1425,7 @@ app.get('/api/assets', async (c) => {
         // Add URLs to each asset
         const assetsWithUrls = result.map(asset => ({
             ...asset,
-            directUrl: `${MINIO_PUBLIC_URL}/${asset.bucket}/${asset.storagePath}`,
+            directUrl: `/api/files/${asset.bucket}/${asset.storagePath}`,
             imgproxyUrl: generateImgproxyUrl(asset.storagePath),
             thumbnailUrl: generateImgproxyUrl(asset.storagePath, { width: 200, height: 200, resize: 'fill', format: 'webp' }),
         }));
@@ -1452,7 +1457,7 @@ app.get('/api/assets/:id', async (c) => {
 
         return c.json({
             ...asset,
-            directUrl: `${MINIO_PUBLIC_URL}/${asset.bucket}/${asset.storagePath}`,
+            directUrl: `/api/files/${asset.bucket}/${asset.storagePath}`,
             transformedUrl: url,
         });
     } catch (error) {
@@ -1501,6 +1506,51 @@ app.get('/api/assets/url/:storagePath', async (c) => {
     const url = generateImgproxyUrl(storagePath, { width, height, quality, format, resize });
 
     return c.json({ url });
+});
+
+// Proxy route to serve MinIO files through backend (avoids localhost:9000 CORS issues)
+app.get('/api/files/:bucket/:filename{.+}', async (c) => {
+    try {
+        const bucket = c.req.param('bucket');
+        const filename = c.req.param('filename');
+
+        const { GetObjectCommand } = await import('@aws-sdk/client-s3');
+        const command = new GetObjectCommand({
+            Bucket: bucket,
+            Key: filename,
+        });
+
+        const response = await s3Client.send(command);
+
+        if (!response.Body) {
+            return c.json({ error: 'File not found' }, 404);
+        }
+
+        // Convert stream to buffer
+        const chunks: Uint8Array[] = [];
+        const reader = response.Body.transformToWebStream().getReader();
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            chunks.push(value);
+        }
+
+        const buffer = Buffer.concat(chunks);
+
+        // Set content type
+        const contentType = response.ContentType || 'application/octet-stream';
+
+        return new Response(buffer, {
+            headers: {
+                'Content-Type': contentType,
+                'Cache-Control': 'public, max-age=31536000', // Cache for 1 year
+            },
+        });
+    } catch (error) {
+        console.error("File proxy error:", error);
+        return c.json({ error: 'File not found' }, 404);
+    }
 });
 
 

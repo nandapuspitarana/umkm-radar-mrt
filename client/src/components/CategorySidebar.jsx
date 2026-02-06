@@ -38,7 +38,7 @@ export default function CategorySidebar({ activeCategory }) {
             case 'wisata':
                 return 'bg-gradient-to-b from-teal-400 to-white';
             case 'atm':
-                return 'bg-gradient-to-b from-green-400 to-white';
+                return 'bg-gradient-to-b from-blue-400 to-white';
             default:
                 return 'bg-gradient-to-b from-red-400 to-white';
         }

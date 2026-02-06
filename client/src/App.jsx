@@ -201,7 +201,7 @@ export default function App() {
         <div className="fixed bottom-6 left-0 right-0 px-4 flex justify-center z-40 pointer-events-none">
           <button
             onClick={() => setIsCartOpen(true)}
-            className="bg-primary hover:bg-primary-dark text-white pl-4 pr-6 py-3 rounded-full shadow-xl shadow-green-900/30 flex items-center gap-3 transition-transform hover:scale-105 pointer-events-auto"
+            className="bg-primary hover:bg-primary-dark text-white pl-4 pr-6 py-3 rounded-full shadow-xl shadow-blue-900/30 flex items-center gap-3 transition-transform hover:scale-105 pointer-events-auto"
           >
             <div className="bg-white/20 px-2 py-0.5 rounded text-sm font-bold">
               {cart.reduce((a, b) => a + b.qty, 0)}
@@ -247,7 +247,7 @@ export default function App() {
             <div className="fixed bottom-6 left-0 right-0 px-4 flex justify-center z-40 pointer-events-none">
               <button
                 onClick={() => setIsCartOpen(true)}
-                className="bg-primary hover:bg-primary-dark text-white pl-4 pr-6 py-3 rounded-full shadow-xl shadow-green-900/30 flex items-center gap-3 transition-transform hover:scale-105 pointer-events-auto"
+                className="bg-primary hover:bg-primary-dark text-white pl-4 pr-6 py-3 rounded-full shadow-xl shadow-blue-900/30 flex items-center gap-3 transition-transform hover:scale-105 pointer-events-auto"
               >
                 <div className="bg-white/20 px-2 py-0.5 rounded text-sm font-bold">
                   {cart.reduce((a, b) => a + b.qty, 0)}
@@ -287,7 +287,7 @@ export default function App() {
             <div className="fixed bottom-6 left-0 right-0 px-4 flex justify-center z-40 pointer-events-none">
               <button
                 onClick={() => setIsCartOpen(true)}
-                className="bg-primary hover:bg-primary-dark text-white pl-4 pr-6 py-3 rounded-full shadow-xl shadow-green-900/30 flex items-center gap-3 transition-transform hover:scale-105 pointer-events-auto"
+                className="bg-primary hover:bg-primary-dark text-white pl-4 pr-6 py-3 rounded-full shadow-xl shadow-blue-900/30 flex items-center gap-3 transition-transform hover:scale-105 pointer-events-auto"
               >
                 <div className="bg-white/20 px-2 py-0.5 rounded text-sm font-bold">
                   {cart.reduce((a, b) => a + b.qty, 0)}
@@ -327,7 +327,7 @@ export default function App() {
             <div className="fixed bottom-6 left-0 right-0 px-4 flex justify-center z-40 pointer-events-none">
               <button
                 onClick={() => setIsCartOpen(true)}
-                className="bg-primary hover:bg-primary-dark text-white pl-4 pr-6 py-3 rounded-full shadow-xl shadow-green-900/30 flex items-center gap-3 transition-transform hover:scale-105 pointer-events-auto"
+                className="bg-primary hover:bg-primary-dark text-white pl-4 pr-6 py-3 rounded-full shadow-xl shadow-blue-900/30 flex items-center gap-3 transition-transform hover:scale-105 pointer-events-auto"
               >
                 <div className="bg-white/20 px-2 py-0.5 rounded text-sm font-bold">
                   {cart.reduce((a, b) => a + b.qty, 0)}

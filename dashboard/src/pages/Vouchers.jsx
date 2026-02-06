@@ -93,7 +93,7 @@ export default function Vouchers() {
                     </div>
                     <button
                         onClick={() => setShowModal(true)}
-                        className="bg-green-700 text-white px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-green-800"
+                        className="bg-blue-700 text-white px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-blue-800"
                     >
                         <Plus size={18} /> Buat Voucher
                     </button>
@@ -107,7 +107,7 @@ export default function Vouchers() {
                             </div>
 
                             <div className="flex items-center gap-4 mb-4">
-                                <div className="w-12 h-12 bg-green-50 rounded-full flex items-center justify-center text-green-600">
+                                <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center text-blue-600">
                                     <Ticket size={24} />
                                 </div>
                                 <div>
@@ -177,7 +177,7 @@ export default function Vouchers() {
 
                                 <div className="flex justify-end gap-3 mt-6">
                                     <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Batal</button>
-                                    <button type="submit" className="px-6 py-2 bg-green-700 text-white rounded-lg hover:bg-green-800 font-medium">Buat</button>
+                                    <button type="submit" className="px-6 py-2 bg-blue-700 text-white rounded-lg hover:bg-blue-800 font-medium">Buat</button>
                                 </div>
                             </form>
                         </div>

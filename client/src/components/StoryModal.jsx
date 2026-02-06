@@ -60,12 +60,22 @@ export default function StoryModal({ isOpen, onClose, story }) {
                             />
                         </div>
 
-                        {/* Story Image */}
-                        <img
-                            src={story.image}
-                            alt={story.title || 'Story'}
-                            className="w-full h-full object-contain"
-                        />
+                        {/* Story Content - Image or Video */}
+                        {story.image && (story.image.match(/\.(mp4|webm|mov)$/i) || story.image.includes('data:video')) ? (
+                            <video
+                                src={story.image}
+                                className="w-full h-full object-contain"
+                                autoPlay
+                                controls
+                                playsInline
+                            />
+                        ) : (
+                            <img
+                                src={story.image}
+                                alt={story.title || 'Story'}
+                                className="w-full h-full object-contain"
+                            />
+                        )}
 
                         {/* Story Info */}
                         {story.title && (

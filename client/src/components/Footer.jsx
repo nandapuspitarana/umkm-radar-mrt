@@ -28,7 +28,7 @@ export default function Footer() {
                         <a
                             key={idx}
                             href={link.url}
-                            className="text-sm text-gray-500 hover:text-green-600 transition-colors"
+                            className="text-sm text-gray-500 hover:text-blue-600 transition-colors"
                         >
                             {link.label}
                         </a>
@@ -37,9 +37,9 @@ export default function Footer() {
 
                 {/* Static Links */}
                 <div className="flex justify-center gap-4 mb-4 text-xs font-semibold text-gray-400">
-                    <a href="/about" className="hover:text-green-600 transition-colors">Tentang Kami</a>
-                    <a href="/terms" className="hover:text-green-600 transition-colors">Syarat & Ketentuan</a>
-                    <a href="/privacy" className="hover:text-green-600 transition-colors">Privasi</a>
+                    <a href="/about" className="hover:text-blue-600 transition-colors">Tentang Kami</a>
+                    <a href="/terms" className="hover:text-blue-600 transition-colors">Syarat & Ketentuan</a>
+                    <a href="/privacy" className="hover:text-blue-600 transition-colors">Privasi</a>
                 </div>
                 <p className="text-xs text-gray-400">
                     {settings.footer_text}

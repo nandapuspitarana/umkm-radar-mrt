@@ -121,7 +121,7 @@ export default function CartSheet({ isOpen, onClose, cart, vendor, onCheckout })
                                         )}
                                     </div>
                                     <div className="flex items-center gap-3">
-                                        <span className="text-sm font-bold bg-green-50 text-green-700 px-2 py-0.5 rounded">x{item.qty}</span>
+                                        <span className="text-sm font-bold bg-blue-50 text-blue-700 px-2 py-0.5 rounded">x{item.qty}</span>
                                         <span className="text-sm font-bold text-gray-800 ml-auto">
                                             {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format((item.discountPrice || item.price) * item.qty)}
                                         </span>
@@ -163,7 +163,7 @@ export default function CartSheet({ isOpen, onClose, cart, vendor, onCheckout })
                                     )}
                                 </div>
                                 {appliedVoucher && (
-                                    <p className="text-xs text-green-600 mt-1 font-medium">Voucher diterapkan! Hemat {new Intl.NumberFormat('id-ID').format(discount)}</p>
+                                    <p className="text-xs text-blue-600 mt-1 font-medium">Voucher diterapkan! Hemat {new Intl.NumberFormat('id-ID').format(discount)}</p>
                                 )}
                             </div>
 
@@ -198,7 +198,7 @@ export default function CartSheet({ isOpen, onClose, cart, vendor, onCheckout })
                             <span>{new Intl.NumberFormat('id-ID').format(subtotal)}</span>
                         </div>
                         {discount > 0 && (
-                            <div className="flex justify-between items-center text-sm text-green-600 font-medium">
+                            <div className="flex justify-between items-center text-sm text-blue-600 font-medium">
                                 <span>Diskon Voucher</span>
                                 <span>- {new Intl.NumberFormat('id-ID').format(discount)}</span>
                             </div>
@@ -213,7 +213,7 @@ export default function CartSheet({ isOpen, onClose, cart, vendor, onCheckout })
                     <button
                         onClick={() => onCheckout(name, note, appliedVoucher, discount)} // Pass voucher data
                         disabled={cart.length === 0 || !name}
-                        className="w-full bg-primary hover:bg-primary-dark disabled:opacity-50 text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-colors shadow-lg shadow-green-900/20"
+                        className="w-full bg-primary hover:bg-primary-dark disabled:opacity-50 text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-colors shadow-lg shadow-blue-900/20"
                     >
                         <span>Pesan</span>
                         {/* pesan via whatsapp */}

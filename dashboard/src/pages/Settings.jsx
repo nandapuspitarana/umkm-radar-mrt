@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Save, FileText, Globe, Store, Upload, X, MapPin, Image, Train, Plus, Trash2, GripVertical, Link } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
+import ImageUploader from '../components/ImageUploader';
 
 export default function Settings() {
     const [activeTab, setActiveTab] = useState(''); // general | pages | profile | banners | transport
@@ -36,6 +37,7 @@ export default function Settings() {
 
     // Settings state
     const [settings, setSettings] = useState({
+        app_logo: '',
         footer_text: '',
         footer_links: []
     });
@@ -77,6 +79,7 @@ export default function Settings() {
             .then(res => res.json())
             .then(data => {
                 setSettings({
+                    app_logo: data.app_logo || '',
                     footer_text: data.footer_text || '',
                     footer_links: data.footer_links || []
                 });
@@ -86,9 +89,22 @@ export default function Settings() {
                     page_privacy: data.page_privacy || ''
                 });
                 // Load banners from database (no hardcode fallback)
-                setBanners(data.homepage_banners || []);
+                const fixedBanners = (data.homepage_banners || []).map(b => ({
+                    ...b,
+                    image: b.image && b.image.startsWith('/assets/homepage/')
+                        ? b.image.replace('/assets/homepage/', '/api/files/assets/homepage/')
+                        : b.image
+                }));
+                setBanners(fixedBanners);
+
                 // Load transport links from database (no hardcode fallback)
-                setTransportLinks(data.transport_links || []);
+                const fixedLinks = (data.transport_links || []).map(link => ({
+                    ...link,
+                    logo: link.logo && link.logo.startsWith('/assets/homepage/')
+                        ? link.logo.replace('/assets/homepage/', '/api/files/assets/homepage/')
+                        : link.logo
+                }));
+                setTransportLinks(fixedLinks);
             })
             .catch(err => console.error("Failed to load settings", err));
 
@@ -258,7 +274,7 @@ export default function Settings() {
                     {isVendor && (
                         <button
                             onClick={() => setActiveTab('profile')}
-                            className={`px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 ${activeTab === 'profile' ? 'bg-green-600 text-white shadow-lg shadow-green-600/20' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}
+                            className={`px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 ${activeTab === 'profile' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}
                         >
                             <Store size={18} />
                             Profil Toko
@@ -269,28 +285,28 @@ export default function Settings() {
                         <>
                             <button
                                 onClick={() => setActiveTab('banners')}
-                                className={`px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 ${activeTab === 'banners' ? 'bg-green-600 text-white shadow-lg shadow-green-600/20' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}
+                                className={`px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 ${activeTab === 'banners' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}
                             >
                                 <Image size={18} />
                                 Banner Story
                             </button>
                             <button
                                 onClick={() => setActiveTab('transport')}
-                                className={`px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 ${activeTab === 'transport' ? 'bg-green-600 text-white shadow-lg shadow-green-600/20' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}
+                                className={`px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 ${activeTab === 'transport' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}
                             >
                                 <Train size={18} />
                                 Transport Links
                             </button>
                             <button
                                 onClick={() => setActiveTab('general')}
-                                className={`px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 ${activeTab === 'general' ? 'bg-green-600 text-white shadow-lg shadow-green-600/20' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}
+                                className={`px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 ${activeTab === 'general' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}
                             >
                                 <Globe size={18} />
                                 Umum & Footer
                             </button>
                             <button
                                 onClick={() => setActiveTab('pages')}
-                                className={`px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 ${activeTab === 'pages' ? 'bg-green-600 text-white shadow-lg shadow-green-600/20' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}
+                                className={`px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 ${activeTab === 'pages' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}
                             >
                                 <FileText size={18} />
                                 Halaman (CMS)
@@ -309,7 +325,7 @@ export default function Settings() {
                             </div>
                             <button
                                 onClick={addBanner}
-                                className="bg-green-600 text-white px-4 py-2 rounded-xl font-bold text-sm hover:bg-green-700 transition-colors flex items-center gap-2"
+                                className="bg-blue-600 text-white px-4 py-2 rounded-xl font-bold text-sm hover:bg-blue-700 transition-colors flex items-center gap-2"
                             >
                                 <Plus size={18} />
                                 Tambah Banner
@@ -326,31 +342,76 @@ export default function Settings() {
                             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                                 {banners.map((banner, index) => (
                                     <div key={banner.id} className="bg-gray-50 rounded-xl p-4 border border-gray-200 relative group">
-                                        {/* Preview */}
-                                        <div className="aspect-[9/16] rounded-lg overflow-hidden bg-gray-200 mb-3 relative">
-                                            {banner.image ? (
-                                                <img src={banner.image} alt={banner.title} className="w-full h-full object-cover" />
-                                            ) : (
-                                                <div className="w-full h-full flex items-center justify-center text-gray-400">
-                                                    <Image size={32} />
-                                                </div>
-                                            )}
-                                            {/* Overlay with title/subtitle */}
-                                            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3">
-                                                <p className="text-white font-bold text-sm truncate">{banner.title || 'Judul'}</p>
-                                                <p className="text-white/80 text-xs truncate">{banner.subtitle || 'Subjudul'}</p>
-                                            </div>
-                                        </div>
-
                                         {/* Form Fields */}
-                                        <div className="space-y-2">
-                                            <input
-                                                type="text"
-                                                placeholder="URL Gambar (Portrait 9:16)"
-                                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                                                value={banner.image}
-                                                onChange={(e) => updateBanner(index, 'image', e.target.value)}
-                                            />
+                                        <div className="space-y-3">
+                                            <div>
+                                                <label className="text-xs font-medium text-gray-500 mb-1 block">Gambar Banner (9:16)</label>
+                                                <div className="aspect-[9/16] rounded-lg overflow-hidden bg-gray-200 relative">
+                                                    {banner.image ? (
+                                                        (banner.image.match(/\.(mp4|webm|mov)$/i) || banner.image.includes('data:video')) ? (
+                                                            <video
+                                                                src={banner.image}
+                                                                className="w-full h-full object-cover"
+                                                                controls
+                                                                muted
+                                                            />
+                                                        ) : (
+                                                            <img
+                                                                src={banner.image}
+                                                                alt={banner.title}
+                                                                className="w-full h-full object-cover"
+                                                                onError={(e) => {
+                                                                    e.target.style.display = 'none';
+                                                                    e.target.nextSibling.style.display = 'flex';
+                                                                }}
+                                                            />
+                                                        )
+                                                    ) : null}
+                                                    <div className={`absolute inset-0 flex flex-col items-center justify-center text-gray-400 ${banner.image ? 'hidden' : 'flex'}`}>
+                                                        <Image size={32} />
+                                                        <p className="text-xs mt-2">Media tidak tersedia</p>
+                                                    </div>
+                                                    {/* Overlay with title/subtitle */}
+                                                    {banner.image && (
+                                                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3 pointer-events-none">
+                                                            <p className="text-white font-bold text-sm truncate">{banner.title || 'Judul'}</p>
+                                                            <p className="text-white/80 text-xs truncate">{banner.subtitle || 'Subjudul'}</p>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label className="text-xs font-medium text-gray-500 mb-1 block">URL atau Upload</label>
+                                                <div className="flex gap-2">
+                                                    <input
+                                                        type="text"
+                                                        placeholder="URL gambar..."
+                                                        className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                                                        value={banner.image}
+                                                        onChange={(e) => updateBanner(index, 'image', e.target.value)}
+                                                    />
+                                                    <label className="px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors cursor-pointer flex items-center gap-1 text-sm font-medium">
+                                                        <Upload size={16} />
+                                                        <input
+                                                            type="file"
+                                                            accept="image/*,video/mp4,video/webm"
+                                                            className="hidden"
+                                                            onChange={async (e) => {
+                                                                const file = e.target.files?.[0];
+                                                                if (!file) return;
+                                                                const formData = new FormData();
+                                                                formData.append('file', file);
+                                                                formData.append('category', 'banner');
+                                                                try {
+                                                                    const res = await fetch('/api/assets/upload', { method: 'POST', body: formData });
+                                                                    const data = await res.json();
+                                                                    if (data.directUrl) updateBanner(index, 'image', data.directUrl);
+                                                                } catch (err) { console.error(err); }
+                                                            }}
+                                                        />
+                                                    </label>
+                                                </div>
+                                            </div>
                                             <input
                                                 type="text"
                                                 placeholder="Judul"
@@ -383,7 +444,7 @@ export default function Settings() {
                             <button
                                 onClick={handleSaveBanners}
                                 disabled={loading}
-                                className="bg-green-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-green-700 transition-all flex items-center gap-2 disabled:opacity-50 shadow-lg shadow-green-600/20"
+                                className="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-blue-700 transition-all flex items-center gap-2 disabled:opacity-50 shadow-lg shadow-blue-600/20"
                             >
                                 <Save size={18} />
                                 {loading ? 'Menyimpan...' : 'Simpan Banner'}
@@ -402,7 +463,7 @@ export default function Settings() {
                             </div>
                             <button
                                 onClick={addTransportLink}
-                                className="bg-green-600 text-white px-4 py-2 rounded-xl font-bold text-sm hover:bg-green-700 transition-colors flex items-center gap-2"
+                                className="bg-blue-600 text-white px-4 py-2 rounded-xl font-bold text-sm hover:bg-blue-700 transition-colors flex items-center gap-2"
                             >
                                 <Plus size={18} />
                                 Tambah
@@ -420,44 +481,73 @@ export default function Settings() {
                                     {/* Logo Preview */}
                                     <div className="w-20 h-16 bg-white rounded-lg border border-gray-200 flex-shrink-0 overflow-hidden flex items-center justify-center">
                                         {link.logo ? (
-                                            <img src={link.logo} alt={link.name} className="max-h-12 max-w-full object-contain" />
+                                            <img
+                                                src={link.logo}
+                                                alt={link.name}
+                                                className="max-h-12 max-w-full object-contain"
+                                                onError={(e) => e.target.style.display = 'none'}
+                                            />
                                         ) : (
                                             <Train size={24} className="text-gray-400" />
                                         )}
                                     </div>
 
                                     {/* Form Fields */}
-                                    <div className="flex-1 grid grid-cols-3 gap-3">
-                                        <input
-                                            type="text"
-                                            placeholder="Nama (mis: TransJakarta)"
-                                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                                            value={link.name}
-                                            onChange={(e) => updateTransportLink(index, 'name', e.target.value)}
-                                        />
-                                        <input
-                                            type="text"
-                                            placeholder="URL Logo (https://...)"
-                                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                                            value={link.logo}
-                                            onChange={(e) => updateTransportLink(index, 'logo', e.target.value)}
-                                        />
-                                        <div className="flex gap-2">
+                                    <div className="flex-1 space-y-2">
+                                        <div className="grid grid-cols-2 gap-3">
                                             <input
                                                 type="text"
-                                                placeholder="Link Redirect (https://...)"
-                                                className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                                                value={link.url}
-                                                onChange={(e) => updateTransportLink(index, 'url', e.target.value)}
+                                                placeholder="Nama (mis: TransJakarta)"
+                                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                                                value={link.name}
+                                                onChange={(e) => updateTransportLink(index, 'name', e.target.value)}
                                             />
-                                            <a
-                                                href={link.url}
-                                                target="_blank"
-                                                rel="noreferrer"
-                                                className="px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors flex items-center"
-                                            >
-                                                <Link size={16} />
-                                            </a>
+                                            <div className="flex gap-2">
+                                                <input
+                                                    type="text"
+                                                    placeholder="Link Redirect (https://...)"
+                                                    className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                                                    value={link.url}
+                                                    onChange={(e) => updateTransportLink(index, 'url', e.target.value)}
+                                                />
+                                                <a
+                                                    href={link.url}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors flex items-center"
+                                                >
+                                                    <Link size={16} />
+                                                </a>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                type="text"
+                                                placeholder="URL Logo (atau upload)"
+                                                className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                                                value={link.logo}
+                                                onChange={(e) => updateTransportLink(index, 'logo', e.target.value)}
+                                            />
+                                            <label className="px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors cursor-pointer flex items-center gap-1 text-sm font-medium">
+                                                <Upload size={16} /> Upload
+                                                <input
+                                                    type="file"
+                                                    accept="image/*"
+                                                    className="hidden"
+                                                    onChange={async (e) => {
+                                                        const file = e.target.files?.[0];
+                                                        if (!file) return;
+                                                        const formData = new FormData();
+                                                        formData.append('file', file);
+                                                        formData.append('category', 'logo');
+                                                        try {
+                                                            const res = await fetch('/api/assets/upload', { method: 'POST', body: formData });
+                                                            const data = await res.json();
+                                                            if (data.directUrl) updateTransportLink(index, 'logo', data.directUrl);
+                                                        } catch (err) { console.error(err); }
+                                                    }}
+                                                />
+                                            </label>
                                         </div>
                                     </div>
 
@@ -476,7 +566,7 @@ export default function Settings() {
                             <button
                                 onClick={handleSaveTransport}
                                 disabled={loading}
-                                className="bg-green-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-green-700 transition-all flex items-center gap-2 disabled:opacity-50 shadow-lg shadow-green-600/20"
+                                className="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-blue-700 transition-all flex items-center gap-2 disabled:opacity-50 shadow-lg shadow-blue-600/20"
                             >
                                 <Save size={18} />
                                 {loading ? 'Menyimpan...' : 'Simpan Transport Links'}
@@ -512,7 +602,7 @@ export default function Settings() {
                                             name="imgType"
                                             checked={imageInputType === 'url'}
                                             onChange={() => setImageInputType('url')}
-                                            className="accent-green-600"
+                                            className="accent-blue-600"
                                         />
                                         <span className="text-sm">Link URL</span>
                                     </label>
@@ -522,7 +612,7 @@ export default function Settings() {
                                             name="imgType"
                                             checked={imageInputType === 'upload'}
                                             onChange={() => setImageInputType('upload')}
-                                            className="accent-green-600"
+                                            className="accent-blue-600"
                                         />
                                         <span className="text-sm">Upload Gambar</span>
                                     </label>
@@ -546,7 +636,7 @@ export default function Settings() {
                                             onChange={handleFileUpload}
                                         />
                                         <label htmlFor="fileUpload" className="cursor-pointer flex flex-col items-center gap-2">
-                                            <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center text-green-600">
+                                            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600">
                                                 <Upload size={20} />
                                             </div>
                                             <span className="text-sm text-gray-600 font-medium">Klik untuk upload atau ambil foto</span>
@@ -575,7 +665,7 @@ export default function Settings() {
                                         <label className="block text-sm font-medium text-gray-700 mb-2">Hari Buka</label>
                                         <div className="flex flex-wrap gap-2">
                                             {['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'].map((day, idx) => (
-                                                <label key={day} className={`cursor-pointer px-3 py-1.5 rounded-lg border text-sm transition-all ${vendorProfile.schedule?.days?.includes(idx) ? 'bg-green-600 text-white border-green-600' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}>
+                                                <label key={day} className={`cursor-pointer px-3 py-1.5 rounded-lg border text-sm transition-all ${vendorProfile.schedule?.days?.includes(idx) ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}>
                                                     <input
                                                         type="checkbox"
                                                         className="hidden"
@@ -619,7 +709,7 @@ export default function Settings() {
                                         <input
                                             type="checkbox"
                                             id="holidayClosed"
-                                            className="w-4 h-4 text-green-600 rounded"
+                                            className="w-4 h-4 text-blue-600 rounded"
                                             checked={vendorProfile.schedule?.holidayClosed || false}
                                             onChange={e => setVendorProfile({ ...vendorProfile, schedule: { ...(vendorProfile.schedule || {}), holidayClosed: e.target.checked } })}
                                         />
@@ -652,7 +742,7 @@ export default function Settings() {
                                 <button
                                     onClick={handleSaveVendor}
                                     disabled={loading}
-                                    className="bg-green-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-green-700 transition-all flex items-center gap-2 disabled:opacity-50"
+                                    className="bg-blue-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-blue-700 transition-all flex items-center gap-2 disabled:opacity-50"
                                 >
                                     <Save size={18} />
                                     Simpan Profil
@@ -666,14 +756,31 @@ export default function Settings() {
                 {activeTab === 'general' && (
                     <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 max-w-3xl animate-fade-in">
                         <h2 className="font-bold text-lg mb-6 flex items-center gap-2">
-                            Konfigurasi Footer
+                            Pengaturan Umum & Branding
                         </h2>
+
+                        {/* Logo Section */}
+                        <div className="mb-8 pb-8 border-b border-gray-100">
+                            <h3 className="font-bold text-gray-800 mb-2">Logo Website</h3>
+                            <p className="text-sm text-gray-500 mb-4">Logo akan ditampilkan di header homepage. Ukuran yang direkomendasikan: 48x48px atau rasio 1:1</p>
+                            <ImageUploader
+                                value={settings.app_logo}
+                                onChange={(url) => setSettings({ ...settings, app_logo: url })}
+                                category="logo"
+                                placeholder="Upload logo atau masukkan URL"
+                            />
+                        </div>
+
+                        {/* Footer Configuration */}
+                        <h3 className="font-bold text-gray-800 mb-4">
+                            Konfigurasi Footer
+                        </h3>
 
                         <div className="mb-6">
                             <label className="block text-sm font-medium text-gray-700 mb-2">Teks Copyright</label>
                             <input
                                 type="text"
-                                className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-green-500 outline-none transition-shadow"
+                                className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 outline-none transition-shadow"
                                 value={settings.footer_text}
                                 onChange={(e) => setSettings({ ...settings, footer_text: e.target.value })}
                                 placeholder="Contoh: © 2024 UMKM Radar. All rights reserved."
@@ -687,14 +794,14 @@ export default function Settings() {
                                     <div key={index} className="flex gap-3">
                                         <input
                                             type="text"
-                                            className="flex-1 border border-gray-300 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-green-500 outline-none"
+                                            className="flex-1 border border-gray-300 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                                             value={link.label}
                                             onChange={(e) => updateLink(index, 'label', e.target.value)}
                                             placeholder="Label Link"
                                         />
                                         <input
                                             type="text"
-                                            className="flex-[2] border border-gray-300 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-green-500 outline-none"
+                                            className="flex-[2] border border-gray-300 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                                             value={link.url}
                                             onChange={(e) => updateLink(index, 'url', e.target.value)}
                                             placeholder="URL (https://...)"
@@ -710,7 +817,7 @@ export default function Settings() {
                             </div>
                             <button
                                 onClick={addLink}
-                                className="text-sm text-green-700 font-bold bg-green-50 px-4 py-2 rounded-xl mt-3 hover:bg-green-100 transition-colors"
+                                className="text-sm text-blue-700 font-bold bg-blue-50 px-4 py-2 rounded-xl mt-3 hover:bg-blue-100 transition-colors"
                             >
                                 + Tambah Link Baru
                             </button>
@@ -720,7 +827,7 @@ export default function Settings() {
                             <button
                                 onClick={handleSaveGeneral}
                                 disabled={loading}
-                                className="bg-green-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-green-700 transition-all flex items-center gap-2 disabled:opacity-50 shadow-lg shadow-green-600/20"
+                                className="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-blue-700 transition-all flex items-center gap-2 disabled:opacity-50 shadow-lg shadow-blue-600/20"
                             >
                                 <Save size={18} />
                                 {loading ? 'Menyimpan...' : 'Simpan Perubahan'}
@@ -746,7 +853,7 @@ export default function Settings() {
                                     <button
                                         key={page.id}
                                         onClick={() => setSelectedPage(page.id)}
-                                        className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-colors ${selectedPage === page.id ? 'bg-green-50 text-green-700 border border-green-200' : 'text-gray-600 hover:bg-gray-50 border border-transparent'}`}
+                                        className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-colors ${selectedPage === page.id ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'text-gray-600 hover:bg-gray-50 border border-transparent'}`}
                                     >
                                         {page.label}
                                     </button>
@@ -756,7 +863,7 @@ export default function Settings() {
                             <div className="flex-1">
                                 <label className="block text-sm font-medium text-gray-700 mb-2">Konten Halaman</label>
                                 <textarea
-                                    className="w-full h-96 border border-gray-300 rounded-xl p-4 focus:ring-2 focus:ring-green-500 outline-none font-mono text-sm leading-relaxed resize-none"
+                                    className="w-full h-96 border border-gray-300 rounded-xl p-4 focus:ring-2 focus:ring-blue-500 outline-none font-mono text-sm leading-relaxed resize-none"
                                     value={pages[selectedPage]}
                                     onChange={(e) => setPages({ ...pages, [selectedPage]: e.target.value })}
                                     placeholder="Tulis konten halaman di sini... (Mendukung teks biasa)"
@@ -775,7 +882,7 @@ export default function Settings() {
                                     <button
                                         onClick={handleSavePages}
                                         disabled={loading}
-                                        className="bg-green-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-green-700 transition-all flex items-center gap-2 disabled:opacity-50 shadow-lg shadow-green-600/20"
+                                        className="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-blue-700 transition-all flex items-center gap-2 disabled:opacity-50 shadow-lg shadow-blue-600/20"
                                     >
                                         <Save size={18} />
                                         Simpan Halaman

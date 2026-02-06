@@ -40,6 +40,7 @@ export default function Home({ vendors, onSelectVendor }) {
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [storyBanners, setStoryBanners] = useState([]); // Fetched from database
     const [bannersLoading, setBannersLoading] = useState(true);
+    const [appLogo, setAppLogo] = useState(''); // Website logo from settings
 
     // Fetch banners from settings API (stored in database)
     useEffect(() => {
@@ -47,8 +48,20 @@ export default function Home({ vendors, onSelectVendor }) {
         fetch('/api/settings')
             .then(res => res.json())
             .then(data => {
+                // Set app logo
+                if (data.app_logo) {
+                    setAppLogo(data.app_logo);
+                }
+
+                // Set banners
                 if (data.homepage_banners && data.homepage_banners.length > 0) {
-                    setStoryBanners(data.homepage_banners);
+                    // Filter out banners without valid images
+                    const validBanners = data.homepage_banners.filter(b =>
+                        b.image &&
+                        !b.image.startsWith('/assets/') && // Exclude old local paths
+                        b.image.trim() !== ''
+                    );
+                    setStoryBanners(validBanners);
                 }
             })
             .catch(err => console.error("Failed to load settings", err))
@@ -144,10 +157,25 @@ export default function Home({ vendors, onSelectVendor }) {
                 <div className="flex items-center justify-between px-4 py-3 gap-4">
                     {/* MRT Logo & Station Info */}
                     <div className="flex items-center gap-3">
-                        {/* MRT Icon */}
-                        <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-blue-800 rounded-xl flex items-center justify-center">
-                            <span className="text-white text-2xl font-bold">M</span>
-                        </div>
+                        {/* MRT Logo - Dynamic or Default */}
+                        {appLogo ? (
+                            <div className="w-12 h-12 rounded-xl overflow-hidden flex items-center justify-center bg-white border border-gray-200">
+                                <img
+                                    src={appLogo}
+                                    alt="Logo"
+                                    className="w-full h-full object-contain"
+                                    onError={(e) => {
+                                        // Fallback to default icon if image fails to load
+                                        e.target.style.display = 'none';
+                                        e.target.parentElement.innerHTML = '<div class="w-12 h-12 bg-gradient-to-br from-blue-600 to-blue-800 rounded-xl flex items-center justify-center"><span class="text-white text-2xl font-bold">M</span></div>';
+                                    }}
+                                />
+                            </div>
+                        ) : (
+                            <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-blue-800 rounded-xl flex items-center justify-center">
+                                <span className="text-white text-2xl font-bold">M</span>
+                            </div>
+                        )}
                         {/* Station Name */}
                         <div className="flex flex-col">
                             <h1 className="font-display text-lg uppercase tracking-tight text-black leading-tight">
@@ -226,25 +254,43 @@ export default function Home({ vendors, onSelectVendor }) {
                             ))}
 
                             {/* Actual Banners from Database */}
-                            {!bannersLoading && storyBanners.map((story) => (
-                                <div
-                                    key={story.id}
-                                    onClick={() => setSelectedStory(story)}
-                                    className="w-[175px] h-[300px] rounded-[20px] overflow-hidden flex-shrink-0 cursor-pointer relative group"
-                                >
-                                    <img
-                                        src={story.image}
-                                        alt={story.title}
-                                        className="w-full h-full object-cover transition-transform group-hover:scale-105"
-                                    />
-                                    {/* Gradient overlay */}
-                                    <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/80" />
-                                    <div className="absolute bottom-[15px] left-[20px] right-[20px]">
-                                        <p className="text-grey-200 font-bold text-[18px] capitalize leading-normal">{story.title}</p>
-                                        <p className="text-grey-200/80 text-[14px] capitalize">{story.subtitle}</p>
+                            {!bannersLoading && storyBanners.map((story) => {
+                                const isVideo = story.image && (story.image.match(/\.(mp4|webm|mov)$/i) || story.image.includes('data:video'));
+                                return (
+                                    <div
+                                        key={story.id}
+                                        onClick={() => setSelectedStory(story)}
+                                        className="w-[175px] h-[300px] rounded-[20px] overflow-hidden flex-shrink-0 cursor-pointer relative group"
+                                    >
+                                        {isVideo ? (
+                                            <video
+                                                src={story.image}
+                                                className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                                                autoPlay
+                                                muted
+                                                loop
+                                                playsInline
+                                            />
+                                        ) : (
+                                            <img
+                                                src={story.image}
+                                                alt={story.title}
+                                                className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                                                onError={(e) => {
+                                                    e.target.style.display = 'none';
+                                                    e.target.parentElement.style.display = 'none'; // Hide the whole card if image fails
+                                                }}
+                                            />
+                                        )}
+                                        {/* Gradient overlay */}
+                                        <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/80" />
+                                        <div className="absolute bottom-[15px] left-[20px] right-[20px]">
+                                            <p className="text-grey-200 font-bold text-[18px] capitalize leading-normal">{story.title}</p>
+                                            <p className="text-grey-200/80 text-[14px] capitalize">{story.subtitle}</p>
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
 
                             {/* Empty State - No banners in database */}
                             {!bannersLoading && storyBanners.length === 0 && (
@@ -254,18 +300,6 @@ export default function Home({ vendors, onSelectVendor }) {
                                 </div>
                             )}
 
-                            {/* Placeholder banners (only show if there are some banners) */}
-                            {!bannersLoading && storyBanners.length > 0 && storyBanners.length < 5 && [1, 2].slice(0, 5 - storyBanners.length).map((i) => (
-                                <div
-                                    key={`placeholder-${i}`}
-                                    className="w-[175px] h-[300px] rounded-[20px] bg-grey-200 flex-shrink-0 flex items-center justify-center"
-                                >
-                                    <svg className="w-8 h-8 text-grey-400 opacity-50" fill="none" viewBox="0 0 80 80">
-                                        <path d="M13.33 60L26.67 43.33L36.67 53.33L53.33 30L66.67 50V60H13.33Z" fill="currentColor" />
-                                        <circle cx="26.67" cy="26.67" r="6.67" fill="currentColor" />
-                                    </svg>
-                                </div>
-                            ))}
                         </div>
                     </div>
 

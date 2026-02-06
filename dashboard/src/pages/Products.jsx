@@ -124,7 +124,7 @@ export default function Products() {
                     </div>
                     <button
                         onClick={() => { resetForm(); setShowModal(true); }}
-                        className="bg-green-700 text-white px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-green-800"
+                        className="bg-blue-700 text-white px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-blue-800"
                     >
                         <Plus size={18} /> Tambah Produk
                     </button>
@@ -144,7 +144,7 @@ export default function Products() {
                             </div>
                             <div className="p-4">
                                 <div className="flex justify-between items-start mb-2">
-                                    <span className="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded-lg uppercase">{product.category}</span>
+                                    <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-lg uppercase">{product.category}</span>
                                     <div className="flex gap-1">
                                         <button onClick={() => openEdit(product)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg"><Edit2 size={16} /></button>
                                         <button onClick={() => handleDelete(product.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg"><Trash2 size={16} /></button>
@@ -212,7 +212,7 @@ export default function Products() {
 
                                 <div className="flex justify-end gap-3 mt-6">
                                     <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Batal</button>
-                                    <button type="submit" className="px-6 py-2 bg-green-700 text-white rounded-lg hover:bg-green-800 font-medium">Simpan</button>
+                                    <button type="submit" className="px-6 py-2 bg-blue-700 text-white rounded-lg hover:bg-blue-800 font-medium">Simpan</button>
                                 </div>
                             </form>
                         </div>

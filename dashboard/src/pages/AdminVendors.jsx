@@ -88,7 +88,7 @@ export default function AdminVendors() {
                     <button
                         data-testid="add-vendor-btn"
                         onClick={() => setIsModalOpen(true)}
-                        className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-xl hover:bg-green-700 shadow-lg shadow-green-600/20 transition-all font-bold text-sm"
+                        className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-600/20 transition-all font-bold text-sm"
                     >
                         <Plus size={18} />
                         Tambah Mitra
@@ -117,7 +117,7 @@ export default function AdminVendors() {
                             <input
                                 type="text"
                                 placeholder="Cari mitra / lokasi..."
-                                className="pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 w-64"
+                                className="pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-64"
                                 value={searchTerm}
                                 onChange={e => setSearchTerm(e.target.value)}
                             />
@@ -149,7 +149,7 @@ export default function AdminVendors() {
                                             <div className="text-xs text-gray-500">{vendor.whatsapp}</div>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-md font-bold">
+                                            <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-md font-bold">
                                                 {vendor.category}
                                             </span>
                                         </td>
@@ -190,7 +190,7 @@ export default function AdminVendors() {
                                     id="name"
                                     data-testid="input-name"
                                     required
-                                    className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-green-500 outline-none"
+                                    className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
                                     value={formData.name}
                                     onChange={e => setFormData({ ...formData, name: e.target.value })}
                                     placeholder="Contoh: UMKM Radar Dukuh Atas"
@@ -203,7 +203,7 @@ export default function AdminVendors() {
                                     <select
                                         id="category"
                                         data-testid="input-category"
-                                        className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-green-500 outline-none"
+                                        className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
                                         value={formData.category}
                                         onChange={e => setFormData({ ...formData, category: e.target.value })}
                                     >
@@ -219,7 +219,7 @@ export default function AdminVendors() {
                                         id="whatsapp"
                                         data-testid="input-whatsapp"
                                         required
-                                        className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-green-500 outline-none"
+                                        className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
                                         value={formData.whatsapp}
                                         onChange={e => setFormData({ ...formData, whatsapp: e.target.value })}
                                         placeholder="0812..."
@@ -233,7 +233,7 @@ export default function AdminVendors() {
                                     id="address"
                                     data-testid="input-address"
                                     required
-                                    className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-green-500 outline-none"
+                                    className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
                                     rows={2}
                                     value={formData.address}
                                     onChange={e => setFormData({ ...formData, address: e.target.value })}
@@ -248,7 +248,7 @@ export default function AdminVendors() {
                                 <input
                                     id="locationTags"
                                     data-testid="input-locationTags"
-                                    className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-green-500 outline-none"
+                                    className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
                                     value={formData.locationTags}
                                     onChange={e => setFormData({ ...formData, locationTags: e.target.value })}
                                     placeholder="Masukkan landmark terdekat..."
@@ -274,7 +274,7 @@ export default function AdminVendors() {
                                         type="number"
                                         step="any"
                                         required
-                                        className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-green-500 outline-none"
+                                        className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
                                         value={formData.lat}
                                         onChange={e => setFormData({ ...formData, lat: e.target.value })}
                                         placeholder="-6.2000"
@@ -288,7 +288,7 @@ export default function AdminVendors() {
                                         type="number"
                                         step="any"
                                         required
-                                        className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-green-500 outline-none"
+                                        className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
                                         value={formData.lng}
                                         onChange={e => setFormData({ ...formData, lng: e.target.value })}
                                         placeholder="106.8..."
@@ -306,7 +306,7 @@ export default function AdminVendors() {
                                 </button>
                                 <button
                                     type="submit"
-                                    className="flex-1 px-4 py-2 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 shadow-lg shadow-green-600/20"
+                                    className="flex-1 px-4 py-2 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-600/20"
                                 >
                                     Simpan Mitra
                                 </button>

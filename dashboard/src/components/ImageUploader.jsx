@@ -1,10 +1,10 @@
 import React, { useState, useRef } from 'react';
-import { Upload, X, Loader2, Image as ImageIcon } from 'lucide-react';
+import { Upload, X, Loader2, Image as ImageIcon, Video } from 'lucide-react';
 
 /**
- * ImageUploader - Reusable component for uploading images to MinIO
- * @param {string} value - Current image URL
- * @param {function} onChange - Callback when image URL changes
+ * ImageUploader - Reusable component for uploading images/videos to MinIO
+ * @param {string} value - Current asset URL
+ * @param {function} onChange - Callback when asset URL changes
  * @param {string} category - Asset category (product, logo, banner)
  * @param {string} placeholder - Placeholder text
  */
@@ -12,25 +12,31 @@ export default function ImageUploader({
     value = '',
     onChange,
     category = 'product',
-    placeholder = 'Upload gambar atau masukkan URL'
+    placeholder = 'Upload gambar/video atau masukkan URL'
 }) {
     const [uploading, setUploading] = useState(false);
     const [dragActive, setDragActive] = useState(false);
     const [error, setError] = useState(null);
     const fileInputRef = useRef(null);
 
+    const isVideo = (url) => {
+        if (!url) return false;
+        return url.match(/\.(mp4|webm|mov)$/i) || url.includes('data:video');
+    };
+
     const handleUpload = async (file) => {
         if (!file) return;
 
-        // Validate file type
-        if (!file.type.startsWith('image/')) {
-            setError('File harus berupa gambar');
+        // Validate file type (image or video)
+        if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
+            setError('File harus berupa gambar atau video');
             return;
         }
 
-        // Validate file size (max 5MB)
-        if (file.size > 5 * 1024 * 1024) {
-            setError('Ukuran file maksimal 5MB');
+        // Validate file size (max 50MB for video, 5MB for image)
+        const maxSize = file.type.startsWith('video/') ? 50 * 1024 * 1024 : 5 * 1024 * 1024;
+        if (file.size > maxSize) {
+            setError(`Ukuran file maksimal ${file.type.startsWith('video/') ? '50MB' : '5MB'}`);
             return;
         }
 
@@ -51,11 +57,11 @@ export default function ImageUploader({
             if (!res.ok) throw new Error('Upload failed');
 
             const data = await res.json();
-            // Use direct MinIO URL for the image
+            // Use direct MinIO URL for the asset
             onChange(data.directUrl);
         } catch (err) {
             console.error('Upload error:', err);
-            setError('Gagal upload gambar. Coba lagi.');
+            setError('Gagal upload file. Coba lagi.');
         } finally {
             setUploading(false);
         }
@@ -95,29 +101,42 @@ export default function ImageUploader({
         <div className="space-y-2">
             {/* Preview */}
             {value && (
-                <div className="relative w-full h-40 bg-gray-100 rounded-lg overflow-hidden group">
-                    <img
-                        src={value}
-                        alt="Preview"
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                            e.target.style.display = 'none';
-                        }}
-                    />
+                <div className="relative w-full h-40 bg-gray-100 rounded-lg overflow-hidden group border border-gray-200">
+                    {isVideo(value) ? (
+                        <video
+                            src={value}
+                            className="w-full h-full object-cover"
+                            controls
+                            muted
+                        />
+                    ) : (
+                        <img
+                            src={value}
+                            alt="Preview"
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                                e.target.style.display = 'none';
+                            }}
+                        />
+                    )}
                     <button
                         type="button"
                         onClick={handleRemove}
-                        className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10"
                     >
                         <X size={14} />
                     </button>
+                    {/* File Type Indicator */}
+                    <div className="absolute bottom-2 right-2 p-1 bg-black/50 text-white rounded text-xs opacity-70">
+                        {isVideo(value) ? <Video size={12} /> : <ImageIcon size={12} />}
+                    </div>
                 </div>
             )}
 
             {/* Upload Area */}
             {!value && (
                 <div
-                    className={`border-2 border-dashed rounded-lg p-4 text-center transition-colors cursor-pointer ${dragActive ? 'border-green-500 bg-green-50' : 'border-gray-300 hover:border-gray-400'
+                    className={`border-2 border-dashed rounded-lg p-4 text-center transition-colors cursor-pointer ${dragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'
                         }`}
                     onDragEnter={handleDrag}
                     onDragLeave={handleDrag}
@@ -128,22 +147,22 @@ export default function ImageUploader({
                     <input
                         ref={fileInputRef}
                         type="file"
-                        accept="image/*"
+                        accept="image/*,video/mp4,video/webm"
                         className="hidden"
                         onChange={handleFileSelect}
                     />
                     <div className="flex flex-col items-center gap-2">
                         {uploading ? (
-                            <Loader2 className="w-8 h-8 text-green-600 animate-spin" />
+                            <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
                         ) : (
                             <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
                                 <Upload className="w-5 h-5 text-gray-400" />
                             </div>
                         )}
                         <p className="text-sm text-gray-500">
-                            {uploading ? 'Mengupload...' : 'Klik atau drag gambar di sini'}
+                            {uploading ? 'Mengupload...' : 'Klik atau drag file di sini'}
                         </p>
-                        <p className="text-xs text-gray-400">PNG, JPG hingga 5MB</p>
+                        <p className="text-xs text-gray-400">Gambar (5MB) atau Video (50MB)</p>
                     </div>
                 </div>
             )}
@@ -157,15 +176,6 @@ export default function ImageUploader({
                     placeholder={placeholder}
                     className="flex-1 p-2 border rounded-lg text-sm"
                 />
-                {value && (
-                    <button
-                        type="button"
-                        onClick={handleRemove}
-                        className="px-3 py-2 text-red-500 hover:bg-red-50 rounded-lg"
-                    >
-                        <X size={18} />
-                    </button>
-                )}
             </div>
 
             {/* Error Message */}

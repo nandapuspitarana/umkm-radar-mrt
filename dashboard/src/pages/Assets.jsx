@@ -128,13 +128,13 @@ export default function Assets() {
                     <div className="flex gap-2">
                         <button
                             onClick={() => setViewMode('grid')}
-                            className={`p-2 rounded-lg ${viewMode === 'grid' ? 'bg-green-100 text-green-600' : 'bg-gray-100'}`}
+                            className={`p-2 rounded-lg ${viewMode === 'grid' ? 'bg-blue-100 text-blue-600' : 'bg-gray-100'}`}
                         >
                             <Grid size={20} />
                         </button>
                         <button
                             onClick={() => setViewMode('list')}
-                            className={`p-2 rounded-lg ${viewMode === 'list' ? 'bg-green-100 text-green-600' : 'bg-gray-100'}`}
+                            className={`p-2 rounded-lg ${viewMode === 'list' ? 'bg-blue-100 text-blue-600' : 'bg-gray-100'}`}
                         >
                             <List size={20} />
                         </button>
@@ -143,18 +143,18 @@ export default function Assets() {
 
                 {/* Upload Area */}
                 <div
-                    className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${dragActive ? 'border-green-500 bg-green-50' : 'border-gray-300 bg-gray-50'}`}
+                    className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${dragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 bg-gray-50'}`}
                     onDragEnter={handleDrag}
                     onDragLeave={handleDrag}
                     onDragOver={handleDrag}
                     onDrop={handleDrop}
                 >
                     <div className="flex flex-col items-center gap-4">
-                        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+                        <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
                             {uploading ? (
-                                <Loader2 className="w-8 h-8 text-green-600 animate-spin" />
+                                <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
                             ) : (
-                                <Upload className="w-8 h-8 text-green-600" />
+                                <Upload className="w-8 h-8 text-blue-600" />
                             )}
                         </div>
                         <div>
@@ -174,7 +174,7 @@ export default function Assets() {
                                 <option value="product">Produk</option>
                                 <option value="general">Umum</option>
                             </select>
-                            <label className="px-4 py-2 bg-green-600 text-white rounded-lg cursor-pointer hover:bg-green-700 flex items-center gap-2">
+                            <label className="px-4 py-2 bg-blue-600 text-white rounded-lg cursor-pointer hover:bg-blue-700 flex items-center gap-2">
                                 <Upload size={18} />
                                 Upload File
                                 <input
@@ -196,7 +196,7 @@ export default function Assets() {
                         <button
                             key={cat.value}
                             onClick={() => setSelectedCategory(cat.value)}
-                            className={`px-3 py-1 rounded-full text-sm ${selectedCategory === cat.value ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                            className={`px-3 py-1 rounded-full text-sm ${selectedCategory === cat.value ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
                         >
                             {cat.label}
                         </button>
@@ -206,7 +206,7 @@ export default function Assets() {
                 {/* Assets Grid/List */}
                 {loading ? (
                     <div className="flex items-center justify-center py-12">
-                        <Loader2 className="w-8 h-8 animate-spin text-green-600" />
+                        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
                     </div>
                 ) : assets.length === 0 ? (
                     <div className="text-center py-12 text-gray-500">
@@ -218,7 +218,7 @@ export default function Assets() {
                         {assets.map((asset) => (
                             <div
                                 key={asset.id}
-                                className={`bg-white rounded-xl border overflow-hidden cursor-pointer hover:shadow-lg transition-shadow ${selectedAsset?.id === asset.id ? 'ring-2 ring-green-500' : ''}`}
+                                className={`bg-white rounded-xl border overflow-hidden cursor-pointer hover:shadow-lg transition-shadow ${selectedAsset?.id === asset.id ? 'ring-2 ring-blue-500' : ''}`}
                                 onClick={() => setSelectedAsset(asset)}
                             >
                                 <div className="aspect-square bg-gray-100 relative">
@@ -274,7 +274,7 @@ export default function Assets() {
                                                     className="p-1.5 hover:bg-gray-100 rounded"
                                                     title="Copy URL"
                                                 >
-                                                    {copiedId === asset.id ? <Check size={16} className="text-green-600" /> : <Copy size={16} />}
+                                                    {copiedId === asset.id ? <Check size={16} className="text-blue-600" /> : <Copy size={16} />}
                                                 </button>
                                                 <button
                                                     onClick={() => handleDelete(asset.id)}
@@ -334,7 +334,7 @@ export default function Assets() {
                                             />
                                             <button
                                                 onClick={() => copyToClipboard(selectedAsset.directUrl, 'direct')}
-                                                className="px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                                                className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
                                             >
                                                 {copiedId === 'direct' ? <Check size={18} /> : <Copy size={18} />}
                                             </button>
@@ -351,7 +351,7 @@ export default function Assets() {
                                             />
                                             <button
                                                 onClick={() => copyToClipboard(selectedAsset.imgproxyUrl, 'imgproxy')}
-                                                className="px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                                                className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
                                             >
                                                 {copiedId === 'imgproxy' ? <Check size={18} /> : <Copy size={18} />}
                                             </button>
@@ -368,7 +368,7 @@ export default function Assets() {
                                             />
                                             <button
                                                 onClick={() => copyToClipboard(selectedAsset.thumbnailUrl, 'thumb')}
-                                                className="px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                                                className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
                                             >
                                                 {copiedId === 'thumb' ? <Check size={18} /> : <Copy size={18} />}
                                             </button>

@@ -38,7 +38,7 @@ export default function Login() {
         <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
             <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
                 <div className="flex flex-col items-center mb-8">
-                    <div className="w-12 h-12 bg-green-100 text-green-700 rounded-xl flex items-center justify-center mb-3">
+                    <div className="w-12 h-12 bg-blue-100 text-blue-700 rounded-xl flex items-center justify-center mb-3">
                         <Store size={24} />
                     </div>
                     <h1 className="text-2xl font-serif font-bold text-gray-800">UMKM Radar Dashboard</h1>
@@ -57,14 +57,14 @@ export default function Login() {
                         <div className="flex bg-gray-100 p-1 rounded-lg">
                             <button
                                 type="button"
-                                className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${role === 'vendor' ? 'bg-white shadow text-green-700' : 'text-gray-500'}`}
+                                className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${role === 'vendor' ? 'bg-white shadow text-blue-700' : 'text-gray-500'}`}
                                 onClick={() => setRole('vendor')}
                             >
                                 Mitra Penjual
                             </button>
                             <button
                                 type="button"
-                                className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${role === 'admin' ? 'bg-white shadow text-green-700' : 'text-gray-500'}`}
+                                className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${role === 'admin' ? 'bg-white shadow text-blue-700' : 'text-gray-500'}`}
                                 onClick={() => setRole('admin')}
                             >
                                 Admin
@@ -76,7 +76,7 @@ export default function Login() {
                         <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
                         <input
                             type="email"
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:outline-none"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
                             placeholder="nama@toko.com"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
@@ -88,7 +88,7 @@ export default function Login() {
                         <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
                         <input
                             type="password"
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:outline-none"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
                             placeholder="••••••••"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
@@ -98,7 +98,7 @@ export default function Login() {
 
                     <button
                         type="submit"
-                        className="w-full bg-green-700 hover:bg-green-800 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2"
+                        className="w-full bg-blue-700 hover:bg-blue-800 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2"
                     >
                         <KeyRound size={18} />
                         Masuk

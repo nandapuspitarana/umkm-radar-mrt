@@ -155,7 +155,7 @@ export default function Dashboard() {
                         {auth.role === 'vendor' && (
                             <button
                                 onClick={() => setShowPickupModal(true)}
-                                className="flex items-center gap-2 bg-green-700 text-white px-4 py-2 rounded-xl hover:bg-green-800 transition-shadow shadow-lg shadow-green-700/20"
+                                className="flex items-center gap-2 bg-blue-700 text-white px-4 py-2 rounded-xl hover:bg-blue-800 transition-shadow shadow-lg shadow-blue-700/20"
                             >
                                 <QrCode size={18} />
                                 Scan Pickup
@@ -170,7 +170,7 @@ export default function Dashboard() {
                     <StatCard label="Menunggu" value={stats.pending} icon={<Clock className="text-orange-500" />} />
                     <StatCard label="Disiapkan" value={stats.processing} icon={<Package className="text-blue-500" />} />
                     <StatCard label="Siap Diambil" value={stats.ready} icon={<CheckCircle className="text-yellow-500" />} />
-                    <StatCard label="Selesai" value={stats.completed} icon={<CheckCircle className="text-green-500" />} />
+                    <StatCard label="Selesai" value={stats.completed} icon={<CheckCircle className="text-blue-500" />} />
                 </div>
 
                 {/* Orders Section */}
@@ -182,7 +182,7 @@ export default function Dashboard() {
                                 <button
                                     key={f}
                                     onClick={() => setFilter(f)}
-                                    className={`px-3 py-1 rounded-lg text-sm font-medium capitalize transition-colors ${filter === f ? 'bg-green-100 text-green-700' : 'text-gray-500 hover:bg-gray-50'}`}
+                                    className={`px-3 py-1 rounded-lg text-sm font-medium capitalize transition-colors ${filter === f ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:bg-gray-50'}`}
                                 >
                                     {f === 'processing' ? 'Disiapkan' : f === 'ready' ? 'Siap Diambil' : f === 'cancelled' ? 'Dibatalkan' : f}
                                 </button>
@@ -267,7 +267,7 @@ export default function Dashboard() {
                         </button>
 
                         <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                            <QrCode className="text-green-600" />
+                            <QrCode className="text-blue-600" />
                             Verifikasi Pesanan
                         </h2>
 
@@ -288,13 +288,13 @@ export default function Dashboard() {
                                     type="text"
                                     maxLength={6}
                                     placeholder="Contoh: 128392"
-                                    className="flex-1 border border-gray-300 rounded-lg px-4 py-2 text-center font-mono text-lg tracking-widest focus:ring-2 focus:ring-green-500 outline-none uppercase"
+                                    className="flex-1 border border-gray-300 rounded-lg px-4 py-2 text-center font-mono text-lg tracking-widest focus:ring-2 focus:ring-blue-500 outline-none uppercase"
                                     value={pickupInput}
                                     onChange={(e) => setPickupInput(e.target.value.replace(/[^0-9]/g, ''))}
                                 />
                                 <button
                                     onClick={handleScanSubmit}
-                                    className="bg-green-600 text-white px-4 rounded-lg font-bold hover:bg-green-700"
+                                    className="bg-blue-600 text-white px-4 rounded-lg font-bold hover:bg-blue-700"
                                 >
                                     Cek
                                 </button>
@@ -342,7 +342,7 @@ function StatusBadge({ status }) {
         pending: "bg-orange-100 text-orange-700",
         processing: "bg-blue-100 text-blue-700",
         ready: "bg-yellow-100 text-yellow-700",
-        completed: "bg-green-100 text-green-700",
+        completed: "bg-blue-100 text-blue-700",
         cancelled: "bg-red-100 text-red-700"
     };
 
@@ -356,7 +356,7 @@ function StatusBadge({ status }) {
 function ActionButton({ label, color, onClick }) {
     const colors = {
         blue: "bg-blue-600 hover:bg-blue-700",
-        green: "bg-green-600 hover:bg-green-700",
+        green: "bg-blue-600 hover:bg-blue-700",
         yellow: "bg-yellow-500 hover:bg-yellow-600",
         red: "bg-red-600 hover:bg-red-700"
     };
@@ -387,7 +387,7 @@ function OrderDetailModal({ order, onClose, onStatusUpdate }) {
         pending: "bg-orange-100 text-orange-700",
         processing: "bg-blue-100 text-blue-700",
         ready: "bg-yellow-100 text-yellow-700",
-        completed: "bg-green-100 text-green-700",
+        completed: "bg-blue-100 text-blue-700",
         cancelled: "bg-red-100 text-red-700"
     };
 
@@ -441,7 +441,7 @@ function OrderDetailModal({ order, onClose, onStatusUpdate }) {
                     {/* Order Items */}
                     <div>
                         <h3 className="text-sm font-bold text-gray-700 uppercase mb-3 flex items-center gap-2">
-                            <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                            <span className="w-2 h-2 rounded-full bg-blue-500"></span>
                             Daftar Barang ({order.items.length})
                         </h3>
                         <div className="border rounded-xl overflow-hidden mb-4">
@@ -498,11 +498,11 @@ function OrderDetailModal({ order, onClose, onStatusUpdate }) {
                             </div>
                             <div className="flex justify-between mb-2 text-sm">
                                 <span className="text-gray-500">Diskon</span>
-                                <span className="font-medium text-green-600">- {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(order.discount || 0)}</span>
+                                <span className="font-medium text-blue-600">- {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(order.discount || 0)}</span>
                             </div>
                             <div className="border-t pt-2 mt-2 flex justify-between items-center">
                                 <span className="font-bold text-gray-900">Total Akhir</span>
-                                <span className="font-bold text-xl text-green-700">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(order.finalTotal || order.total)}</span>
+                                <span className="font-bold text-xl text-blue-700">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(order.finalTotal || order.total)}</span>
                             </div>
                         </div>
                     </div>
@@ -531,7 +531,7 @@ function OrderDetailModal({ order, onClose, onStatusUpdate }) {
                     {order.status === 'ready' && (
                         <button
                             onClick={() => { onStatusUpdate(order.id, 'completed'); onClose(); }}
-                            className="px-6 py-2 rounded-xl bg-green-600 text-white font-bold hover:bg-green-700 shadow-lg shadow-green-600/20"
+                            className="px-6 py-2 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 shadow-lg shadow-blue-600/20"
                         >
                             Selesai (Sudah Diambil)
                         </button>

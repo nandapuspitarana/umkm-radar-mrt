@@ -25,8 +25,8 @@ export default function Sidebar() {
     return (
         <aside className="w-64 bg-white border-r border-gray-200 flex flex-col fixed h-full z-10">
             <div className="p-6 border-b border-gray-100 flex items-center gap-3">
-                <div className="w-8 h-8 bg-green-100 text-green-700 rounded-lg flex items-center justify-center font-bold">G</div>
-                <span className="font-serif font-bold text-xl text-green-800">UMKM Radar</span>
+                <div className="w-8 h-8 bg-blue-100 text-blue-700 rounded-lg flex items-center justify-center font-bold">G</div>
+                <span className="font-serif font-bold text-xl text-blue-800">UMKM Radar</span>
             </div>
 
             <nav className="flex-1 p-4 space-y-2">
@@ -92,7 +92,7 @@ export default function Sidebar() {
                         </div>
                     </div>
                     <div className="flex-1 overflow-hidden">
-                        <p className="text-sm font-medium truncate text-gray-700 group-hover:text-green-700 transition-colors">{auth.name || auth.email}</p>
+                        <p className="text-sm font-medium truncate text-gray-700 group-hover:text-blue-700 transition-colors">{auth.name || auth.email}</p>
                         <p className="text-xs text-gray-500 capitalize">{auth.role}</p>
                     </div>
                 </button>
@@ -107,7 +107,7 @@ export default function Sidebar() {
 
 function SidebarItem({ icon, label, active, badge, onClick }) {
     return (
-        <button onClick={onClick} className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all ${active ? 'bg-green-50 text-green-700' : 'text-gray-600 hover:bg-gray-50'}`}>
+        <button onClick={onClick} className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all ${active ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50'}`}>
             <div className="flex items-center gap-3">
                 {icon}
                 <span className="font-medium text-sm">{label}</span>
