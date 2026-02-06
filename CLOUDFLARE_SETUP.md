@@ -44,7 +44,7 @@ Untuk setup yang lebih stabil dan manajemen via dashboard Cloudflare:
 2.  Masuk ke menu **Networks** > **Tunnels**.
 3.  Klik **Create a tunnel**.
 4.  Pilih **Cloudflared** sebagai connector type.
-5.  Beri nama tunnel (misal: `grocries-client`).
+5.  Beri nama tunnel (misal: `umkm-radar-mrt-client`).
 6.  Anda akan melihat instruksi "Install and run a connector". Pilih **Windows**.
 
 ### Langkah B: Jalankan Connector
@@ -56,13 +56,13 @@ Untuk setup yang lebih stabil dan manajemen via dashboard Cloudflare:
 9.  Setelah connector status "Connected", klik **Next** di dashboard.
 10. Masuk ke tab **Public Hostname**.
 11. Isi form:
-    *   **Subdomain**: `grocries` (atau nama lain yang diinginkan).
+    *   **Subdomain**: `umkm-radar-mrt` (atau nama lain yang diinginkan).
     *   **Domain**: pilih domain Anda yang terdaftar di Cloudflare.
     *   **Service**: pilih `HTTP`.
     *   **URL**: isi `localhost:8082`.
 12. Klik **Save Tunnel**.
 
-Selesai! Aplikasi Anda sekarang bisa diakses via `https://grocries.domainanda.com`.
+Selesai! Aplikasi Anda sekarang bisa diakses via `https://umkm-radar-mrt.domainanda.com`.
 
 ---
 
