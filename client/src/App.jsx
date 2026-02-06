@@ -3,6 +3,7 @@ import { Routes, Route } from 'react-router-dom';
 import Home from './pages/Home';
 import Kuliner from './pages/Kuliner';
 import Ngopi from './pages/Ngopi';
+import Atm from './pages/Atm';
 import Vendor from './pages/Vendor';
 import CartSheet from './components/CartSheet';
 import { ShoppingBag } from 'lucide-react';
@@ -278,6 +279,46 @@ export default function App() {
             />
           ) : (
             <Ngopi
+              vendors={vendors}
+              onSelectVendor={setCurrentVendor}
+            />
+          )}
+          {cart.length > 0 && !isCartOpen && (
+            <div className="fixed bottom-6 left-0 right-0 px-4 flex justify-center z-40 pointer-events-none">
+              <button
+                onClick={() => setIsCartOpen(true)}
+                className="bg-primary hover:bg-primary-dark text-white pl-4 pr-6 py-3 rounded-full shadow-xl shadow-green-900/30 flex items-center gap-3 transition-transform hover:scale-105 pointer-events-auto"
+              >
+                <div className="bg-white/20 px-2 py-0.5 rounded text-sm font-bold">
+                  {cart.reduce((a, b) => a + b.qty, 0)}
+                </div>
+                <span className="font-bold text-sm">Lihat Keranjang</span>
+                <ShoppingBag size={18} />
+              </button>
+            </div>
+          )}
+          <CartSheet
+            isOpen={isCartOpen}
+            onClose={() => setIsCartOpen(false)}
+            cart={cart}
+            vendor={currentVendor}
+            onCheckout={handleCheckout}
+          />
+          <Footer />
+        </div>
+      } />
+      <Route path="/atm" element={
+        <div className="antialiased text-gray-800">
+          {currentVendor ? (
+            <Vendor
+              vendor={currentVendor}
+              products={products}
+              onBack={() => { setCurrentVendor(null); }}
+              onAddToCart={handleAddToCart}
+              cart={cart}
+            />
+          ) : (
+            <Atm
               vendors={vendors}
               onSelectVendor={setCurrentVendor}
             />

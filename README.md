@@ -204,6 +204,7 @@ Setelah seeding, gunakan akun berikut untuk login di [Dashboard](http://localhos
 - `/` - Homepage dengan rekomendasi toko
 - `/kuliner` - Halaman kategori Kuliner (warung makan terdekat MRT)
 - `/ngopi` - Halaman kategori Ngopi (kedai kopi terdekat MRT)
+- `/atm` - Halaman kategori ATM & Minimarket (ATM, minimarket, supermarket)
 - `/about` - Tentang Kami
 - `/terms` - Syarat & Ketentuan
 - `/privacy` - Kebijakan Privasi

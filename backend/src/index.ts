@@ -907,6 +907,133 @@ app.post('/api/seed-ngopi', async (c) => {
     });
 });
 
+// Seed ATM/Minimarket/Supermarket Vendors Only (Add without reset)
+app.post('/api/seed-atm', async (c) => {
+    // Check if ATM vendors already exist
+    const existingAtm = await db.select().from(vendors).where(eq(vendors.category, 'Minimarket'));
+
+    if (existingAtm.length > 3) {  // We already have some from convenience stores
+        return c.json({ message: 'ATM vendors already seeded', count: existingAtm.length });
+    }
+
+    // ATM/Minimarket/Supermarket vendors based on Figma design
+    const atmVendors = [
+        {
+            name: "Alfamidi",
+            lat: -6.2277,
+            lng: 106.8033,
+            whatsapp: "6281234567908",
+            address: "Area Parkir Timur GBK",
+            image: "https://images.unsplash.com/photo-1604719312566-8912e9227c6a?w=400&h=400&fit=crop",
+            schedule: { days: ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"], open: "06:00", close: "21:00" },
+            status: "approved",
+            category: "Minimarket",
+            rating: 4.4,
+            locationTags: "Area GBK, MRT Senayan",
+            description: "Minimarket, Snacks, Minuman"
+        },
+        {
+            name: "Superindo",
+            lat: -6.2270,
+            lng: 106.8018,
+            whatsapp: "6281234567909",
+            address: "FX Sudirman Lt. UG",
+            image: "https://images.unsplash.com/photo-1604719312566-8912e9227c6a?w=400&h=400&fit=crop",
+            schedule: { days: ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"], open: "09:00", close: "21:00" },
+            status: "approved",
+            category: "Supermarket",
+            rating: 4.5,
+            locationTags: "FX Sudirman, MRT Senayan",
+            description: "Supermarket, Groceries, Fresh Produce"
+        },
+        {
+            name: "Transmart",
+            lat: -6.2295,
+            lng: 106.8005,
+            whatsapp: "6281234567910",
+            address: "Ratu Plaza Lt. LG",
+            image: "https://images.unsplash.com/photo-1604719312566-8912e9227c6a?w=400&h=400&fit=crop",
+            schedule: { days: ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"], open: "09:00", close: "21:00" },
+            status: "approved",
+            category: "Supermarket",
+            rating: 4.3,
+            locationTags: "Ratu Plaza, MRT Senayan",
+            description: "Hypermarket, Electronics, Home Needs"
+        },
+        {
+            name: "Hero Supermarket",
+            lat: -6.2260,
+            lng: 106.7995,
+            whatsapp: "6281234567911",
+            address: "Plaza Senayan Lt. B1",
+            image: "https://images.unsplash.com/photo-1604719312566-8912e9227c6a?w=400&h=400&fit=crop",
+            schedule: { days: ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"], open: "09:00", close: "21:00" },
+            status: "approved",
+            category: "Supermarket",
+            rating: 4.6,
+            locationTags: "Plaza Senayan, MRT Senayan",
+            description: "Premium Supermarket, Imported Goods"
+        },
+        {
+            name: "TheFoodHall",
+            lat: -6.2272,
+            lng: 106.7988,
+            whatsapp: "6281234567912",
+            address: "Senayan City Lt. LG",
+            image: "https://images.unsplash.com/photo-1604719312566-8912e9227c6a?w=400&h=400&fit=crop",
+            schedule: { days: ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"], open: "09:00", close: "21:00" },
+            status: "approved",
+            category: "Supermarket",
+            rating: 4.7,
+            locationTags: "Senayan City, MRT Senayan",
+            description: "Gourmet Food Market, Premium Products"
+        }
+    ];
+
+    // Insert vendors
+    const insertedVendors = [];
+    for (const vendor of atmVendors) {
+        const [newVendor] = await db.insert(vendors).values(vendor as any).returning();
+        insertedVendors.push(newVendor);
+    }
+
+    // Add products for supermarkets
+    const supermarketProducts = [
+        // Alfamidi
+        { vendorId: insertedVendors[0].id, name: "Onigiri Salmon", price: 12000, category: "Snack", image: "https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?w=400&h=400&fit=crop", description: "Nasi kepal isi salmon" },
+        { vendorId: insertedVendors[0].id, name: "Minuman Dingin", price: 8000, category: "Minuman", image: "https://images.unsplash.com/photo-1561758033-48d52648ae8b?w=400&h=400&fit=crop", description: "Berbagai minuman dingin" },
+        { vendorId: insertedVendors[0].id, name: "Roti Fresh", price: 15000, category: "Roti", image: "https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=400&h=400&fit=crop", description: "Roti fresh berbagai rasa" },
+
+        // Superindo
+        { vendorId: insertedVendors[1].id, name: "Buah Segar Pack", price: 35000, category: "Produce", image: "https://images.unsplash.com/photo-1610832958506-aa56368176cf?w=400&h=400&fit=crop", description: "Pack buah segar pilihan" },
+        { vendorId: insertedVendors[1].id, name: "Sayuran Organik", price: 25000, category: "Produce", image: "https://images.unsplash.com/photo-1540420773420-3366772f4999?w=400&h=400&fit=crop", description: "Sayuran organik segar" },
+
+        // Transmart
+        { vendorId: insertedVendors[2].id, name: "Daging Sapi Slice", price: 85000, category: "Meat", image: "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=400&h=400&fit=crop", description: "Daging sapi premium sliced" },
+        { vendorId: insertedVendors[2].id, name: "Seafood Pack", price: 75000, category: "Seafood", image: "https://images.unsplash.com/photo-1565680018093-ebb6aca4522f?w=400&h=400&fit=crop", description: "Aneka seafood segar" },
+
+        // Hero Supermarket  
+        { vendorId: insertedVendors[3].id, name: "Cheese Import", price: 95000, category: "Dairy", image: "https://images.unsplash.com/photo-1486297678162-eb2a19b0a32d?w=400&h=400&fit=crop", description: "Keju import premium" },
+        { vendorId: insertedVendors[3].id, name: "Wine Selection", price: 250000, category: "Beverage", image: "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=400&h=400&fit=crop", description: "Pilihan wine import" },
+
+        // TheFoodHall
+        { vendorId: insertedVendors[4].id, name: "Truffle Oil", price: 185000, category: "Gourmet", image: "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=400&h=400&fit=crop", description: "Truffle oil premium" },
+        { vendorId: insertedVendors[4].id, name: "Artisan Bread", price: 65000, category: "Bakery", image: "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400&h=400&fit=crop", description: "Roti artisan fresh baked" }
+    ];
+
+    for (const product of supermarketProducts) {
+        await db.insert(products).values(product as any);
+    }
+
+    await redis.del('vendors_list');
+
+    return c.json({
+        message: 'ATM/Minimarket vendors seeded successfully!',
+        vendors: insertedVendors.length,
+        products: supermarketProducts.length
+    });
+});
+
 
 // 6. Settings API
 app.get('/api/settings', async (c) => {
