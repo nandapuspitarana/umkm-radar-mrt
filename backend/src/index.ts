@@ -402,6 +402,133 @@ app.post('/api/seed', async (c) => {
             rating: 4.2,
             locationTags: "Dekat MRT Senayan",
             description: "Roti tawar & Isi, onigiri, Sosis, Salad buah"
+        },
+        // Ngopi/Coffee Shops based on Figma design
+        {
+            name: "Kopi Kenangan",
+            lat: -6.2274,
+            lng: 106.8020,
+            whatsapp: "6281234567899",
+            address: "FX Sudirman Lt. GF",
+            image: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=400&h=400&fit=crop",
+            schedule: { days: ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"], open: "08:00", close: "21:00" },
+            status: "approved",
+            category: "Ngopi",
+            rating: 4.7,
+            locationTags: "FX Sudirman, MRT Senayan",
+            description: "Es Kopi Kenangan, Kopi Susu, Snacks"
+        },
+        {
+            name: "Djournal Coffee",
+            lat: -6.2276,
+            lng: 106.8019,
+            whatsapp: "6281234567900",
+            address: "FX Sudirman Lt. G",
+            image: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400&h=400&fit=crop",
+            schedule: { days: ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"], open: "08:00", close: "21:00" },
+            status: "approved",
+            category: "Ngopi",
+            rating: 4.6,
+            locationTags: "FX Sudirman, MRT Senayan",
+            description: "Specialty Coffee, Latte Art, Pastries"
+        },
+        {
+            name: "Starbucks",
+            lat: -6.2279,
+            lng: 106.8023,
+            whatsapp: "6281234567901",
+            address: "FX Sudirman Lt. G",
+            image: "https://images.unsplash.com/photo-1453614512568-c4024d13c247?w=400&h=400&fit=crop",
+            schedule: { days: ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"], open: "08:00", close: "21:00" },
+            status: "approved",
+            category: "Ngopi",
+            rating: 4.5,
+            locationTags: "FX Sudirman, MRT Senayan",
+            description: "Espresso, Frappuccino, Tea, Pastries"
+        },
+        {
+            name: "Fore Coffee",
+            lat: -6.2281,
+            lng: 106.8024,
+            whatsapp: "6281234567902",
+            address: "FX Sudirman Lt. G",
+            image: "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=400&h=400&fit=crop",
+            schedule: { days: ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"], open: "08:00", close: "21:00" },
+            status: "approved",
+            category: "Ngopi",
+            rating: 4.6,
+            locationTags: "FX Sudirman, MRT Senayan",
+            description: "Kopi Lokal, Es Kopi Susu, Single Origin"
+        },
+        {
+            name: "Anomali Coffee",
+            lat: -6.2340,
+            lng: 106.8010,
+            whatsapp: "6281234567903",
+            address: "Jl. Senopati Raya 115",
+            image: "https://images.unsplash.com/photo-1442512595331-e89e73853f31?w=400&h=400&fit=crop",
+            schedule: { days: ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"], open: "08:00", close: "23:00" },
+            status: "approved",
+            category: "Ngopi",
+            rating: 4.8,
+            locationTags: "Senopati, MRT Senayan",
+            description: "Single Origin Indonesia, Manual Brew, Pour Over"
+        },
+        {
+            name: "Kopi Kalyan",
+            lat: -6.2345,
+            lng: 106.8015,
+            whatsapp: "6281234567904",
+            address: "Jl. Senopati Raya No. 28",
+            image: "https://images.unsplash.com/photo-1507133750040-4a8f57021571?w=400&h=400&fit=crop",
+            schedule: { days: ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"], open: "06:00", close: "21:00" },
+            status: "approved",
+            category: "Ngopi",
+            rating: 4.5,
+            locationTags: "Senopati, MRT Senayan",
+            description: "Specialty Coffee, Cold Brew, V60"
+        },
+        {
+            name: "Giyanti Coffee Roastery",
+            lat: -6.1995,
+            lng: 106.8400,
+            whatsapp: "6281234567905",
+            address: "Jl. Surabaya No. 20, Menteng",
+            image: "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=400&h=400&fit=crop",
+            schedule: { days: ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"], open: "06:00", close: "21:00" },
+            status: "approved",
+            category: "Ngopi",
+            rating: 4.9,
+            locationTags: "Menteng, Area Jakarta Pusat",
+            description: "Artisan Coffee, Fresh Roasted Beans, Coffee Lab"
+        },
+        {
+            name: "Common Grounds",
+            lat: -6.2265,
+            lng: 106.7990,
+            whatsapp: "6281234567906",
+            address: "Plaza Senayan Lt. 2",
+            image: "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=400&h=400&fit=crop",
+            schedule: { days: ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"], open: "10:00", close: "21:00" },
+            status: "approved",
+            category: "Ngopi",
+            rating: 4.7,
+            locationTags: "Plaza Senayan, MRT Senayan",
+            description: "Specialty Coffee, Australian Style, Brunch"
+        },
+        {
+            name: "Union Coffee",
+            lat: -6.2268,
+            lng: 106.7992,
+            whatsapp: "6281234567907",
+            address: "Plaza Senayan Lt. 1",
+            image: "https://images.unsplash.com/photo-1498804103079-a6351b050096?w=400&h=400&fit=crop",
+            schedule: { days: ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"], open: "10:00", close: "21:00" },
+            status: "approved",
+            category: "Ngopi",
+            rating: 4.6,
+            locationTags: "Plaza Senayan, MRT Senayan",
+            description: "Espresso Based, Cold Brew, Light Snacks"
         }
     ];
 
@@ -458,7 +585,52 @@ app.post('/api/seed', async (c) => {
         // Family Mart
         { vendorId: insertedVendors[8].id, name: "Famichiki", price: 16000, category: "Snack", image: "https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?w=400&h=400&fit=crop", description: "Ayam goreng crispy signature" },
         { vendorId: insertedVendors[8].id, name: "Onigiri Teriyaki", price: 12000, category: "Snack", image: "https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?w=400&h=400&fit=crop", description: "Nasi kepal isi teriyaki" },
-        { vendorId: insertedVendors[8].id, name: "Salad Sayur", price: 18000, category: "Snack", image: "https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?w=400&h=400&fit=crop", description: "Salad sayuran segar" }
+        { vendorId: insertedVendors[8].id, name: "Salad Sayur", price: 18000, category: "Snack", image: "https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?w=400&h=400&fit=crop", description: "Salad sayuran segar" },
+
+        // Kopi Kenangan (index 9)
+        { vendorId: insertedVendors[9].id, name: "Es Kopi Kenangan Mantan", price: 18000, category: "Kopi", image: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=400&h=400&fit=crop", description: "Signature coffee dengan gula aren" },
+        { vendorId: insertedVendors[9].id, name: "Es Kopi Kenangan Caramel", price: 22000, category: "Kopi", image: "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=400&h=400&fit=crop", description: "Kopi susu dengan caramel" },
+        { vendorId: insertedVendors[9].id, name: "Matcha Latte", price: 25000, category: "Non-Kopi", image: "https://images.unsplash.com/photo-1515823064-d6e0c04616a7?w=400&h=400&fit=crop", description: "Green tea latte creamy" },
+
+        // Djournal Coffee (index 10)
+        { vendorId: insertedVendors[10].id, name: "Cafe Latte", price: 35000, category: "Kopi", image: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400&h=400&fit=crop", description: "Espresso dengan steamed milk" },
+        { vendorId: insertedVendors[10].id, name: "Cappuccino", price: 35000, category: "Kopi", image: "https://images.unsplash.com/photo-1557006021-b85faa2bc5e2?w=400&h=400&fit=crop", description: "Espresso dengan foam tebal" },
+        { vendorId: insertedVendors[10].id, name: "Croissant", price: 28000, category: "Pastry", image: "https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=400&h=400&fit=crop", description: "French butter croissant" },
+
+        // Starbucks (index 11)
+        { vendorId: insertedVendors[11].id, name: "Caramel Macchiato", price: 55000, category: "Kopi", image: "https://images.unsplash.com/photo-1453614512568-c4024d13c247?w=400&h=400&fit=crop", description: "Espresso vanilla caramel" },
+        { vendorId: insertedVendors[11].id, name: "Java Chip Frappuccino", price: 58000, category: "Blended", image: "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=400&h=400&fit=crop", description: "Blended mocha chocolate chip" },
+        { vendorId: insertedVendors[11].id, name: "Green Tea Latte", price: 50000, category: "Non-Kopi", image: "https://images.unsplash.com/photo-1515823064-d6e0c04616a7?w=400&h=400&fit=crop", description: "Matcha dengan steamed milk" },
+
+        // Fore Coffee (index 12)
+        { vendorId: insertedVendors[12].id, name: "Aren Latte", price: 28000, category: "Kopi", image: "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=400&h=400&fit=crop", description: "Kopi susu gula aren" },
+        { vendorId: insertedVendors[12].id, name: "Butterscotch Latte", price: 32000, category: "Kopi", image: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=400&h=400&fit=crop", description: "Kopi dengan butterscotch" },
+        { vendorId: insertedVendors[12].id, name: "Cold Brew", price: 25000, category: "Kopi", image: "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=400&h=400&fit=crop", description: "Cold brew 12 jam" },
+
+        // Anomali Coffee (index 13)
+        { vendorId: insertedVendors[13].id, name: "Aceh Gayo Pour Over", price: 45000, category: "Single Origin", image: "https://images.unsplash.com/photo-1442512595331-e89e73853f31?w=400&h=400&fit=crop", description: "Pour over single origin Aceh" },
+        { vendorId: insertedVendors[13].id, name: "Toraja V60", price: 48000, category: "Single Origin", image: "https://images.unsplash.com/photo-1442512595331-e89e73853f31?w=400&h=400&fit=crop", description: "V60 single origin Toraja" },
+        { vendorId: insertedVendors[13].id, name: "Espresso Double", price: 35000, category: "Kopi", image: "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=400&h=400&fit=crop", description: "Double shot espresso" },
+
+        // Kopi Kalyan (index 14)
+        { vendorId: insertedVendors[14].id, name: "Cold Brew Black", price: 32000, category: "Kopi", image: "https://images.unsplash.com/photo-1507133750040-4a8f57021571?w=400&h=400&fit=crop", description: "Cold brew tanpa susu" },
+        { vendorId: insertedVendors[14].id, name: "Kalyan Signature", price: 35000, category: "Kopi", image: "https://images.unsplash.com/photo-1507133750040-4a8f57021571?w=400&h=400&fit=crop", description: "Signature coffee blend" },
+        { vendorId: insertedVendors[14].id, name: "V60 Single Origin", price: 42000, category: "Single Origin", image: "https://images.unsplash.com/photo-1442512595331-e89e73853f31?w=400&h=400&fit=crop", description: "Manual brew V60" },
+
+        // Giyanti Coffee Roastery (index 15)
+        { vendorId: insertedVendors[15].id, name: "House Blend Espresso", price: 28000, category: "Kopi", image: "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=400&h=400&fit=crop", description: "House blend espresso" },
+        { vendorId: insertedVendors[15].id, name: "Syphon Brew", price: 55000, category: "Single Origin", image: "https://images.unsplash.com/photo-1442512595331-e89e73853f31?w=400&h=400&fit=crop", description: "Artisan syphon brewing" },
+        { vendorId: insertedVendors[15].id, name: "Coffee Beans 250g", price: 120000, category: "Retail", image: "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=400&h=400&fit=crop", description: "Fresh roasted beans" },
+
+        // Common Grounds (index 16)
+        { vendorId: insertedVendors[16].id, name: "Flat White", price: 45000, category: "Kopi", image: "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=400&h=400&fit=crop", description: "Australian style flat white" },
+        { vendorId: insertedVendors[16].id, name: "Long Black", price: 40000, category: "Kopi", image: "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=400&h=400&fit=crop", description: "Double shot americano" },
+        { vendorId: insertedVendors[16].id, name: "Avocado Toast", price: 65000, category: "Food", image: "https://images.unsplash.com/photo-1541519227354-08fa5d50c44d?w=400&h=400&fit=crop", description: "Brunch favorite" },
+
+        // Union Coffee (index 17)
+        { vendorId: insertedVendors[17].id, name: "Piccolo Latte", price: 38000, category: "Kopi", image: "https://images.unsplash.com/photo-1498804103079-a6351b050096?w=400&h=400&fit=crop", description: "Small latte dengan ristretto" },
+        { vendorId: insertedVendors[17].id, name: "Iced Long Black", price: 35000, category: "Kopi", image: "https://images.unsplash.com/photo-1498804103079-a6351b050096?w=400&h=400&fit=crop", description: "Es americano" },
+        { vendorId: insertedVendors[17].id, name: "Banana Bread", price: 35000, category: "Pastry", image: "https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=400&h=400&fit=crop", description: "Homemade banana bread" }
     ];
 
     for (const product of productData) {
@@ -525,6 +697,213 @@ app.post('/api/seed', async (c) => {
         vendors: insertedVendors.length,
         products: productData.length,
         users: 7
+    });
+});
+
+// Seed Ngopi Vendors Only (Add without reset)
+app.post('/api/seed-ngopi', async (c) => {
+    // Check if Ngopi vendors already exist
+    const existingNgopi = await db.select().from(vendors).where(eq(vendors.category, 'Ngopi'));
+
+    if (existingNgopi.length > 0) {
+        return c.json({ message: 'Ngopi vendors already seeded', count: existingNgopi.length });
+    }
+
+    // Ngopi/Coffee Shops based on Figma design
+    const ngopiVendors = [
+        {
+            name: "Kopi Kenangan",
+            lat: -6.2274,
+            lng: 106.8020,
+            whatsapp: "6281234567899",
+            address: "FX Sudirman Lt. GF",
+            image: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=400&h=400&fit=crop",
+            schedule: { days: ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"], open: "08:00", close: "21:00" },
+            status: "approved",
+            category: "Ngopi",
+            rating: 4.7,
+            locationTags: "FX Sudirman, MRT Senayan",
+            description: "Es Kopi Kenangan, Kopi Susu, Snacks"
+        },
+        {
+            name: "Djournal Coffee",
+            lat: -6.2276,
+            lng: 106.8019,
+            whatsapp: "6281234567900",
+            address: "FX Sudirman Lt. G",
+            image: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400&h=400&fit=crop",
+            schedule: { days: ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"], open: "08:00", close: "21:00" },
+            status: "approved",
+            category: "Ngopi",
+            rating: 4.6,
+            locationTags: "FX Sudirman, MRT Senayan",
+            description: "Specialty Coffee, Latte Art, Pastries"
+        },
+        {
+            name: "Starbucks",
+            lat: -6.2279,
+            lng: 106.8023,
+            whatsapp: "6281234567901",
+            address: "FX Sudirman Lt. G",
+            image: "https://images.unsplash.com/photo-1453614512568-c4024d13c247?w=400&h=400&fit=crop",
+            schedule: { days: ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"], open: "08:00", close: "21:00" },
+            status: "approved",
+            category: "Ngopi",
+            rating: 4.5,
+            locationTags: "FX Sudirman, MRT Senayan",
+            description: "Espresso, Frappuccino, Tea, Pastries"
+        },
+        {
+            name: "Fore Coffee",
+            lat: -6.2281,
+            lng: 106.8024,
+            whatsapp: "6281234567902",
+            address: "FX Sudirman Lt. G",
+            image: "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=400&h=400&fit=crop",
+            schedule: { days: ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"], open: "08:00", close: "21:00" },
+            status: "approved",
+            category: "Ngopi",
+            rating: 4.6,
+            locationTags: "FX Sudirman, MRT Senayan",
+            description: "Kopi Lokal, Es Kopi Susu, Single Origin"
+        },
+        {
+            name: "Anomali Coffee",
+            lat: -6.2340,
+            lng: 106.8010,
+            whatsapp: "6281234567903",
+            address: "Jl. Senopati Raya 115",
+            image: "https://images.unsplash.com/photo-1442512595331-e89e73853f31?w=400&h=400&fit=crop",
+            schedule: { days: ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"], open: "08:00", close: "23:00" },
+            status: "approved",
+            category: "Ngopi",
+            rating: 4.8,
+            locationTags: "Senopati, MRT Senayan",
+            description: "Single Origin Indonesia, Manual Brew, Pour Over"
+        },
+        {
+            name: "Kopi Kalyan",
+            lat: -6.2345,
+            lng: 106.8015,
+            whatsapp: "6281234567904",
+            address: "Jl. Senopati Raya No. 28",
+            image: "https://images.unsplash.com/photo-1507133750040-4a8f57021571?w=400&h=400&fit=crop",
+            schedule: { days: ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"], open: "06:00", close: "21:00" },
+            status: "approved",
+            category: "Ngopi",
+            rating: 4.5,
+            locationTags: "Senopati, MRT Senayan",
+            description: "Specialty Coffee, Cold Brew, V60"
+        },
+        {
+            name: "Giyanti Coffee Roastery",
+            lat: -6.1995,
+            lng: 106.8400,
+            whatsapp: "6281234567905",
+            address: "Jl. Surabaya No. 20, Menteng",
+            image: "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=400&h=400&fit=crop",
+            schedule: { days: ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"], open: "06:00", close: "21:00" },
+            status: "approved",
+            category: "Ngopi",
+            rating: 4.9,
+            locationTags: "Menteng, Area Jakarta Pusat",
+            description: "Artisan Coffee, Fresh Roasted Beans, Coffee Lab"
+        },
+        {
+            name: "Common Grounds",
+            lat: -6.2265,
+            lng: 106.7990,
+            whatsapp: "6281234567906",
+            address: "Plaza Senayan Lt. 2",
+            image: "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=400&h=400&fit=crop",
+            schedule: { days: ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"], open: "10:00", close: "21:00" },
+            status: "approved",
+            category: "Ngopi",
+            rating: 4.7,
+            locationTags: "Plaza Senayan, MRT Senayan",
+            description: "Specialty Coffee, Australian Style, Brunch"
+        },
+        {
+            name: "Union Coffee",
+            lat: -6.2268,
+            lng: 106.7992,
+            whatsapp: "6281234567907",
+            address: "Plaza Senayan Lt. 1",
+            image: "https://images.unsplash.com/photo-1498804103079-a6351b050096?w=400&h=400&fit=crop",
+            schedule: { days: ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"], open: "10:00", close: "21:00" },
+            status: "approved",
+            category: "Ngopi",
+            rating: 4.6,
+            locationTags: "Plaza Senayan, MRT Senayan",
+            description: "Espresso Based, Cold Brew, Light Snacks"
+        }
+    ];
+
+    // Insert vendors
+    const insertedVendors = [];
+    for (const vendor of ngopiVendors) {
+        const [newVendor] = await db.insert(vendors).values(vendor as any).returning();
+        insertedVendors.push(newVendor);
+    }
+
+    // Add products for each coffee shop
+    const coffeeProducts = [
+        // Kopi Kenangan
+        { vendorId: insertedVendors[0].id, name: "Es Kopi Kenangan Mantan", price: 18000, category: "Kopi", image: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=400&h=400&fit=crop", description: "Signature coffee dengan gula aren" },
+        { vendorId: insertedVendors[0].id, name: "Es Kopi Kenangan Caramel", price: 22000, category: "Kopi", image: "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=400&h=400&fit=crop", description: "Kopi susu dengan caramel" },
+        { vendorId: insertedVendors[0].id, name: "Matcha Latte", price: 25000, category: "Non-Kopi", image: "https://images.unsplash.com/photo-1515823064-d6e0c04616a7?w=400&h=400&fit=crop", description: "Green tea latte creamy" },
+
+        // Djournal Coffee
+        { vendorId: insertedVendors[1].id, name: "Cafe Latte", price: 35000, category: "Kopi", image: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400&h=400&fit=crop", description: "Espresso dengan steamed milk" },
+        { vendorId: insertedVendors[1].id, name: "Cappuccino", price: 35000, category: "Kopi", image: "https://images.unsplash.com/photo-1557006021-b85faa2bc5e2?w=400&h=400&fit=crop", description: "Espresso dengan foam tebal" },
+        { vendorId: insertedVendors[1].id, name: "Croissant", price: 28000, category: "Pastry", image: "https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=400&h=400&fit=crop", description: "French butter croissant" },
+
+        // Starbucks
+        { vendorId: insertedVendors[2].id, name: "Caramel Macchiato", price: 55000, category: "Kopi", image: "https://images.unsplash.com/photo-1453614512568-c4024d13c247?w=400&h=400&fit=crop", description: "Espresso vanilla caramel" },
+        { vendorId: insertedVendors[2].id, name: "Java Chip Frappuccino", price: 58000, category: "Blended", image: "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=400&h=400&fit=crop", description: "Blended mocha chocolate chip" },
+        { vendorId: insertedVendors[2].id, name: "Green Tea Latte", price: 50000, category: "Non-Kopi", image: "https://images.unsplash.com/photo-1515823064-d6e0c04616a7?w=400&h=400&fit=crop", description: "Matcha dengan steamed milk" },
+
+        // Fore Coffee
+        { vendorId: insertedVendors[3].id, name: "Aren Latte", price: 28000, category: "Kopi", image: "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=400&h=400&fit=crop", description: "Kopi susu gula aren" },
+        { vendorId: insertedVendors[3].id, name: "Butterscotch Latte", price: 32000, category: "Kopi", image: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=400&h=400&fit=crop", description: "Kopi dengan butterscotch" },
+        { vendorId: insertedVendors[3].id, name: "Cold Brew", price: 25000, category: "Kopi", image: "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=400&h=400&fit=crop", description: "Cold brew 12 jam" },
+
+        // Anomali Coffee
+        { vendorId: insertedVendors[4].id, name: "Aceh Gayo Pour Over", price: 45000, category: "Single Origin", image: "https://images.unsplash.com/photo-1442512595331-e89e73853f31?w=400&h=400&fit=crop", description: "Pour over single origin Aceh" },
+        { vendorId: insertedVendors[4].id, name: "Toraja V60", price: 48000, category: "Single Origin", image: "https://images.unsplash.com/photo-1442512595331-e89e73853f31?w=400&h=400&fit=crop", description: "V60 single origin Toraja" },
+        { vendorId: insertedVendors[4].id, name: "Espresso Double", price: 35000, category: "Kopi", image: "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=400&h=400&fit=crop", description: "Double shot espresso" },
+
+        // Kopi Kalyan
+        { vendorId: insertedVendors[5].id, name: "Cold Brew Black", price: 32000, category: "Kopi", image: "https://images.unsplash.com/photo-1507133750040-4a8f57021571?w=400&h=400&fit=crop", description: "Cold brew tanpa susu" },
+        { vendorId: insertedVendors[5].id, name: "Kalyan Signature", price: 35000, category: "Kopi", image: "https://images.unsplash.com/photo-1507133750040-4a8f57021571?w=400&h=400&fit=crop", description: "Signature coffee blend" },
+        { vendorId: insertedVendors[5].id, name: "V60 Single Origin", price: 42000, category: "Single Origin", image: "https://images.unsplash.com/photo-1442512595331-e89e73853f31?w=400&h=400&fit=crop", description: "Manual brew V60" },
+
+        // Giyanti Coffee Roastery
+        { vendorId: insertedVendors[6].id, name: "House Blend Espresso", price: 28000, category: "Kopi", image: "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=400&h=400&fit=crop", description: "House blend espresso" },
+        { vendorId: insertedVendors[6].id, name: "Syphon Brew", price: 55000, category: "Single Origin", image: "https://images.unsplash.com/photo-1442512595331-e89e73853f31?w=400&h=400&fit=crop", description: "Artisan syphon brewing" },
+        { vendorId: insertedVendors[6].id, name: "Coffee Beans 250g", price: 120000, category: "Retail", image: "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=400&h=400&fit=crop", description: "Fresh roasted beans" },
+
+        // Common Grounds
+        { vendorId: insertedVendors[7].id, name: "Flat White", price: 45000, category: "Kopi", image: "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=400&h=400&fit=crop", description: "Australian style flat white" },
+        { vendorId: insertedVendors[7].id, name: "Long Black", price: 40000, category: "Kopi", image: "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=400&h=400&fit=crop", description: "Double shot americano" },
+        { vendorId: insertedVendors[7].id, name: "Avocado Toast", price: 65000, category: "Food", image: "https://images.unsplash.com/photo-1541519227354-08fa5d50c44d?w=400&h=400&fit=crop", description: "Brunch favorite" },
+
+        // Union Coffee
+        { vendorId: insertedVendors[8].id, name: "Piccolo Latte", price: 38000, category: "Kopi", image: "https://images.unsplash.com/photo-1498804103079-a6351b050096?w=400&h=400&fit=crop", description: "Small latte dengan ristretto" },
+        { vendorId: insertedVendors[8].id, name: "Iced Long Black", price: 35000, category: "Kopi", image: "https://images.unsplash.com/photo-1498804103079-a6351b050096?w=400&h=400&fit=crop", description: "Es americano" },
+        { vendorId: insertedVendors[8].id, name: "Banana Bread", price: 35000, category: "Pastry", image: "https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=400&h=400&fit=crop", description: "Homemade banana bread" }
+    ];
+
+    for (const product of coffeeProducts) {
+        await db.insert(products).values(product as any);
+    }
+
+    await redis.del('vendors_list');
+
+    return c.json({
+        message: 'Ngopi vendors seeded successfully!',
+        vendors: insertedVendors.length,
+        products: coffeeProducts.length
     });
 });
 

@@ -130,17 +130,45 @@ Setelah seeding berhasil, akan terbuat data berikut:
 | 8 | Lawson | Convenience Store | Blok B 82 | 05:30 - 22:00 |
 | 9 | Family Mart | Convenience Store | Blok A 12 | 05:00 - 22:00 |
 
+#### Ngopi / Coffee Shop (9 Kedai Kopi)
+
+| No | Nama | Kategori | Alamat | Jam Buka |
+| :--- | :--- | :--- | :--- | :--- |
+| 10 | Kopi Kenangan | Ngopi | FX Sudirman Lt. GF | 08:00 - 21:00 |
+| 11 | Djournal Coffee | Ngopi | FX Sudirman Lt. G | 08:00 - 21:00 |
+| 12 | Starbucks | Ngopi | FX Sudirman Lt. G | 08:00 - 21:00 |
+| 13 | Fore Coffee | Ngopi | FX Sudirman Lt. G | 08:00 - 21:00 |
+| 14 | Anomali Coffee | Ngopi | Jl. Senopati Raya 115 | 08:00 - 23:00 |
+| 15 | Kopi Kalyan | Ngopi | Jl. Senopati Raya No. 28 | 06:00 - 21:00 |
+| 16 | Giyanti Coffee Roastery | Ngopi | Jl. Surabaya No. 20, Menteng | 06:00 - 21:00 |
+| 17 | Common Grounds | Ngopi | Plaza Senayan Lt. 2 | 10:00 - 21:00 |
+| 18 | Union Coffee | Ngopi | Plaza Senayan Lt. 1 | 10:00 - 21:00 |
+
 #### Produk per Vendor
 
+**Kuliner:**
 - **Warung Betawi Babeh**: Nasi Uduk Komplit, Ketupat Sayur, Lontong Sayur, Gorengan
 - **Tenda Bang Jali**: Nasi Uduk Spesial, Ketan Serundeng
 - **Warung Padang Uni Ami**: Ketupat Sayur Padang, Bubur Kampiun, Gorengan Mix
 - **Mie Ayam Gaul**: Mie Ayam Biasa, Komplit, Jumbo
 - **Bubur Ayam Jakarta**: Bubur Ayam Biasa, Spesial, Komplit
 - **Sedjuk Bakmi & Kopi**: Bakmi Ayam, Bakmi Pangsit, Kopi Susu, Es Kopi
+
+**Convenience Store:**
 - **Indomaret Point**: Onigiri Salmon, Roti Isi Coklat, Salad Buah
 - **Lawson**: Onigiri Tuna, Oden Set, Sosis Panggang
 - **Family Mart**: Famichiki, Onigiri Teriyaki, Salad Sayur
+
+**Ngopi:**
+- **Kopi Kenangan**: Es Kopi Kenangan Mantan, Es Kopi Kenangan Caramel, Matcha Latte
+- **Djournal Coffee**: Cafe Latte, Cappuccino, Croissant
+- **Starbucks**: Caramel Macchiato, Java Chip Frappuccino, Green Tea Latte
+- **Fore Coffee**: Aren Latte, Butterscotch Latte, Cold Brew
+- **Anomali Coffee**: Aceh Gayo Pour Over, Toraja V60, Espresso Double
+- **Kopi Kalyan**: Cold Brew Black, Kalyan Signature, V60 Single Origin
+- **Giyanti Coffee Roastery**: House Blend Espresso, Syphon Brew, Coffee Beans 250g
+- **Common Grounds**: Flat White, Long Black, Avocado Toast
+- **Union Coffee**: Piccolo Latte, Iced Long Black, Banana Bread
 
 ### 🔐 Akun Demo Login Dashboard
 
@@ -175,6 +203,7 @@ Setelah seeding, gunakan akun berikut untuk login di [Dashboard](http://localhos
 ### Client (Pembeli)
 - `/` - Homepage dengan rekomendasi toko
 - `/kuliner` - Halaman kategori Kuliner (warung makan terdekat MRT)
+- `/ngopi` - Halaman kategori Ngopi (kedai kopi terdekat MRT)
 - `/about` - Tentang Kami
 - `/terms` - Syarat & Ketentuan
 - `/privacy` - Kebijakan Privasi
