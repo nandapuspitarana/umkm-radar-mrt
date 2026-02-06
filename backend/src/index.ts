@@ -4,7 +4,7 @@ import { cors } from 'hono/cors';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import * as dotenv from 'dotenv';
-import { vendors, products, orders, settings, users, vouchers } from './db/schema';
+import { vendors, products, orders, settings, users, vouchers, assets } from './db/schema';
 import { eq, desc, and } from 'drizzle-orm';
 
 dotenv.config();
@@ -20,6 +20,19 @@ import { join } from 'path';
 import { randomBytes } from 'crypto';
 
 import Redis from 'ioredis';
+
+// MinIO / S3 Client
+import { S3Client, PutObjectCommand, DeleteObjectCommand, ListObjectsV2Command, CreateBucketCommand, HeadBucketCommand } from '@aws-sdk/client-s3';
+
+const s3Client = new S3Client({
+    endpoint: process.env.MINIO_ENDPOINT || 'http://localhost:9000',
+    region: 'us-east-1',
+    credentials: {
+        accessKeyId: process.env.MINIO_ACCESS_KEY || 'umkmradar',
+        secretAccessKey: process.env.MINIO_SECRET_KEY || 'umkmradar123',
+    },
+    forcePathStyle: true, // Required for MinIO
+});
 
 // Database Connection
 const pool = new Pool({
@@ -1034,6 +1047,58 @@ app.post('/api/seed-atm', async (c) => {
     });
 });
 
+// Seed Homepage Settings (Banners & Transport Links)
+app.post('/api/seed-homepage-settings', async (c) => {
+    // Default banner data from Figma design
+    const defaultBanners = [
+        { id: 1, image: '/assets/homepage/banner_kopken.png', title: 'Kopi Kenangan', subtitle: 'Black Aren' },
+        { id: 2, image: '/assets/homepage/banner_famicafe.png', title: 'FamiCafe', subtitle: 'New Americano' },
+        { id: 3, image: '/assets/homepage/banner_alfamart.png', title: 'Alfamart', subtitle: 'Promo Spesial' },
+    ];
+
+    // Default transport links from Figma design
+    const defaultTransportLinks = [
+        { id: 'tije', name: 'TransJakarta', logo: '/assets/homepage/logo_tije.png', url: 'https://transjakarta.co.id/' },
+        { id: 'jaklingko', name: 'JakLingko', logo: '/assets/homepage/logo_jaklingko.png', url: 'https://jaklingko.id/' },
+        { id: 'lrt', name: 'LRT Jakarta', logo: '/assets/homepage/logo_lrt.png', url: 'https://www.lrtjakarta.co.id/' },
+        { id: 'kai', name: 'KAI Commuter', logo: '/assets/homepage/logo_kai.png', url: 'https://www.krl.co.id/' },
+        { id: 'whoosh', name: 'Whoosh', logo: '/assets/homepage/logo_whoosh.png', url: 'https://whoosh.id/' }
+    ];
+
+    try {
+        // Check if already exists
+        const existingBanners = await db.select().from(settings).where(eq(settings.key, 'homepage_banners'));
+        const existingTransport = await db.select().from(settings).where(eq(settings.key, 'transport_links'));
+
+        const results = [];
+
+        if (existingBanners.length === 0) {
+            const inserted = await db.insert(settings).values({
+                key: 'homepage_banners',
+                value: defaultBanners as any
+            }).returning();
+            results.push({ key: 'homepage_banners', status: 'created' });
+        } else {
+            results.push({ key: 'homepage_banners', status: 'already_exists' });
+        }
+
+        if (existingTransport.length === 0) {
+            const inserted = await db.insert(settings).values({
+                key: 'transport_links',
+                value: defaultTransportLinks as any
+            }).returning();
+            results.push({ key: 'transport_links', status: 'created' });
+        } else {
+            results.push({ key: 'transport_links', status: 'already_exists' });
+        }
+
+        return c.json({ message: 'Homepage settings seeded', results });
+    } catch (error) {
+        console.error(error);
+        return c.json({ error: 'Failed to seed homepage settings' }, 500);
+    }
+});
+
 
 // 6. Settings API
 app.get('/api/settings', async (c) => {
@@ -1232,6 +1297,212 @@ app.post('/api/upload', async (c) => {
         return c.json({ error: 'Upload failed' }, 500);
     }
 });
+
+// ==========================================
+// ASSET MANAGEMENT API (MinIO + imgproxy)
+// ==========================================
+
+const MINIO_BUCKET = 'assets';
+const IMGPROXY_URL = process.env.IMGPROXY_URL || 'http://localhost:8088';
+const MINIO_PUBLIC_URL = process.env.MINIO_PUBLIC_URL || 'http://localhost:9000';
+
+// Ensure bucket exists
+async function ensureBucketExists() {
+    try {
+        await s3Client.send(new HeadBucketCommand({ Bucket: MINIO_BUCKET }));
+    } catch (err: any) {
+        if (err.name === 'NotFound' || err.$metadata?.httpStatusCode === 404) {
+            await s3Client.send(new CreateBucketCommand({ Bucket: MINIO_BUCKET }));
+            console.log(`✅ Created MinIO bucket: ${MINIO_BUCKET}`);
+        }
+    }
+}
+
+// Generate imgproxy URL with transformations
+function generateImgproxyUrl(storagePath: string, options: {
+    width?: number,
+    height?: number,
+    resize?: 'fit' | 'fill' | 'crop',
+    quality?: number,
+    format?: 'webp' | 'avif' | 'jpg' | 'png',
+    blur?: number,
+} = {}) {
+    const transforms: string[] = [];
+
+    if (options.resize && (options.width || options.height)) {
+        transforms.push(`rs:${options.resize}:${options.width || 0}:${options.height || 0}`);
+    } else if (options.width || options.height) {
+        transforms.push(`rs:fit:${options.width || 0}:${options.height || 0}`);
+    }
+
+    if (options.quality) transforms.push(`q:${options.quality}`);
+    if (options.format) transforms.push(`f:${options.format}`);
+    if (options.blur) transforms.push(`bl:${options.blur}`);
+
+    const transformPath = transforms.length > 0 ? transforms.join('/') + '/' : '';
+    const s3Path = `s3://${MINIO_BUCKET}/${storagePath}`;
+
+    return `${IMGPROXY_URL}/insecure/${transformPath}plain/${s3Path}`;
+}
+
+// Upload asset to MinIO
+app.post('/api/assets/upload', async (c) => {
+    try {
+        await ensureBucketExists();
+
+        const formData = await c.req.formData();
+        const file = formData.get('file') as File;
+        const category = formData.get('category') as string || 'general';
+        const alt = formData.get('alt') as string || '';
+
+        if (!file) {
+            return c.json({ error: 'No file provided' }, 400);
+        }
+
+        // Generate unique filename
+        const ext = file.name.split('.').pop() || 'jpg';
+        const timestamp = Date.now();
+        const randomId = randomBytes(8).toString('hex');
+        const storagePath = `${category}/${timestamp}-${randomId}.${ext}`;
+
+        // Upload to MinIO
+        const buffer = await file.arrayBuffer();
+        await s3Client.send(new PutObjectCommand({
+            Bucket: MINIO_BUCKET,
+            Key: storagePath,
+            Body: Buffer.from(buffer),
+            ContentType: file.type,
+        }));
+
+        // Save metadata to database
+        const [inserted] = await db.insert(assets).values({
+            filename: file.name,
+            storagePath: storagePath,
+            mimeType: file.type,
+            size: file.size,
+            bucket: MINIO_BUCKET,
+            category: category,
+            alt: alt,
+        }).returning();
+
+        // Generate URLs
+        const directUrl = `${MINIO_PUBLIC_URL}/${MINIO_BUCKET}/${storagePath}`;
+        const imgproxyUrl = generateImgproxyUrl(storagePath);
+        const thumbnailUrl = generateImgproxyUrl(storagePath, { width: 200, height: 200, resize: 'fill', format: 'webp' });
+
+        return c.json({
+            id: inserted.id,
+            filename: inserted.filename,
+            storagePath: inserted.storagePath,
+            directUrl,
+            imgproxyUrl,
+            thumbnailUrl,
+            size: inserted.size,
+            category: inserted.category,
+        });
+    } catch (error) {
+        console.error("Asset upload error:", error);
+        return c.json({ error: 'Upload failed' }, 500);
+    }
+});
+
+// List all assets
+app.get('/api/assets', async (c) => {
+    try {
+        const category = c.req.query('category');
+
+        let query = db.select().from(assets).orderBy(desc(assets.createdAt));
+
+        const result = category
+            ? await db.select().from(assets).where(eq(assets.category, category)).orderBy(desc(assets.createdAt))
+            : await db.select().from(assets).orderBy(desc(assets.createdAt));
+
+        // Add URLs to each asset
+        const assetsWithUrls = result.map(asset => ({
+            ...asset,
+            directUrl: `${MINIO_PUBLIC_URL}/${asset.bucket}/${asset.storagePath}`,
+            imgproxyUrl: generateImgproxyUrl(asset.storagePath),
+            thumbnailUrl: generateImgproxyUrl(asset.storagePath, { width: 200, height: 200, resize: 'fill', format: 'webp' }),
+        }));
+
+        return c.json(assetsWithUrls);
+    } catch (error) {
+        console.error("List assets error:", error);
+        return c.json({ error: 'Failed to list assets' }, 500);
+    }
+});
+
+// Get single asset with transformation options
+app.get('/api/assets/:id', async (c) => {
+    try {
+        const id = parseInt(c.req.param('id'));
+        const width = c.req.query('w') ? parseInt(c.req.query('w')!) : undefined;
+        const height = c.req.query('h') ? parseInt(c.req.query('h')!) : undefined;
+        const quality = c.req.query('q') ? parseInt(c.req.query('q')!) : undefined;
+        const format = c.req.query('f') as 'webp' | 'avif' | 'jpg' | 'png' | undefined;
+        const resize = c.req.query('rs') as 'fit' | 'fill' | 'crop' | undefined;
+
+        const [asset] = await db.select().from(assets).where(eq(assets.id, id));
+
+        if (!asset) {
+            return c.json({ error: 'Asset not found' }, 404);
+        }
+
+        const url = generateImgproxyUrl(asset.storagePath, { width, height, quality, format, resize });
+
+        return c.json({
+            ...asset,
+            directUrl: `${MINIO_PUBLIC_URL}/${asset.bucket}/${asset.storagePath}`,
+            transformedUrl: url,
+        });
+    } catch (error) {
+        console.error("Get asset error:", error);
+        return c.json({ error: 'Failed to get asset' }, 500);
+    }
+});
+
+// Delete asset
+app.delete('/api/assets/:id', async (c) => {
+    try {
+        const id = parseInt(c.req.param('id'));
+
+        // Get asset info first
+        const [asset] = await db.select().from(assets).where(eq(assets.id, id));
+
+        if (!asset) {
+            return c.json({ error: 'Asset not found' }, 404);
+        }
+
+        // Delete from MinIO
+        await s3Client.send(new DeleteObjectCommand({
+            Bucket: MINIO_BUCKET,
+            Key: asset.storagePath,
+        }));
+
+        // Delete from database
+        await db.delete(assets).where(eq(assets.id, id));
+
+        return c.json({ success: true, message: 'Asset deleted' });
+    } catch (error) {
+        console.error("Delete asset error:", error);
+        return c.json({ error: 'Failed to delete asset' }, 500);
+    }
+});
+
+// Get imgproxy URL generator (for frontend to build URLs)
+app.get('/api/assets/url/:storagePath', async (c) => {
+    const storagePath = c.req.param('storagePath');
+    const width = c.req.query('w') ? parseInt(c.req.query('w')!) : undefined;
+    const height = c.req.query('h') ? parseInt(c.req.query('h')!) : undefined;
+    const quality = c.req.query('q') ? parseInt(c.req.query('q')!) : 80;
+    const format = c.req.query('f') as 'webp' | 'avif' | 'jpg' | 'png' || 'webp';
+    const resize = c.req.query('rs') as 'fit' | 'fill' | 'crop' || 'fit';
+
+    const url = generateImgproxyUrl(storagePath, { width, height, quality, format, resize });
+
+    return c.json({ url });
+});
+
 
 const port = 3000;
 if (process.env.NODE_ENV !== 'test') {

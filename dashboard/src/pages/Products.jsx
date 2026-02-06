@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Edit2, Search, Package, Save } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
+import ImageUploader from '../components/ImageUploader';
 
 export default function Products() {
     const [products, setProducts] = useState([]);
@@ -192,8 +193,13 @@ export default function Products() {
                                     </select>
                                 </div>
                                 <div>
-                                    <label htmlFor="image" className="block text-sm font-medium text-gray-700 mb-1">URL Gambar (Sementara)</label>
-                                    <input id="image" required type="text" className="w-full p-2 border rounded-lg" placeholder="https://..." value={formData.image} onChange={e => setFormData({ ...formData, image: e.target.value })} />
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Gambar Produk</label>
+                                    <ImageUploader
+                                        value={formData.image}
+                                        onChange={(url) => setFormData({ ...formData, image: url })}
+                                        category="product"
+                                        placeholder="Upload atau masukkan URL gambar"
+                                    />
                                 </div>
                                 <div>
                                     <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">Deskripsi</label>

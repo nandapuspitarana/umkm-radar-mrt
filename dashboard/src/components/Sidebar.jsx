@@ -7,7 +7,8 @@ import {
     LogOut,
     Package,
     Ticket,
-    Store
+    Store,
+    Image
 } from 'lucide-react';
 
 export default function Sidebar() {
@@ -61,6 +62,16 @@ export default function Sidebar() {
                     active={location.pathname === '/vouchers'}
                     onClick={() => navigate('/vouchers')}
                 />
+
+                {auth.role === 'admin' && (
+                    <SidebarItem
+                        icon={<Image size={20} />}
+                        label="Assets"
+                        active={location.pathname === '/assets'}
+                        onClick={() => navigate('/assets')}
+                    />
+                )}
+
                 <SidebarItem
                     icon={<Settings size={20} />}
                     label="Pengaturan"

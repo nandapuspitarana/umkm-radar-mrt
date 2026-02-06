@@ -68,5 +68,44 @@ services:
     depends_on:
       - backend
 
+  # MinIO - S3 Compatible Object Storage for Assets
+  minio:
+    image: minio/minio:latest
+    container_name: umkmradar_minio
+    ports:
+      - "9000:9000" # API
+      - "9001:9001" # Console
+    environment:
+      MINIO_ROOT_USER: umkmradar
+      MINIO_ROOT_PASSWORD: umkmradar123
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: [ "CMD", "mc", "ready", "local" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # imgproxy - On-the-fly Image Processing
+  imgproxy:
+    image: darthsim/imgproxy:latest
+    container_name: umkmradar_imgproxy
+    ports:
+      - "8088:8080"
+    environment:
+      IMGPROXY_USE_S3: "true"
+      IMGPROXY_S3_ENDPOINT: "http://minio:9000"
+      AWS_ACCESS_KEY_ID: umkmradar
+      AWS_SECRET_ACCESS_KEY: umkmradar123
+      AWS_REGION: us-east-1
+      IMGPROXY_ALLOW_INSECURE_URLS: "true"
+      IMGPROXY_MAX_SRC_RESOLUTION: 50
+      IMGPROXY_ENFORCE_WEBP: "true"
+      IMGPROXY_ENABLE_AVIF_DETECTION: "true"
+    depends_on:
+      - minio
+
 volumes:
   postgres_data:
+  minio_data:

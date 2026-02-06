@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, MapPin, Store, Edit, Trash2 } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
+import ImageUploader from '../components/ImageUploader';
 
 export default function AdminVendors() {
     const [vendors, setVendors] = useState([]);
@@ -16,7 +17,8 @@ export default function AdminVendors() {
         address: '',
         lat: '',
         lng: '',
-        locationTags: '' // New Field
+        locationTags: '',
+        image: '' // Store image
     });
 
     useEffect(() => {
@@ -57,7 +59,7 @@ export default function AdminVendors() {
                 alert("Berhasil menambahkan Mitra baru!");
                 setIsModalOpen(false);
                 setFormData({
-                    name: '', whatsapp: '', category: 'Umum', address: '', lat: '', lng: '', locationTags: ''
+                    name: '', whatsapp: '', category: 'Umum', address: '', lat: '', lng: '', locationTags: '', image: ''
                 });
                 fetchVendors();
             } else {
@@ -250,6 +252,16 @@ export default function AdminVendors() {
                                     value={formData.locationTags}
                                     onChange={e => setFormData({ ...formData, locationTags: e.target.value })}
                                     placeholder="Masukkan landmark terdekat..."
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Foto Toko</label>
+                                <ImageUploader
+                                    value={formData.image}
+                                    onChange={(url) => setFormData({ ...formData, image: url })}
+                                    category="logo"
+                                    placeholder="Upload foto toko"
                                 />
                             </div>
 

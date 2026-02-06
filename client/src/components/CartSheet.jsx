@@ -215,7 +215,8 @@ export default function CartSheet({ isOpen, onClose, cart, vendor, onCheckout })
                         disabled={cart.length === 0 || !name}
                         className="w-full bg-primary hover:bg-primary-dark disabled:opacity-50 text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-colors shadow-lg shadow-green-900/20"
                     >
-                        <span>Pesan via WhatsApp</span>
+                        <span>Pesan</span>
+                        {/* pesan via whatsapp */}
                         <MessageCircle size={18} />
                     </button>
                 </div>

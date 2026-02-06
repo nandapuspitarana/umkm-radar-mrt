@@ -6,6 +6,7 @@ import Settings from './pages/Settings';
 import Products from './pages/Products';
 import Vouchers from './pages/Vouchers';
 import AdminVendors from './pages/AdminVendors';
+import Assets from './pages/Assets';
 
 function PrivateRoute({ children }) {
   const auth = JSON.parse(localStorage.getItem('grocries_auth'));
@@ -62,6 +63,14 @@ export default function App() {
           element={
             <PrivateRoute>
               <AdminVendors />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/assets"
+          element={
+            <PrivateRoute>
+              <Assets />
             </PrivateRoute>
           }
         />

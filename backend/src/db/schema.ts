@@ -72,3 +72,17 @@ export const users = pgTable('users', {
     vendorId: integer('vendor_id').references(() => vendors.id), // Nullable for admin
     name: text('name').notNull(),
 });
+
+// Asset Management - MinIO storage metadata
+export const assets = pgTable('assets', {
+    id: serial('id').primaryKey(),
+    filename: text('filename').notNull(), // Original filename
+    storagePath: text('storage_path').notNull(), // Path in MinIO bucket
+    mimeType: text('mime_type').notNull(),
+    size: integer('size').notNull(), // File size in bytes
+    bucket: text('bucket').default('assets'),
+    category: text('category').default('general'), // banner, logo, product, etc.
+    alt: text('alt'), // Alt text for accessibility
+    uploadedBy: integer('uploaded_by').references(() => users.id),
+    createdAt: timestamp('created_at').defaultNow(),
+});

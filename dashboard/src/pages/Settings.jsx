@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Save, FileText, Globe, Store, Upload, X, MapPin } from 'lucide-react';
+import { Save, FileText, Globe, Store, Upload, X, MapPin, Image, Train, Plus, Trash2, GripVertical, Link } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
 
 export default function Settings() {
-    const [activeTab, setActiveTab] = useState(''); // general | pages | profile
+    const [activeTab, setActiveTab] = useState(''); // general | pages | profile | banners | transport
     const [imageInputType, setImageInputType] = useState('url'); // url | upload
-
-    // ... (rest of states)
 
     // Handle File Upload
     const handleFileUpload = async (e) => {
@@ -36,11 +34,17 @@ export default function Settings() {
         }
     };
 
-    // ... existing code ...
+    // Settings state
     const [settings, setSettings] = useState({
         footer_text: '',
         footer_links: []
     });
+
+    // Banner Story State
+    const [banners, setBanners] = useState([]);
+
+    // Transport Links State
+    const [transportLinks, setTransportLinks] = useState([]);
 
     // Vendor Profile State
     const [vendorProfile, setVendorProfile] = useState({
@@ -81,6 +85,10 @@ export default function Settings() {
                     page_terms: data.page_terms || '',
                     page_privacy: data.page_privacy || ''
                 });
+                // Load banners from database (no hardcode fallback)
+                setBanners(data.homepage_banners || []);
+                // Load transport links from database (no hardcode fallback)
+                setTransportLinks(data.transport_links || []);
             })
             .catch(err => console.error("Failed to load settings", err));
 
@@ -105,7 +113,7 @@ export default function Settings() {
 
         // Initial Tab
         if (!activeTab) {
-            setActiveTab(isVendor ? 'profile' : 'general');
+            setActiveTab(isVendor ? 'profile' : 'banners');
         }
 
     }, [auth, isVendor, activeTab]);
@@ -150,6 +158,8 @@ export default function Settings() {
 
     const handleSaveGeneral = () => handleSave(settings);
     const handleSavePages = () => handleSave(pages);
+    const handleSaveBanners = () => handleSave({ homepage_banners: banners });
+    const handleSaveTransport = () => handleSave({ transport_links: transportLinks });
 
     // General Logic
     const addLink = () => {
@@ -168,6 +178,46 @@ export default function Settings() {
     const removeLink = (index) => {
         const newLinks = settings.footer_links.filter((_, i) => i !== index);
         setSettings(prev => ({ ...prev, footer_links: newLinks }));
+    };
+
+    // Banner Logic
+    const addBanner = () => {
+        setBanners(prev => [...prev, {
+            id: Date.now(),
+            image: '',
+            title: '',
+            subtitle: ''
+        }]);
+    };
+
+    const updateBanner = (index, key, value) => {
+        const newBanners = [...banners];
+        newBanners[index][key] = value;
+        setBanners(newBanners);
+    };
+
+    const removeBanner = (index) => {
+        setBanners(prev => prev.filter((_, i) => i !== index));
+    };
+
+    // Transport Link Logic
+    const addTransportLink = () => {
+        setTransportLinks(prev => [...prev, {
+            id: Date.now().toString(),
+            name: '',
+            logo: '',
+            url: ''
+        }]);
+    };
+
+    const updateTransportLink = (index, key, value) => {
+        const newLinks = [...transportLinks];
+        newLinks[index][key] = value;
+        setTransportLinks(newLinks);
+    };
+
+    const removeTransportLink = (index) => {
+        setTransportLinks(prev => prev.filter((_, i) => i !== index));
     };
 
     const handleGetCurrentLocation = () => {
@@ -204,7 +254,7 @@ export default function Settings() {
                     <p className="text-gray-500">{isVendor ? 'Kelola informasi toko Anda.' : 'Kelola konten dan konfigurasi website.'}</p>
                 </header>
 
-                <div className="flex gap-4 mb-6">
+                <div className="flex gap-4 mb-6 flex-wrap">
                     {isVendor && (
                         <button
                             onClick={() => setActiveTab('profile')}
@@ -217,6 +267,20 @@ export default function Settings() {
 
                     {auth.role === 'admin' && (
                         <>
+                            <button
+                                onClick={() => setActiveTab('banners')}
+                                className={`px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 ${activeTab === 'banners' ? 'bg-green-600 text-white shadow-lg shadow-green-600/20' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}
+                            >
+                                <Image size={18} />
+                                Banner Story
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('transport')}
+                                className={`px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 ${activeTab === 'transport' ? 'bg-green-600 text-white shadow-lg shadow-green-600/20' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}
+                            >
+                                <Train size={18} />
+                                Transport Links
+                            </button>
                             <button
                                 onClick={() => setActiveTab('general')}
                                 className={`px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 ${activeTab === 'general' ? 'bg-green-600 text-white shadow-lg shadow-green-600/20' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}
@@ -234,6 +298,192 @@ export default function Settings() {
                         </>
                     )}
                 </div>
+
+                {/* BANNER STORY MANAGEMENT */}
+                {activeTab === 'banners' && auth.role === 'admin' && (
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 max-w-4xl animate-fade-in">
+                        <div className="flex items-center justify-between mb-6">
+                            <div>
+                                <h2 className="font-bold text-lg text-gray-800">Banner Story Homepage</h2>
+                                <p className="text-sm text-gray-500">Kelola gambar story portrait di homepage. Rasio yang direkomendasikan: 9:16 (portrait)</p>
+                            </div>
+                            <button
+                                onClick={addBanner}
+                                className="bg-green-600 text-white px-4 py-2 rounded-xl font-bold text-sm hover:bg-green-700 transition-colors flex items-center gap-2"
+                            >
+                                <Plus size={18} />
+                                Tambah Banner
+                            </button>
+                        </div>
+
+                        {banners.length === 0 ? (
+                            <div className="text-center py-12 text-gray-400">
+                                <Image size={48} className="mx-auto mb-4 opacity-50" />
+                                <p className="font-medium">Belum ada banner story</p>
+                                <p className="text-sm">Klik "Tambah Banner" untuk menambahkan</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                {banners.map((banner, index) => (
+                                    <div key={banner.id} className="bg-gray-50 rounded-xl p-4 border border-gray-200 relative group">
+                                        {/* Preview */}
+                                        <div className="aspect-[9/16] rounded-lg overflow-hidden bg-gray-200 mb-3 relative">
+                                            {banner.image ? (
+                                                <img src={banner.image} alt={banner.title} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center text-gray-400">
+                                                    <Image size={32} />
+                                                </div>
+                                            )}
+                                            {/* Overlay with title/subtitle */}
+                                            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3">
+                                                <p className="text-white font-bold text-sm truncate">{banner.title || 'Judul'}</p>
+                                                <p className="text-white/80 text-xs truncate">{banner.subtitle || 'Subjudul'}</p>
+                                            </div>
+                                        </div>
+
+                                        {/* Form Fields */}
+                                        <div className="space-y-2">
+                                            <input
+                                                type="text"
+                                                placeholder="URL Gambar (Portrait 9:16)"
+                                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                                                value={banner.image}
+                                                onChange={(e) => updateBanner(index, 'image', e.target.value)}
+                                            />
+                                            <input
+                                                type="text"
+                                                placeholder="Judul"
+                                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                                                value={banner.title}
+                                                onChange={(e) => updateBanner(index, 'title', e.target.value)}
+                                            />
+                                            <input
+                                                type="text"
+                                                placeholder="Subjudul"
+                                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                                                value={banner.subtitle}
+                                                onChange={(e) => updateBanner(index, 'subtitle', e.target.value)}
+                                            />
+                                        </div>
+
+                                        {/* Delete Button */}
+                                        <button
+                                            onClick={() => removeBanner(index)}
+                                            className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                                        >
+                                            <Trash2 size={14} />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        <div className="pt-6 border-t border-gray-100 mt-6 flex justify-end">
+                            <button
+                                onClick={handleSaveBanners}
+                                disabled={loading}
+                                className="bg-green-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-green-700 transition-all flex items-center gap-2 disabled:opacity-50 shadow-lg shadow-green-600/20"
+                            >
+                                <Save size={18} />
+                                {loading ? 'Menyimpan...' : 'Simpan Banner'}
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* TRANSPORT LINKS MANAGEMENT */}
+                {activeTab === 'transport' && auth.role === 'admin' && (
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 max-w-4xl animate-fade-in">
+                        <div className="flex items-center justify-between mb-6">
+                            <div>
+                                <h2 className="font-bold text-lg text-gray-800">Transport Links</h2>
+                                <p className="text-sm text-gray-500">Kelola link transportasi di homepage (TransJakarta, MRT, LRT, dll)</p>
+                            </div>
+                            <button
+                                onClick={addTransportLink}
+                                className="bg-green-600 text-white px-4 py-2 rounded-xl font-bold text-sm hover:bg-green-700 transition-colors flex items-center gap-2"
+                            >
+                                <Plus size={18} />
+                                Tambah
+                            </button>
+                        </div>
+
+                        <div className="space-y-4">
+                            {transportLinks.map((link, index) => (
+                                <div key={link.id} className="bg-gray-50 rounded-xl p-4 border border-gray-200 flex gap-4 items-center group">
+                                    {/* Drag Handle */}
+                                    <div className="text-gray-400 cursor-grab">
+                                        <GripVertical size={20} />
+                                    </div>
+
+                                    {/* Logo Preview */}
+                                    <div className="w-20 h-16 bg-white rounded-lg border border-gray-200 flex-shrink-0 overflow-hidden flex items-center justify-center">
+                                        {link.logo ? (
+                                            <img src={link.logo} alt={link.name} className="max-h-12 max-w-full object-contain" />
+                                        ) : (
+                                            <Train size={24} className="text-gray-400" />
+                                        )}
+                                    </div>
+
+                                    {/* Form Fields */}
+                                    <div className="flex-1 grid grid-cols-3 gap-3">
+                                        <input
+                                            type="text"
+                                            placeholder="Nama (mis: TransJakarta)"
+                                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                                            value={link.name}
+                                            onChange={(e) => updateTransportLink(index, 'name', e.target.value)}
+                                        />
+                                        <input
+                                            type="text"
+                                            placeholder="URL Logo (https://...)"
+                                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                                            value={link.logo}
+                                            onChange={(e) => updateTransportLink(index, 'logo', e.target.value)}
+                                        />
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="text"
+                                                placeholder="Link Redirect (https://...)"
+                                                className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                                                value={link.url}
+                                                onChange={(e) => updateTransportLink(index, 'url', e.target.value)}
+                                            />
+                                            <a
+                                                href={link.url}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors flex items-center"
+                                            >
+                                                <Link size={16} />
+                                            </a>
+                                        </div>
+                                    </div>
+
+                                    {/* Delete Button */}
+                                    <button
+                                        onClick={() => removeTransportLink(index)}
+                                        className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors"
+                                    >
+                                        <Trash2 size={18} />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="pt-6 border-t border-gray-100 mt-6 flex justify-end">
+                            <button
+                                onClick={handleSaveTransport}
+                                disabled={loading}
+                                className="bg-green-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-green-700 transition-all flex items-center gap-2 disabled:opacity-50 shadow-lg shadow-green-600/20"
+                            >
+                                <Save size={18} />
+                                {loading ? 'Menyimpan...' : 'Simpan Transport Links'}
+                            </button>
+                        </div>
+                    </div>
+                )}
 
                 {/* VENDOR PROFILE */}
                 {activeTab === 'profile' && isVendor && (

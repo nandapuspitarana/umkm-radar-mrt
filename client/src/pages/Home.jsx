@@ -6,13 +6,6 @@ import TransportLinks from '../components/TransportLinks';
 import ContentSection, { ContentCard } from '../components/ContentSection';
 import StoryModal from '../components/StoryModal';
 
-// Story banner data
-const storyBanners = [
-    { id: 1, image: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=400&h=600&fit=crop', title: 'Kopi Kenangan', subtitle: 'Black Aren' },
-    { id: 2, image: 'https://images.unsplash.com/photo-1534040385115-33dcb3acba5b?w=400&h=600&fit=crop', title: 'FamiCafe', subtitle: 'New Americano' },
-    { id: 3, image: 'https://images.unsplash.com/photo-1604719312566-8912e9227c6a?w=400&h=600&fit=crop', title: 'Alfamart', subtitle: 'Promo Spesial' },
-];
-
 // Quick access content
 const quickAccessContent = [
     { id: 1, image: 'https://images.unsplash.com/photo-1504754524776-8f4f37790ca0?w=400&h=400&fit=crop', title: 'Buat yang', subtitle: 'Belum Sarapan' },
@@ -45,6 +38,22 @@ export default function Home({ vendors, onSelectVendor }) {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedStory, setSelectedStory] = useState(null);
     const [isSearchOpen, setIsSearchOpen] = useState(false);
+    const [storyBanners, setStoryBanners] = useState([]); // Fetched from database
+    const [bannersLoading, setBannersLoading] = useState(true);
+
+    // Fetch banners from settings API (stored in database)
+    useEffect(() => {
+        setBannersLoading(true);
+        fetch('/api/settings')
+            .then(res => res.json())
+            .then(data => {
+                if (data.homepage_banners && data.homepage_banners.length > 0) {
+                    setStoryBanners(data.homepage_banners);
+                }
+            })
+            .catch(err => console.error("Failed to load settings", err))
+            .finally(() => setBannersLoading(false));
+    }, []);
 
     // Safety check for vendors
     const safeVendors = Array.isArray(vendors) ? vendors : [];
@@ -205,34 +214,56 @@ export default function Home({ vendors, onSelectVendor }) {
 
                 {/* Main Content Area */}
                 <main className="flex-1 bg-grey-100 rounded-tl-3xl overflow-y-auto">
-                    {/* Story Banners */}
-                    <div className="overflow-x-auto no-scrollbar pt-3 px-2.5">
-                        <div className="flex gap-1.5 pb-2">
-                            {storyBanners.map((story) => (
+                    {/* Story Banners - Figma: 175x300 portrait (Data from Database) */}
+                    <div className="overflow-x-auto no-scrollbar pt-2.5 px-2.5">
+                        <div className="flex gap-[5px] pr-2.5">
+                            {/* Loading Skeleton */}
+                            {bannersLoading && [1, 2, 3].map((i) => (
+                                <div
+                                    key={`loading-${i}`}
+                                    className="w-[175px] h-[300px] rounded-[20px] bg-grey-200 flex-shrink-0 animate-pulse"
+                                />
+                            ))}
+
+                            {/* Actual Banners from Database */}
+                            {!bannersLoading && storyBanners.map((story) => (
                                 <div
                                     key={story.id}
                                     onClick={() => setSelectedStory(story)}
-                                    className="w-44 h-72 rounded-2xl overflow-hidden flex-shrink-0 cursor-pointer relative group"
+                                    className="w-[175px] h-[300px] rounded-[20px] overflow-hidden flex-shrink-0 cursor-pointer relative group"
                                 >
                                     <img
                                         src={story.image}
                                         alt={story.title}
                                         className="w-full h-full object-cover transition-transform group-hover:scale-105"
                                     />
-                                    <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/50" />
-                                    <div className="absolute bottom-4 left-4 right-4">
-                                        <p className="text-white font-bold text-sm">{story.title}</p>
-                                        <p className="text-white/80 text-xs">{story.subtitle}</p>
+                                    {/* Gradient overlay */}
+                                    <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/80" />
+                                    <div className="absolute bottom-[15px] left-[20px] right-[20px]">
+                                        <p className="text-grey-200 font-bold text-[18px] capitalize leading-normal">{story.title}</p>
+                                        <p className="text-grey-200/80 text-[14px] capitalize">{story.subtitle}</p>
                                     </div>
                                 </div>
                             ))}
-                            {/* Placeholder banners */}
-                            {[1, 2].map((i) => (
+
+                            {/* Empty State - No banners in database */}
+                            {!bannersLoading && storyBanners.length === 0 && (
+                                <div className="w-full py-8 text-center text-grey-400">
+                                    <p className="text-sm">Belum ada banner story.</p>
+                                    <p className="text-xs">Kelola di Admin Dashboard → Settings</p>
+                                </div>
+                            )}
+
+                            {/* Placeholder banners (only show if there are some banners) */}
+                            {!bannersLoading && storyBanners.length > 0 && storyBanners.length < 5 && [1, 2].slice(0, 5 - storyBanners.length).map((i) => (
                                 <div
                                     key={`placeholder-${i}`}
-                                    className="w-44 h-72 rounded-2xl bg-grey-200 flex-shrink-0 flex items-center justify-center"
+                                    className="w-[175px] h-[300px] rounded-[20px] bg-grey-200 flex-shrink-0 flex items-center justify-center"
                                 >
-                                    <span className="text-4xl opacity-30">📷</span>
+                                    <svg className="w-8 h-8 text-grey-400 opacity-50" fill="none" viewBox="0 0 80 80">
+                                        <path d="M13.33 60L26.67 43.33L36.67 53.33L53.33 30L66.67 50V60H13.33Z" fill="currentColor" />
+                                        <circle cx="26.67" cy="26.67" r="6.67" fill="currentColor" />
+                                    </svg>
                                 </div>
                             ))}
                         </div>
