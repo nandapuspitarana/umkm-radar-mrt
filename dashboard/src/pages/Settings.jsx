@@ -78,33 +78,65 @@ export default function Settings() {
         fetch('/api/settings')
             .then(res => res.json())
             .then(data => {
+                // Parse app_logo (could be string or { logo: "..." })
+                let appLogo = '';
+                if (data.app_logo) {
+                    appLogo = typeof data.app_logo === 'string'
+                        ? data.app_logo
+                        : (data.app_logo.logo || '');
+                }
+
+                // Parse footer_text (could be string or { text: "..." })
+                let footerText = '';
+                if (data.footer_text) {
+                    footerText = typeof data.footer_text === 'string'
+                        ? data.footer_text
+                        : (data.footer_text.text || '');
+                }
+
+                // Parse footer_links (could be array or { links: [...] })
+                let footerLinks = [];
+                if (data.footer_links) {
+                    if (Array.isArray(data.footer_links)) {
+                        footerLinks = data.footer_links;
+                    } else if (data.footer_links.links && Array.isArray(data.footer_links.links)) {
+                        footerLinks = data.footer_links.links;
+                    }
+                }
+
                 setSettings({
-                    app_logo: data.app_logo || '',
-                    footer_text: data.footer_text || '',
-                    footer_links: data.footer_links || []
+                    app_logo: appLogo,
+                    footer_text: footerText,
+                    footer_links: footerLinks
                 });
                 setPages({
                     page_about: data.page_about || '',
                     page_terms: data.page_terms || '',
                     page_privacy: data.page_privacy || ''
                 });
-                // Load banners from database (no hardcode fallback)
-                const fixedBanners = (data.homepage_banners || []).map(b => ({
-                    ...b,
-                    image: b.image && b.image.startsWith('/assets/homepage/')
-                        ? b.image.replace('/assets/homepage/', '/api/files/assets/homepage/')
-                        : b.image
-                }));
-                setBanners(fixedBanners);
+                // Load banners from database - handle both array and nested object formats
+                let rawBanners = [];
+                if (data.homepage_banners) {
+                    if (Array.isArray(data.homepage_banners)) {
+                        rawBanners = data.homepage_banners;
+                    } else if (data.homepage_banners.banners && Array.isArray(data.homepage_banners.banners)) {
+                        rawBanners = data.homepage_banners.banners;
+                    }
+                }
+                // Use banners as-is, no path transformation needed (Vite serves /assets/... directly)
+                setBanners(rawBanners);
 
-                // Load transport links from database (no hardcode fallback)
-                const fixedLinks = (data.transport_links || []).map(link => ({
-                    ...link,
-                    logo: link.logo && link.logo.startsWith('/assets/homepage/')
-                        ? link.logo.replace('/assets/homepage/', '/api/files/assets/homepage/')
-                        : link.logo
-                }));
-                setTransportLinks(fixedLinks);
+                // Load transport links - handle both array and nested object formats
+                let rawLinks = [];
+                if (data.transport_links) {
+                    if (Array.isArray(data.transport_links)) {
+                        rawLinks = data.transport_links;
+                    } else if (data.transport_links.links && Array.isArray(data.transport_links.links)) {
+                        rawLinks = data.transport_links.links;
+                    }
+                }
+                // Use links as-is, no path transformation needed (Vite serves /assets/... directly)
+                setTransportLinks(rawLinks);
             })
             .catch(err => console.error("Failed to load settings", err));
 

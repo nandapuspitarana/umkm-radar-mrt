@@ -10,8 +10,12 @@ export default function TransportLinks() {
         fetch('/api/settings')
             .then(res => res.json())
             .then(data => {
-                if (data.transport_links && data.transport_links.length > 0) {
-                    setTransportModa(data.transport_links);
+                if (data.transport_links) {
+                    if (Array.isArray(data.transport_links)) {
+                        setTransportModa(data.transport_links);
+                    } else if (data.transport_links.links && Array.isArray(data.transport_links.links)) {
+                        setTransportModa(data.transport_links.links);
+                    }
                 }
             })
             .catch(err => console.error("Failed to load transport links", err))
@@ -77,23 +81,7 @@ export default function TransportLinks() {
                 {topRow.length > 0 && (
                     <div className="flex gap-[5px]">
                         {topRow.map((moda) => (
-                            <a
-                                key={moda.id}
-                                href={moda.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex-1 h-[80px] bg-white rounded-[15px] flex items-center justify-center overflow-hidden hover:shadow-md transition-shadow"
-                            >
-                                <img
-                                    src={moda.logo}
-                                    alt={moda.name}
-                                    className="max-h-[50px] max-w-[70%] object-contain"
-                                    onError={(e) => {
-                                        e.target.style.display = 'none';
-                                        e.target.parentElement.innerHTML = `<span class="text-xs font-semibold text-grey-600">${moda.name}</span>`;
-                                    }}
-                                />
-                            </a>
+                            <TransportLinkItem key={moda.id} moda={moda} heightClass="h-[80px] max-h-[50px]" />
                         ))}
                     </div>
                 )}
@@ -102,27 +90,41 @@ export default function TransportLinks() {
                 {bottomRow.length > 0 && (
                     <div className="flex gap-[5px]">
                         {bottomRow.map((moda) => (
-                            <a
-                                key={moda.id}
-                                href={moda.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex-1 h-[60px] bg-white rounded-[15px] flex items-center justify-center overflow-hidden hover:shadow-md transition-shadow"
-                            >
-                                <img
-                                    src={moda.logo}
-                                    alt={moda.name}
-                                    className="max-h-[40px] max-w-[70%] object-contain"
-                                    onError={(e) => {
-                                        e.target.style.display = 'none';
-                                        e.target.parentElement.innerHTML = `<span class="text-xs font-semibold text-grey-600">${moda.name}</span>`;
-                                    }}
-                                />
-                            </a>
+                            <TransportLinkItem key={moda.id} moda={moda} heightClass="h-[60px] max-h-[40px]" />
                         ))}
                     </div>
                 )}
             </div>
         </div>
+    );
+}
+
+function TransportLinkItem({ moda, heightClass }) {
+    const [imgError, setImgError] = useState(false);
+
+    // Extract height from class or default
+    const containerHeight = heightClass.split(' ')[0]; // h-[80px]
+    const imgMaxHeight = heightClass.split(' ')[1] || 'max-h-[50px]';
+
+    return (
+        <a
+            href={moda.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`flex-1 ${containerHeight} bg-white rounded-[15px] flex items-center justify-center overflow-hidden hover:shadow-md transition-shadow`}
+        >
+            {imgError ? (
+                <span className="text-xs font-semibold text-grey-600 px-1 text-center leading-tight">
+                    {moda.name}
+                </span>
+            ) : (
+                <img
+                    src={moda.logo}
+                    alt={moda.name}
+                    className={`${imgMaxHeight} max-w-[70%] object-contain`}
+                    onError={() => setImgError(true)}
+                />
+            )}
+        </a>
     );
 }

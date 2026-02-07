@@ -1,247 +1,377 @@
-# UMKM Radar MRT
+# 🚇 UMKM Radar MRT
 
-Platform UMKM Radar yang menghubungkan pelanggan dengan UMKM terdekat dari stasiun MRT menggunakan Geolocation.
+Platform untuk menemukan UMKM terbaik di sekitar stasiun MRT Jakarta. Memudahkan pengguna menemukan kuliner, kopi, wisata, dan fasilitas publik terdekat dari stasiun MRT.
 
-## 🚀 Tech Stack
-
-*   **Frontend (Consumer)**: React + Vite + TailwindCSS (Folder: `client`)
-*   **Frontend (Dashboard)**: React + Vite + TailwindCSS (Folder: `dashboard`)
-*   **Backend**: HonoJS + Node.js (Folder: `backend`)
-*   **Database**: PostgreSQL (via Docker)
-*   **ORM**: Drizzle ORM
-*   **Cache**: Redis
-
-## 📂 Struktur Project
-
-```
-├── client/          # Web Aplikasi untuk Pembeli (Mobile First)
-├── dashboard/       # Web Dashboard untuk Admin & Penjual
-├── backend/         # API Server (Hono)
-└── docker-compose.yml
-```
-
-## 🛠 Cara Menjalankan (Docker)
-
-Cara paling mudah untuk menjalankan seluruh aplikasi adalah menggunakan Docker Compose.
-
-### Quick Start
-1.  Pastikan Docker sudah terinstall.
-2.  Jalankan perintah:
-    ```bash
-    docker-compose up --build
-    ```
-3.  Akses aplikasi:
-    *   **Website Pembeli**: [http://localhost:8082](http://localhost:8082)
-    *   **Dashboard Admin**: [http://localhost:8083](http://localhost:8083)
-    *   **API Server**: [http://localhost:3000](http://localhost:3000)
-
-### Build dengan Versioning
-
-**Current Version: 1.0.0**
-
-Untuk build images dengan version tags:
-
-**Linux/Mac:**
-```bash
-chmod +x build.sh
-./build.sh
-```
-
-**Windows (PowerShell):**
-```powershell
-.\build.ps1
-```
-
-Images yang dibuat:
-- `umkmradar/backend:1.0.0`
-- `umkmradar/client:1.0.0`
-- `umkmradar/dashboard:1.0.0`
-
-## 🛠 Cara Menjalankan (Development Mode)
-
-Untuk menjalankan seluruh aplikasi (Backend, Client, dan Dashboard) dengan satu perintah:
-
-1.  Pastikan infrastruktur (DB, Redis, MinIO) sudah berjalan:
-    ```bash
-    docker-compose up -d db redis minio imgproxy
-    ```
-2.  Jalankan perintah berikut di root folder:
-    ```bash
-    npm run dev
-    ```
-    
-    **Catatan**: Script ini akan:
-    - Menjalankan Backend terlebih dahulu
-    - Menunggu Backend siap (health check)
-    - Baru menjalankan Client dan Dashboard
-    - Mencegah error koneksi saat startup
+![UMKM Radar MRT](https://images.unsplash.com/photo-1555881400-74d7acaacd8b?w=1200&h=400&fit=crop)
 
 ---
 
-## 🛠 Cara Menjalankan (Manual)
+## 📋 Table of Contents
 
-Jika ingin menjalankan satu per satu secara lokal untuk development.
+- [Features](#-features)
+- [Tech Stack](#-tech-stack)
+- [Project Structure](#-project-structure)
+- [Getting Started](#-getting-started)
+- [Database Setup](#-database-setup)
+- [Documentation](#-documentation)
+- [API Endpoints](#-api-endpoints)
+- [Screenshots](#-screenshots)
+- [Contributing](#-contributing)
+- [License](#-license)
 
-### 1. Database
-Pastikan PostgreSQL berjalan lokal atau gunakan Docker untuk DB saja:
-```bash
-docker-compose up -d db redis
+---
+
+## ✨ Features
+
+### 🌐 Client App (User-Facing)
+- 🗺️ **Interactive Map** - Lihat vendor di peta dengan marker
+- 📍 **Location-Based** - Temukan UMKM terdekat dari lokasi Anda
+- 🏷️ **Category Filter** - Filter berdasarkan kategori (Kuliner, Ngopi, Wisata, dll)
+- 🛒 **Shopping Cart** - Keranjang belanja dengan voucher support
+- 📱 **Responsive Design** - Mobile-friendly interface
+- 🎟️ **Voucher System** - Diskon dengan kode voucher
+- 📦 **Order Tracking** - Track pesanan dengan pickup code
+- ⭐ **Ratings & Reviews** - Lihat rating vendor dan produk
+
+### 🎛️ Admin Dashboard
+- 👥 **Vendor Management** - CRUD vendors dengan approval system
+- 📦 **Product Management** - Kelola produk per vendor
+- 📊 **Order Management** - Track dan update status pesanan
+- 🏷️ **Category Management** - Kelola kategori secara dinamis
+- 🧭 **Navigation Management** - Kelola menu header/footer
+- 🖼️ **Asset Management** - Upload dan kelola gambar (MinIO)
+- 🎟️ **Voucher Management** - Buat dan kelola voucher diskon
+- ⚙️ **Settings** - Konfigurasi aplikasi
+- 📈 **Analytics** - Dashboard dengan statistik
+
+### 🔐 Vendor Dashboard
+- 📦 **Product Management** - Kelola produk sendiri
+- 📋 **Order Management** - Lihat dan proses pesanan
+- ⚙️ **Profile Settings** - Update info vendor
+- 📊 **Sales Report** - Laporan penjualan
+
+---
+
+## 🛠️ Tech Stack
+
+### Frontend
+- **Framework**: React 18 + Vite
+- **Routing**: React Router v6
+- **Styling**: Vanilla CSS (modern, responsive)
+- **Icons**: Lucide React
+- **Maps**: Leaflet + React Leaflet
+- **HTTP Client**: Fetch API
+- **State Management**: React Hooks
+
+### Backend
+- **Runtime**: Node.js
+- **Framework**: Hono (fast web framework)
+- **Database**: PostgreSQL
+- **ORM**: Drizzle ORM
+- **File Storage**: MinIO (S3-compatible)
+- **Cache**: Redis (optional)
+
+### DevOps
+- **Package Manager**: npm
+- **Build Tool**: Vite
+- **Database Migrations**: Drizzle Kit
+- **Process Manager**: tsx (TypeScript execution)
+
+---
+
+## 📁 Project Structure
+
+```
+umkm-radar-mrt/
+├── backend/                 # Backend API
+│   ├── src/
+│   │   ├── db/
+│   │   │   └── schema.ts   # Database schema
+│   │   └── index.ts        # Main API server
+│   ├── migrations/         # SQL migration files
+│   └── package.json
+│
+├── client/                 # Client app (user-facing)
+│   ├── src/
+│   │   ├── components/    # React components
+│   │   ├── pages/         # Page components
+│   │   ├── App.jsx        # Main app component
+│   │   └── main.jsx       # Entry point
+│   └── package.json
+│
+├── dashboard/             # Admin/Vendor dashboard
+│   ├── src/
+│   │   ├── components/   # Dashboard components
+│   │   ├── pages/        # Dashboard pages
+│   │   ├── App.jsx       # Dashboard app
+│   │   └── main.jsx      # Entry point
+│   └── package.json
+│
+├── docs/                  # Documentation
+│   ├── CATEGORY_MANAGEMENT.md
+│   ├── CATEGORY_STANDARDIZATION.md
+│   ├── NAVIGATION_MANAGEMENT.md
+│   ├── PERFORMANCE_OPTIMIZATION.md
+│   └── DUMMY_DATA.md
+│
+├── dev.mjs               # Development server script
+├── dev.ps1               # PowerShell dev script
+├── seed-database.ps1     # Database seeding script
+└── package.json          # Root package.json
 ```
 
-### 2. Backend
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+- Node.js 18+ 
+- PostgreSQL 14+
+- MinIO (optional, for file uploads)
+- Redis (optional, for caching)
+
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/yourusername/umkm-radar-mrt.git
+   cd umkm-radar-mrt
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Setup environment variables**
+   
+   Create `.env` file in `backend/`:
+   ```env
+   DATABASE_URL=postgresql://postgres:postgres@localhost:5432/umkm_radar
+   MINIO_ENDPOINT=localhost
+   MINIO_PORT=9000
+   MINIO_ACCESS_KEY=minioadmin
+   MINIO_SECRET_KEY=minioadmin
+   MINIO_USE_SSL=false
+   REDIS_URL=redis://localhost:6379
+   ```
+
+4. **Setup database**
+   ```bash
+   # Create database
+   createdb umkm_radar
+
+   # Run migrations
+   cd backend
+   npm run db:push
+
+   # Seed dummy data
+   cd ..
+   .\seed-database.ps1
+   ```
+
+5. **Start development servers**
+   ```bash
+   # Option 1: Using Node.js script
+   npm run dev
+
+   # Option 2: Using PowerShell script
+   .\dev.ps1
+   ```
+
+6. **Access the applications**
+   - Client App: http://localhost:5173
+   - Dashboard: http://localhost:5174
+   - Backend API: http://localhost:3000
+
+---
+
+## 🗄️ Database Setup
+
+### Quick Setup (Recommended)
+
+```powershell
+# Run the automated seed script
+.\seed-database.ps1
+```
+
+This will:
+1. Create all tables
+2. Add indexes for performance
+3. Seed categories
+4. Seed navigation items
+5. Create admin user
+6. Add 17 dummy vendors
+7. Add 40+ dummy products
+8. Add vouchers and settings
+
+### Manual Setup
+
 ```bash
 cd backend
-cp .env.example .env  # Pastikan URL DB sesuai
-npm install
-npm run db:push       # Push schema ke database
-npm run dev
+
+# Push schema to database
+npm run db:push
+
+# Run migrations manually
+psql -h localhost -U postgres -d umkm_radar -f migrations/001_add_categories.sql
+psql -h localhost -U postgres -d umkm_radar -f migrations/002_add_indexes.sql
+psql -h localhost -U postgres -d umkm_radar -f migrations/003_seed_and_migrate_categories.sql
+psql -h localhost -U postgres -d umkm_radar -f migrations/004_seed_navigation.sql
+psql -h localhost -U postgres -d umkm_radar -f migrations/999_seed_dummy_data.sql
 ```
 
-### 3. Client (Pembeli)
-```bash
-cd client
-npm install
-npm run dev
-```
+### Default Credentials
 
-### 4. Dashboard (Admin)
-```bash
-cd dashboard
-npm install
-npm run dev
-```
+**Admin Account:**
+- Email: `admin@umkmradar.com`
+- Password: `admin123`
 
+---
 
-## 🌱 Inisialisasi Database (Seeding)
+## 📚 Documentation
 
-Saat pertama kali dijalankan, database akan kosong. Jalankan perintah berikut untuk mengisi **Data Dummy** (Toko, Produk, User):
+Detailed documentation available in `/docs`:
 
-**Menggunakan Curl (Linux/Mac/Git Bash):**
-```bash
-curl -X POST http://localhost:3000/api/seed
-```
+- **[Category Management](docs/CATEGORY_MANAGEMENT.md)** - Manage vendor/product categories
+- **[Category Standardization](docs/CATEGORY_STANDARDIZATION.md)** - Category system architecture
+- **[Navigation Management](docs/NAVIGATION_MANAGEMENT.md)** - Dynamic navigation menus
+- **[Performance Optimization](docs/PERFORMANCE_OPTIMIZATION.md)** - Caching & optimization strategies
+- **[Dummy Data](docs/DUMMY_DATA.md)** - Complete dummy data documentation
 
-**Menggunakan PowerShell (Windows):**
-```powershell
-Invoke-RestMethod -Uri http://localhost:3000/api/seed -Method POST
-```
+---
 
-> **Catatan:** Reset database (jika perlu) dapat dilakukan dengan menghapus volume docker `postgres_data`.
+## 🔌 API Endpoints
 
-### 📦 Data Seed (Dummy Data)
+### Vendors
+- `GET /api/vendors` - Get all vendors
+- `GET /api/vendors/:id` - Get single vendor
+- `POST /api/vendors` - Create vendor
+- `PUT /api/vendors/:id` - Update vendor
+- `DELETE /api/vendors/:id` - Delete vendor
 
-Setelah seeding berhasil, akan terbuat data berikut:
+### Products
+- `GET /api/products` - Get all products
+- `GET /api/products/vendor/:vendorId` - Get products by vendor
+- `POST /api/products` - Create product
+- `PUT /api/products/:id` - Update product
+- `DELETE /api/products/:id` - Delete product
 
-#### Vendor Kuliner (6 UMKM Makanan)
+### Categories
+- `GET /api/categories` - Get all categories
+- `POST /api/categories` - Create category
+- `PUT /api/categories/:id` - Update category
+- `DELETE /api/categories/:id` - Delete category
 
-| No | Nama | Kategori | Alamat | Jam Buka |
-| :--- | :--- | :--- | :--- | :--- |
-| 1 | Warung Betawi Babeh Patal Senayan | Kuliner | Jalan Patal Senayan No. 7 | 07:00 - 12:00 |
-| 2 | Tenda Bang Jali | Kuliner | Blok C 28 | 06:00 - 10:00 |
-| 3 | Warung Padang Uni Ami | Kuliner | Blok D 12 | 06:00 - 10:00 |
-| 4 | Mie Ayam Gaul Senayan | Kuliner | Area Sudirman, FX Sudirman | 06:00 - 16:00 |
-| 5 | Bubur Ayam Jakarta | Kuliner | Kawasan FX Sudirman | 06:00 - 10:00 |
-| 6 | Sedjuk Bakmi & Kopi | Kuliner | Koridor Sudirman-Senayan | 06:00 - 21:00 |
+### Navigation
+- `GET /api/navigation` - Get navigation items
+- `GET /api/navigation?position=header` - Filter by position
+- `POST /api/navigation` - Create navigation item
+- `PUT /api/navigation/:id` - Update navigation item
+- `DELETE /api/navigation/:id` - Delete navigation item
 
-#### Convenience Store (3 Toko)
+### Orders
+- `GET /api/orders` - Get all orders
+- `GET /api/orders/vendor/:vendorId` - Get orders by vendor
+- `POST /api/orders` - Create order
+- `PUT /api/orders/:id` - Update order status
 
-| No | Nama | Kategori | Alamat | Jam Buka |
-| :--- | :--- | :--- | :--- | :--- |
-| 7 | Indomaret Point | Convenience Store | Blok B 45 | 05:00 - 22:00 |
-| 8 | Lawson | Convenience Store | Blok B 82 | 05:30 - 22:00 |
-| 9 | Family Mart | Convenience Store | Blok A 12 | 05:00 - 22:00 |
+### Assets
+- `GET /api/assets` - Get all assets
+- `POST /api/assets/upload` - Upload asset
+- `DELETE /api/assets/:id` - Delete asset
 
-#### Ngopi / Coffee Shop (9 Kedai Kopi)
+### Vouchers
+- `GET /api/vouchers` - Get all vouchers
+- `POST /api/vouchers/validate` - Validate voucher code
 
-| No | Nama | Kategori | Alamat | Jam Buka |
-| :--- | :--- | :--- | :--- | :--- |
-| 10 | Kopi Kenangan | Ngopi | FX Sudirman Lt. GF | 08:00 - 21:00 |
-| 11 | Djournal Coffee | Ngopi | FX Sudirman Lt. G | 08:00 - 21:00 |
-| 12 | Starbucks | Ngopi | FX Sudirman Lt. G | 08:00 - 21:00 |
-| 13 | Fore Coffee | Ngopi | FX Sudirman Lt. G | 08:00 - 21:00 |
-| 14 | Anomali Coffee | Ngopi | Jl. Senopati Raya 115 | 08:00 - 23:00 |
-| 15 | Kopi Kalyan | Ngopi | Jl. Senopati Raya No. 28 | 06:00 - 21:00 |
-| 16 | Giyanti Coffee Roastery | Ngopi | Jl. Surabaya No. 20, Menteng | 06:00 - 21:00 |
-| 17 | Common Grounds | Ngopi | Plaza Senayan Lt. 2 | 10:00 - 21:00 |
-| 18 | Union Coffee | Ngopi | Plaza Senayan Lt. 1 | 10:00 - 21:00 |
+---
 
-#### Produk per Vendor
+## 📸 Screenshots
 
-**Kuliner:**
-- **Warung Betawi Babeh**: Nasi Uduk Komplit, Ketupat Sayur, Lontong Sayur, Gorengan
-- **Tenda Bang Jali**: Nasi Uduk Spesial, Ketan Serundeng
-- **Warung Padang Uni Ami**: Ketupat Sayur Padang, Bubur Kampiun, Gorengan Mix
-- **Mie Ayam Gaul**: Mie Ayam Biasa, Komplit, Jumbo
-- **Bubur Ayam Jakarta**: Bubur Ayam Biasa, Spesial, Komplit
-- **Sedjuk Bakmi & Kopi**: Bakmi Ayam, Bakmi Pangsit, Kopi Susu, Es Kopi
+### Client App
+![Home Page](https://via.placeholder.com/800x400?text=Home+Page)
+![Vendor Details](https://via.placeholder.com/800x400?text=Vendor+Details)
+![Shopping Cart](https://via.placeholder.com/800x400?text=Shopping+Cart)
 
-**Convenience Store:**
-- **Indomaret Point**: Onigiri Salmon, Roti Isi Coklat, Salad Buah
-- **Lawson**: Onigiri Tuna, Oden Set, Sosis Panggang
-- **Family Mart**: Famichiki, Onigiri Teriyaki, Salad Sayur
+### Admin Dashboard
+![Dashboard](https://via.placeholder.com/800x400?text=Admin+Dashboard)
+![Vendor Management](https://via.placeholder.com/800x400?text=Vendor+Management)
+![Category Management](https://via.placeholder.com/800x400?text=Category+Management)
 
-**Ngopi:**
-- **Kopi Kenangan**: Es Kopi Kenangan Mantan, Es Kopi Kenangan Caramel, Matcha Latte
-- **Djournal Coffee**: Cafe Latte, Cappuccino, Croissant
-- **Starbucks**: Caramel Macchiato, Java Chip Frappuccino, Green Tea Latte
-- **Fore Coffee**: Aren Latte, Butterscotch Latte, Cold Brew
-- **Anomali Coffee**: Aceh Gayo Pour Over, Toraja V60, Espresso Double
-- **Kopi Kalyan**: Cold Brew Black, Kalyan Signature, V60 Single Origin
-- **Giyanti Coffee Roastery**: House Blend Espresso, Syphon Brew, Coffee Beans 250g
-- **Common Grounds**: Flat White, Long Black, Avocado Toast
-- **Union Coffee**: Piccolo Latte, Iced Long Black, Banana Bread
+---
 
-### 🔐 Akun Demo Login Dashboard
+## 🎯 Roadmap
 
-Setelah seeding, gunakan akun berikut untuk login di [Dashboard](http://localhost:8083):
+### Phase 1: Core Features ✅
+- [x] Vendor management
+- [x] Product management
+- [x] Order system
+- [x] Category system
+- [x] Navigation management
+- [x] Asset management
 
-| Role | Email | Password | Keterangan |
-| :--- | :--- | :--- | :--- |
-| **Admin** | `admin@umkmradar.com` | `admin` | Akses Penuh (Global Settings) |
-| **Mitra** | `babeh@umkmradar.com` | `mitra` | Toko: Warung Betawi Babeh Patal Senayan |
-| **Mitra** | `bangjali@umkmradar.com` | `mitra` | Toko: Tenda Bang Jali |
-| **Mitra** | `uniami@umkmradar.com` | `mitra` | Toko: Warung Padang Uni Ami |
-| **Mitra** | `mieayam@umkmradar.com` | `mitra` | Toko: Mie Ayam Gaul Senayan |
-| **Mitra** | `buburayam@umkmradar.com` | `mitra` | Toko: Bubur Ayam Jakarta |
-| **Mitra** | `sedjuk@umkmradar.com` | `mitra` | Toko: Sedjuk Bakmi & Kopi |
+### Phase 2: Enhancements 🚧
+- [ ] React Query integration for caching
+- [ ] Real-time order updates (WebSocket)
+- [ ] Push notifications
+- [ ] Advanced search & filters
+- [ ] Reviews & ratings system
+- [ ] Loyalty points
 
-## 📱 Fitur Utama
+### Phase 3: Advanced Features 📋
+- [ ] Multi-language support
+- [ ] Dark mode
+- [ ] Progressive Web App (PWA)
+- [ ] Mobile app (React Native)
+- [ ] Analytics dashboard
+- [ ] AI-powered recommendations
 
-### Consumer App
-*   **Geolocation Sorting**: Menampilkan toko terdekat dari lokasi user.
-*   **Kategori Navigasi**: Rekomen, Publik, Kuliner, Ngopi, Wisata, ATM & Belanja
-*   **Real-time Cart**: Keranjang belanja yang responsif.
-*   **WhatsApp Checkout**: Order diteruskan langsung ke WhatsApp penjual dengan format rapi.
+---
 
-### Dashboard
-*   **Multirole**: Login sebagai Admin atau Mitra Penjual.
-*   **Order Management**: Ubah status pesanan (Pending -> Confirmed -> Done).
-*   **Product Management**: Kelola produk toko.
-*   **Voucher Management**: Kelola voucher diskon.
+## 🤝 Contributing
 
-## 🗺️ Halaman Aplikasi
+Contributions are welcome! Please follow these steps:
 
-### Client (Pembeli)
-- `/` - Homepage dengan rekomendasi toko
-- `/kuliner` - Halaman kategori Kuliner (warung makan terdekat MRT)
-- `/ngopi` - Halaman kategori Ngopi (kedai kopi terdekat MRT)
-- `/atm` - Halaman kategori ATM & Minimarket (ATM, minimarket, supermarket)
-- `/about` - Tentang Kami
-- `/terms` - Syarat & Ketentuan
-- `/privacy` - Kebijakan Privasi
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
-### Dashboard
-- `/login` - Login Admin/Mitra
-- `/` - Dashboard utama
-- `/products` - Kelola produk
-- `/orders` - Kelola pesanan
-- `/vouchers` - Kelola voucher
+---
 
-## 🧪 Testing
+## 📄 License
 
-Jalankan unit test:
-```bash
-cd client && npm test
-cd backend && npm test
-```
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
+---
+
+## 👥 Team
+
+- **Developer**: Your Name
+- **Designer**: Designer Name
+- **Project Manager**: PM Name
+
+---
+
+## 🙏 Acknowledgments
+
+- MRT Jakarta for inspiration
+- UMKM community in Jakarta
+- Open source community
+
+---
+
+## 📞 Contact
+
+- **Email**: info@umkmradar.com
+- **WhatsApp**: +62 812-3456-7890
+- **Website**: https://umkmradar.com
+
+---
+
+<div align="center">
+  <p>Made with ❤️ for Jakarta UMKM Community</p>
+  <p>© 2026 UMKM Radar MRT. All rights reserved.</p>
+</div>

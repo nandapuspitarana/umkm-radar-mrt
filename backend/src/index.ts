@@ -4,8 +4,8 @@ import { cors } from 'hono/cors';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import * as dotenv from 'dotenv';
-import { vendors, products, orders, settings, users, vouchers, assets, categories } from './db/schema';
-import { eq, desc, and } from 'drizzle-orm';
+import { vendors, products, orders, settings, users, vouchers, assets, categories, navigationItems } from './db/schema';
+import { eq, desc, and, sql } from 'drizzle-orm';
 
 dotenv.config();
 
@@ -651,8 +651,15 @@ app.post('/api/seed', async (c) => {
         { vendorId: insertedVendors[17].id, name: "Banana Bread", price: 35000, category: "Pastry", image: "https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=400&h=400&fit=crop", description: "Homemade banana bread" }
     ];
 
-    for (const product of productData) {
-        await db.insert(products).values(product as any);
+    // Check if products already exist to prevent duplicates
+    const existingProducts = await db.select().from(products);
+    if (existingProducts.length === 0) {
+        for (const product of productData) {
+            await db.insert(products).values(product as any);
+        }
+        console.log("Products seeded successfully");
+    } else {
+        console.log("Products already exist, skipping product seed");
     }
 
     // Seed Users
@@ -1646,7 +1653,289 @@ app.delete('/api/categories/:id', async (c) => {
     }
 });
 
+// ==================== NAVIGATION ITEMS MANAGEMENT ====================
 
+// Get all navigation items
+app.get('/api/navigation', async (c) => {
+    try {
+        const position = c.req.query('position'); // Optional filter by position
+        let query = db.select().from(navigationItems);
+
+        if (position) {
+            query = query.where(eq(navigationItems.position, position)) as any;
+        }
+
+        const result = await query.orderBy(navigationItems.sortOrder, navigationItems.label);
+        return c.json(result);
+    } catch (error) {
+        console.error('Navigation fetch error:', error);
+        return c.json({ error: 'Failed to fetch navigation items' }, 500);
+    }
+});
+
+// Get single navigation item
+app.get('/api/navigation/:id', async (c) => {
+    const id = c.req.param('id');
+    try {
+        const result = await db.select().from(navigationItems).where(eq(navigationItems.id, parseInt(id)));
+        if (result.length === 0) return c.json(null, 404);
+        return c.json(result[0]);
+    } catch (error) {
+        return c.json({ error: 'Failed to fetch navigation item' }, 500);
+    }
+});
+
+// Create navigation item
+app.post('/api/navigation', async (c) => {
+    try {
+        const body = await c.req.json();
+        const { label, path, icon, parentId, position, sortOrder, isExternal, isVisible, requiresAuth } = body;
+
+        const result = await db.insert(navigationItems).values({
+            label,
+            path,
+            icon: icon || null,
+            parentId: parentId || null,
+            position: position || 'header',
+            sortOrder: sortOrder || 0,
+            isExternal: isExternal !== undefined ? isExternal : false,
+            isVisible: isVisible !== undefined ? isVisible : true,
+            requiresAuth: requiresAuth !== undefined ? requiresAuth : false,
+        }).returning();
+
+        return c.json(result[0], 201);
+    } catch (error) {
+        console.error('Navigation creation error:', error);
+        return c.json({ error: 'Failed to create navigation item' }, 500);
+    }
+});
+
+// Update navigation item
+app.put('/api/navigation/:id', async (c) => {
+    const id = c.req.param('id');
+    try {
+        const body = await c.req.json();
+        const { label, path, icon, parentId, position, sortOrder, isExternal, isVisible, requiresAuth } = body;
+
+        const updateData: any = {};
+        if (label !== undefined) updateData.label = label;
+        if (path !== undefined) updateData.path = path;
+        if (icon !== undefined) updateData.icon = icon;
+        if (parentId !== undefined) updateData.parentId = parentId;
+        if (position !== undefined) updateData.position = position;
+        if (sortOrder !== undefined) updateData.sortOrder = sortOrder;
+        if (isExternal !== undefined) updateData.isExternal = isExternal;
+        if (isVisible !== undefined) updateData.isVisible = isVisible;
+        if (requiresAuth !== undefined) updateData.requiresAuth = requiresAuth;
+
+        const result = await db.update(navigationItems)
+            .set(updateData)
+            .where(eq(navigationItems.id, parseInt(id)))
+            .returning();
+
+        if (result.length === 0) return c.json({ error: 'Navigation item not found' }, 404);
+        return c.json(result[0]);
+    } catch (error) {
+        console.error('Navigation update error:', error);
+        return c.json({ error: 'Failed to update navigation item' }, 500);
+    }
+});
+
+// Delete navigation item
+app.delete('/api/navigation/:id', async (c) => {
+    const id = c.req.param('id');
+    try {
+        const result = await db.delete(navigationItems).where(eq(navigationItems.id, parseInt(id))).returning();
+        if (result.length === 0) return c.json({ error: 'Navigation item not found' }, 404);
+        return c.json({ message: 'Navigation item deleted successfully' });
+    } catch (error) {
+        console.error('Navigation deletion error:', error);
+        return c.json({ error: 'Failed to delete navigation item' }, 500);
+    }
+});
+
+// Reorder navigation items
+app.post('/api/navigation/reorder', async (c) => {
+    try {
+        const body = await c.req.json();
+        const { items } = body; // Array of { id, sortOrder }
+
+        // Update sort order for each item
+        for (const item of items) {
+            await db.update(navigationItems)
+                .set({ sortOrder: item.sortOrder })
+                .where(eq(navigationItems.id, item.id));
+        }
+
+        return c.json({ message: 'Navigation items reordered successfully' });
+    } catch (error) {
+        console.error('Navigation reorder error:', error);
+        return c.json({ error: 'Failed to reorder navigation items' }, 500);
+    }
+});
+
+// ==================== SETTINGS API ====================
+// Get all settings
+app.get('/api/settings', async (c) => {
+    try {
+        const result = await db.select().from(settings);
+
+        // Transform to a more usable format
+        const settingsObj: any = {};
+        result.forEach(setting => {
+            // Parse JSON value if it's a string
+            try {
+                settingsObj[setting.key] = typeof setting.value === 'string'
+                    ? JSON.parse(setting.value)
+                    : setting.value;
+            } catch {
+                settingsObj[setting.key] = setting.value;
+            }
+        });
+
+        return c.json(settingsObj);
+    } catch (error) {
+        console.error('Settings fetch error:', error);
+        return c.json({ error: 'Failed to fetch settings' }, 500);
+    }
+});
+
+// Get single setting by key
+app.get('/api/settings/:key', async (c) => {
+    const key = c.req.param('key');
+    try {
+        const result = await db.select().from(settings).where(eq(settings.key, key)).limit(1);
+        if (result.length === 0) return c.json({ error: 'Setting not found' }, 404);
+
+        // Parse JSON value
+        try {
+            const value = typeof result[0].value === 'string'
+                ? JSON.parse(result[0].value)
+                : result[0].value;
+            return c.json({ key: result[0].key, value });
+        } catch {
+            return c.json(result[0]);
+        }
+    } catch (error) {
+        console.error('Setting fetch error:', error);
+        return c.json({ error: 'Failed to fetch setting' }, 500);
+    }
+});
+
+// Update or create setting
+app.put('/api/settings/:key', async (c) => {
+    const key = c.req.param('key');
+    try {
+        const body = await c.req.json();
+        const { value } = body;
+
+        // Check if setting exists
+        const existing = await db.select().from(settings).where(eq(settings.key, key)).limit(1);
+
+        if (existing.length > 0) {
+            // Update existing
+            const result = await db.update(settings)
+                .set({ value })
+                .where(eq(settings.key, key))
+                .returning();
+            return c.json(result[0]);
+        } else {
+            // Create new
+            const result = await db.insert(settings).values({ key, value }).returning();
+            return c.json(result[0]);
+        }
+    } catch (error) {
+        console.error('Setting update error:', error);
+        return c.json({ error: 'Failed to update setting' }, 500);
+    }
+});
+
+// ==================== ASSETS API ====================
+// Get all assets
+app.get('/api/assets', async (c) => {
+    try {
+        const category = c.req.query('category');
+
+        let result;
+        if (category) {
+            result = await db.select().from(assets).where(eq(assets.category, category));
+        } else {
+            result = await db.select().from(assets);
+        }
+
+        return c.json(result);
+    } catch (error) {
+        console.error('Assets fetch error:', error);
+        return c.json({ error: 'Failed to fetch assets' }, 500);
+    }
+});
+
+// Get single asset by storage path (for serving files)
+app.get('/api/assets/:path{.+}', async (c) => {
+    const path = c.req.param('path'); // Get everything after /api/assets/
+
+    if (!path) {
+        return c.json({ error: 'Asset path required' }, 400);
+    }
+
+    try {
+        const result = await db.select().from(assets).where(eq(assets.storagePath, path)).limit(1);
+
+        if (result.length === 0) {
+            // Return placeholder SVG for missing assets
+            const placeholderSvg = `<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg">
+                <rect width="100" height="100" fill="#e5e7eb"/>
+                <text x="50" y="50" text-anchor="middle" dy=".3em" fill="#9ca3af" font-family="sans-serif" font-size="12">No Image</text>
+            </svg>`;
+            c.header('Content-Type', 'image/svg+xml');
+            return c.body(placeholderSvg);
+        }
+
+        const asset = result[0];
+
+        // For now, return a placeholder response
+        // In production, you would fetch from MinIO/S3 here
+        const placeholderSvg = `<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg">
+            <rect width="100" height="100" fill="#3b82f6"/>
+            <text x="50" y="50" text-anchor="middle" dy=".3em" fill="white" font-family="sans-serif" font-size="10">${asset.filename}</text>
+        </svg>`;
+
+        c.header('Content-Type', 'image/svg+xml');
+        c.header('Cache-Control', 'public, max-age=31536000'); // Cache for 1 year
+        return c.body(placeholderSvg);
+    } catch (error) {
+        console.error('Asset fetch error:', error);
+        return c.json({ error: 'Failed to fetch asset' }, 500);
+    }
+});
+
+
+
+
+
+
+// ==================== CLEANUP API ====================
+// Cleanup Duplicate Products Endpoint
+app.post('/api/cleanup-products', async (c) => {
+    try {
+        console.log("Cleaning duplicate products...");
+        // Deletes products that are duplicates based on name and vendor_id, keeping the one with the smallest ID
+        await db.execute(sql`
+            DELETE FROM products a USING products b
+            WHERE a.id > b.id 
+            AND a.vendor_id = b.vendor_id 
+            AND a.name = b.name;
+        `);
+
+        // Also invalidate cache
+        await redis.del('vendors_list');
+
+        return c.json({ message: 'Duplicate products removed successfully' });
+    } catch (error) {
+        console.error("Cleanup error:", error);
+        return c.json({ error: 'Failed to clean products' }, 500);
+    }
+});
 
 const port = 3000;
 if (process.env.NODE_ENV !== 'test') {

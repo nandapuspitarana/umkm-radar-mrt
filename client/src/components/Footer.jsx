@@ -7,17 +7,33 @@ export default function Footer() {
     });
 
     useEffect(() => {
-        fetch('http://localhost:3000/api/settings')
+        fetch('/api/settings')
             .then(res => res.json())
             .then(data => {
-                if (data.footer_text || data.footer_links) {
-                    setSettings({
-                        footer_text: data.footer_text || '© 2024 UMKM Radar',
-                        footer_links: data.footer_links || []
-                    });
+                // Parse footer_text safely (could be string or object)
+                let text = '© 2024 UMKM Radar';
+                if (data.footer_text) {
+                    text = typeof data.footer_text === 'string'
+                        ? data.footer_text
+                        : (data.footer_text.text || text);
                 }
+
+                // Parse footer_links safely (could be array or object with .links)
+                let links = [];
+                if (data.footer_links) {
+                    if (Array.isArray(data.footer_links)) {
+                        links = data.footer_links;
+                    } else if (data.footer_links.links && Array.isArray(data.footer_links.links)) {
+                        links = data.footer_links.links;
+                    }
+                }
+
+                setSettings({
+                    footer_text: text,
+                    footer_links: links
+                });
             })
-            .catch(err => console.error("Failed to fetch footer settings"));
+            .catch(err => console.error("Failed to fetch footer settings", err));
     }, []);
 
     return (

@@ -1,5 +1,18 @@
 import { pgTable, serial, text, doublePrecision, integer, timestamp, jsonb, boolean } from 'drizzle-orm/pg-core';
 
+// Categories - For vendor/product categorization (MUST BE FIRST - referenced by vendors & products)
+export const categories = pgTable('categories', {
+    id: serial('id').primaryKey(),
+    name: text('name').notNull(), // e.g. "Ngopi", "Kuliner", "ATM & Belanja"
+    slug: text('slug').notNull().unique(), // e.g. "ngopi", "kuliner", "atm-belanja"
+    icon: text('icon'), // Icon name or URL
+    color: text('color').default('#0969da'), // Hex color for UI
+    description: text('description'),
+    isActive: boolean('is_active').default(true),
+    sortOrder: integer('sort_order').default(0), // For ordering in UI
+    createdAt: timestamp('created_at').defaultNow(),
+});
+
 export const vendors = pgTable('vendors', {
     id: serial('id').primaryKey(),
     name: text('name').notNull(),
@@ -10,7 +23,8 @@ export const vendors = pgTable('vendors', {
     image: text('image'), // Store Logo URL
     schedule: jsonb('schedule'), // { days: [], open: "06:00", close: "21:00", holidayClosed: true }
     status: text('status').default('pending'), // approved, pending, rejected
-    category: text('category').default('Umum'), // Umum, Sayur, Buah, Daging, etc.
+    category: text('category').default('Umum'), // DEPRECATED: Use categoryId instead
+    categoryId: integer('category_id').references(() => categories.id), // Foreign key to categories table
     rating: doublePrecision('rating').default(0),
     locationTags: text('location_tags'), // e.g. "Dekat MRT BNI, Dukuh Atas"
     description: text('description'), // e.g. "Nasi uduk, Ketupat sayur, Lontong"
@@ -22,7 +36,8 @@ export const products = pgTable('products', {
     name: text('name').notNull(),
     price: integer('price').notNull(),
     originalPrice: integer('original_price'),
-    category: text('category').notNull(),
+    category: text('category').notNull(), // DEPRECATED: Use categoryId instead
+    categoryId: integer('category_id').references(() => categories.id), // Foreign key to categories table
     image: text('image').notNull(),
     rating: doublePrecision('rating').default(0),
     discountPrice: integer('discount_price'), // Using this as the final sale price if present
@@ -81,21 +96,23 @@ export const assets = pgTable('assets', {
     mimeType: text('mime_type').notNull(),
     size: integer('size').notNull(), // File size in bytes
     bucket: text('bucket').default('assets'),
-    category: text('category').default('general'), // banner, logo, product, etc.
+    category: text('category').default('general'), // banner, logo, product, etc. (NOT related to categories table)
     alt: text('alt'), // Alt text for accessibility
     uploadedBy: integer('uploaded_by').references(() => users.id),
     createdAt: timestamp('created_at').defaultNow(),
 });
 
-// Categories - For vendor/product categorization
-export const categories = pgTable('categories', {
+// Navigation Items - For managing navigation menus
+export const navigationItems = pgTable('navigation_items', {
     id: serial('id').primaryKey(),
-    name: text('name').notNull(), // e.g. "Ngopi", "Kuliner", "ATM & Belanja"
-    slug: text('slug').notNull().unique(), // e.g. "ngopi", "kuliner", "atm-belanja"
-    icon: text('icon'), // Icon name or URL
-    color: text('color').default('#0969da'), // Hex color for UI
-    description: text('description'),
-    isActive: boolean('is_active').default(true),
-    sortOrder: integer('sort_order').default(0), // For ordering in UI
+    label: text('label').notNull(), // Menu label, e.g. "Beranda", "Tentang Kami"
+    path: text('path').notNull(), // URL path, e.g. "/", "/about", "/contact"
+    icon: text('icon'), // Icon name or emoji
+    parentId: integer('parent_id').references((): any => navigationItems.id), // For nested menus
+    position: text('position').notNull().default('header'), // 'header', 'footer', 'sidebar'
+    sortOrder: integer('sort_order').default(0), // Display order
+    isExternal: boolean('is_external').default(false), // External link?
+    isVisible: boolean('is_visible').default(true), // Show/hide
+    requiresAuth: boolean('requires_auth').default(false), // Login required?
     createdAt: timestamp('created_at').defaultNow(),
 });
