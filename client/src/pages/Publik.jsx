@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MapPin, ChevronRight, Play } from 'lucide-react';
+import { MapPin, ChevronRight } from 'lucide-react';
 import AppLayout from '../components/AppLayout';
 
 // Category mapping for display titles
@@ -42,23 +42,19 @@ export default function Publik() {
 
     return (
         <AppLayout
-            title="Ruang Publik"
+            title="Fasilitas Umum / Ruang Publik"
             subtitle="Senayan Mastercard"
             activeCategory="publik"
         >
             <div className="pb-6">
-                {/* Video Banner Placeholder */}
+                {/* Banner Image */}
                 <div className="p-2.5">
-                    <div className="relative w-full aspect-[3/2] max-h-[200px] bg-grey-300 rounded-2xl overflow-hidden flex items-center justify-center">
+                    <div className="relative w-full aspect-[3/2] max-h-[200px] max-w-[600px] bg-grey-900 rounded-[20px] overflow-hidden">
                         <img
                             src="https://images.unsplash.com/photo-1519331379826-f10be5486c6f?w=600&h=400&fit=crop"
-                            alt="Public spaces"
+                            alt="Ruang Publik"
                             className="w-full h-full object-cover"
                         />
-                        <div className="absolute inset-0 bg-black/20" />
-                        <button className="absolute w-20 h-20 bg-white/90 rounded-full flex items-center justify-center shadow-lg hover:bg-white transition-colors">
-                            <Play size={32} className="text-grey-600 ml-1" fill="currentColor" />
-                        </button>
                     </div>
                 </div>
 
@@ -90,18 +86,22 @@ export default function Publik() {
 // Section Component
 function DestinationSection({ section }) {
     return (
-        <div className="py-2">
+        <div className="py-1.5 pr-2.5">
             {/* Section Header */}
-            <div className="flex items-center justify-between px-5 pt-3 pb-2">
-                <h2 className="font-bold text-[15px] text-black capitalize">
+            <div className="flex items-center gap-1.5 px-5 pt-2.5 pb-2">
+                <h2 className="font-bold text-[15px] text-black capitalize flex-1">
                     {section.title}
                 </h2>
-                <ChevronRight size={16} className="text-grey-600" />
+                <div className="flex items-center pt-0.5">
+                    <div className="flex items-center justify-center h-[11px] w-[10px] -rotate-90">
+                        <ChevronRight size={10} className="text-grey-600" />
+                    </div>
+                </div>
             </div>
 
             {/* Horizontal Scroll Cards */}
-            <div className="overflow-x-auto no-scrollbar px-2.5">
-                <div className="flex gap-1.5">
+            <div className="overflow-x-auto no-scrollbar">
+                <div className="flex gap-1.5 px-2.5">
                     {section.destinations.map((dest) => (
                         <DestinationCard key={dest.id} destination={dest} />
                     ))}
@@ -113,10 +113,22 @@ function DestinationSection({ section }) {
 
 // Destination Card Component matching Figma design
 function DestinationCard({ destination }) {
-    const imageUrl = destination.image_url || 'https://images.unsplash.com/photo-1555993539-1732b0258235?w=400&h=300&fit=crop';
-    const distance = destination.distance_from_station
-        ? `${(destination.distance_from_station / 1000).toFixed(1)} km`
-        : destination.distance || 'N/A';
+    // Use 'image' field from database
+    const imageUrl = destination.image || 'https://images.unsplash.com/photo-1519331379826-f10be5486c6f?w=600&h=400&fit=crop';
+
+    // Format distance properly - distance_from_station is in kilometers
+    const formatDistance = (distanceKm) => {
+        if (!distanceKm && distanceKm !== 0) return '0 m';
+
+        if (distanceKm < 1) {
+            // Convert to meters for distances less than 1 km
+            return `${Math.round(distanceKm * 1000)} m`;
+        }
+        // Show in km for distances >= 1 km
+        return `${distanceKm.toFixed(1)} km`;
+    };
+
+    const distance = formatDistance(destination.distance_from_station);
 
     return (
         <div className="w-[200px] h-[133px] rounded-[15px] overflow-hidden flex-shrink-0 cursor-pointer relative group">
@@ -126,7 +138,7 @@ function DestinationCard({ destination }) {
                 alt={destination.name}
                 className="absolute inset-0 w-full h-full object-cover transition-transform group-hover:scale-105"
                 onError={(e) => {
-                    e.target.src = 'https://images.unsplash.com/photo-1555993539-1732b0258235?w=400&h=300&fit=crop';
+                    e.target.src = 'https://images.unsplash.com/photo-1519331379826-f10be5486c6f?w=600&h=400&fit=crop';
                 }}
             />
 
@@ -135,22 +147,17 @@ function DestinationCard({ destination }) {
 
             {/* Distance Badge (Top Left) */}
             <div className="absolute top-5 left-5 flex items-center gap-1.5">
-                <MapPin size={12} className="text-white" />
+                <MapPin size={12} className="text-white" fill="white" />
                 <span className="text-white text-sm font-semibold lowercase">
                     {distance}
                 </span>
             </div>
 
             {/* Title (Bottom) */}
-            <div className="absolute bottom-4 left-5 right-5">
-                <p className="text-grey-200 text-sm font-semibold capitalize leading-tight">
+            <div className="absolute bottom-0 left-0 right-0 px-5 pb-[15px]">
+                <p className="text-sm font-semibold text-grey-200 capitalize leading-normal whitespace-pre-wrap">
                     {destination.name}
                 </p>
-                {destination.description && (
-                    <p className="text-grey-200 text-xs opacity-80 leading-tight mt-0.5 line-clamp-2">
-                        {destination.description}
-                    </p>
-                )}
             </div>
         </div>
     );

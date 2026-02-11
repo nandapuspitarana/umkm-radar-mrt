@@ -9,7 +9,7 @@ import Atm from './pages/Atm';
 import Vendor from './pages/Vendor';
 import CartSheet from './components/CartSheet';
 import { ShoppingBag } from 'lucide-react';
-import Footer from './components/Footer';
+
 import StaticPage from './pages/StaticPage';
 
 export default function App() {
@@ -222,7 +222,7 @@ export default function App() {
         onCheckout={handleCheckout}
       />
 
-      <Footer />
+
     </div>
   );
 
@@ -266,7 +266,7 @@ export default function App() {
             vendor={currentVendor}
             onCheckout={handleCheckout}
           />
-          <Footer />
+
         </div>
       } />
       <Route path="/ngopi" element={
@@ -306,7 +306,7 @@ export default function App() {
             vendor={currentVendor}
             onCheckout={handleCheckout}
           />
-          <Footer />
+
         </div>
       } />
       <Route path="/publik" element={
@@ -346,13 +346,13 @@ export default function App() {
             vendor={currentVendor}
             onCheckout={handleCheckout}
           />
-          <Footer />
+
         </div>
       } />
       <Route path="/wisata" element={
         <div className="antialiased text-gray-800">
           <Wisata />
-          <Footer />
+
         </div>
       } />
       <Route path="/atm" element={
@@ -392,7 +392,7 @@ export default function App() {
             vendor={currentVendor}
             onCheckout={handleCheckout}
           />
-          <Footer />
+
         </div>
       } />
       <Route path="/terms" element={<StaticPage title="Syarat & Ketentuan" pageKey="page_terms" />} />
