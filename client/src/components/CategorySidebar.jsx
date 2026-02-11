@@ -54,16 +54,16 @@ export default function CategorySidebar({ activeCategory }) {
                 >
                     <div
                         className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl transition-all ${currentActive === category.id
-                                ? `${getActiveGradient(category.id)} shadow-md`
-                                : 'bg-transparent hover:bg-grey-100'
+                            ? `${getActiveGradient(category.id)} shadow-md`
+                            : 'bg-transparent hover:bg-grey-100'
                             }`}
                     >
                         {category.icon}
                     </div>
                     <span
                         className={`text-xs font-semibold text-center leading-tight ${currentActive === category.id
-                                ? 'text-grey-600'
-                                : 'text-grey-600'
+                            ? 'text-grey-600'
+                            : 'text-grey-600'
                             }`}
                     >
                         {category.label}

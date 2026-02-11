@@ -1,19 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Search, ChevronDown, X, User, ShoppingBag, HelpCircle } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Search, X, User, ShoppingBag, HelpCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-// ATM Bank data with static images
-const atmBanks = [
-    { id: 1, name: 'Bank BCA', image: 'https://images.unsplash.com/photo-1601597111158-2fceff292cdc?w=400&h=300&fit=crop', distance: '30 m' },
-    { id: 2, name: 'Bank Mandiri', image: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=400&h=300&fit=crop', distance: '30 m' },
-    { id: 3, name: 'Bank BNI', image: 'https://images.unsplash.com/photo-1556742393-d75f468bfcb0?w=400&h=300&fit=crop', distance: '52 m' },
-    { id: 4, name: 'Bank BTPN', image: 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400&h=300&fit=crop', distance: '52 m' },
-    { id: 5, name: 'Bank BTN', image: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=400&h=300&fit=crop', distance: '224 m' },
-    { id: 6, name: 'Bank Danamon', image: 'https://images.unsplash.com/photo-1501167786227-4cba60f6d58f?w=400&h=300&fit=crop', distance: '318 m' },
-];
-
-// Category sidebar data
+// Category menu items
 const categories = [
     { id: 'rekomen', label: 'Rekomen', icon: '📢', path: '/' },
     { id: 'publik', label: 'Publik', icon: '🛋️', path: '/publik' },
@@ -23,40 +13,30 @@ const categories = [
     { id: 'atm', label: 'ATM & Belanja', icon: '🏪', path: '/atm' },
 ];
 
-// ATM & Shopping categories for filter
-const atmCategories = [
-    'Semua Kategori',
-    'ATM',
-    'Minimarket',
-    'Supermarket',
-    'Department Store',
-];
-
-export default function Atm({ vendors, onSelectVendor }) {
+export default function AppLayout({ children, title = 'UMKM Radar', subtitle = 'Senayan Mastercard', activeCategory = 'rekomen' }) {
     const navigate = useNavigate();
-    const [selectedCategory, setSelectedCategory] = useState('Semua Kategori');
-    const [isCategoryOpen, setIsCategoryOpen] = useState(false);
+    const location = useLocation();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const [searchQuery, setSearchQuery] = useState('');
     const [isSearchOpen, setIsSearchOpen] = useState(false);
-    const [sortedVendors, setSortedVendors] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [searchQuery, setSearchQuery] = useState('');
     const [logo, setLogo] = useState({ url: '', text: 'M' });
 
-    // Fetch logo from settings
     useEffect(() => {
+        // Fetch logo from settings
         fetch('/api/settings')
             .then(res => res.json())
             .then(data => {
                 let logoUrl = '';
                 let logoText = 'M';
 
+                // Parse app_logo
                 if (data.app_logo) {
                     logoUrl = typeof data.app_logo === 'string'
                         ? data.app_logo
                         : (data.app_logo.url || data.app_logo.logo || '');
                 }
 
+                // Parse app_logo_text
                 if (data.app_logo_text) {
                     logoText = typeof data.app_logo_text === 'string'
                         ? data.app_logo_text
@@ -68,102 +48,6 @@ export default function Atm({ vendors, onSelectVendor }) {
             .catch(err => console.error('Failed to load logo settings:', err));
     }, []);
 
-    // Filter vendors by ATM/Shopping category
-    const safeVendors = Array.isArray(vendors) ? vendors : [];
-    const atmVendors = safeVendors.filter(v =>
-        v.category?.toLowerCase().includes('atm') ||
-        v.category?.toLowerCase().includes('minimarket') ||
-        v.category?.toLowerCase().includes('supermarket') ||
-        v.category?.toLowerCase().includes('convenience') ||
-        v.category?.toLowerCase().includes('belanja') ||
-        v.category?.toLowerCase().includes('store')
-    );
-
-    // Sort by distance
-    useEffect(() => {
-        let isMounted = true;
-
-        const timer = setTimeout(() => {
-            if (isMounted && loading) {
-                setSortedVendors(atmVendors);
-                setLoading(false);
-            }
-        }, 5000);
-
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    if (!isMounted) return;
-                    const { latitude, longitude } = position.coords;
-                    sortVendors(latitude, longitude);
-                    clearTimeout(timer);
-                },
-                (error) => {
-                    if (!isMounted) return;
-                    setSortedVendors(atmVendors);
-                    setLoading(false);
-                    clearTimeout(timer);
-                },
-                { timeout: 5000, enableHighAccuracy: false }
-            );
-        } else {
-            setSortedVendors(atmVendors);
-            setLoading(false);
-            clearTimeout(timer);
-        }
-
-        return () => {
-            isMounted = false;
-            clearTimeout(timer);
-        };
-    }, [vendors]);
-
-    const sortVendors = (lat, lng) => {
-        const sorted = [...atmVendors].map(v => {
-            if (!v.location || !v.location.lat || !v.location.lng) {
-                return { ...v, distance: null };
-            }
-            return {
-                ...v,
-                distance: calculateDistance(lat, lng, v.location.lat, v.location.lng)
-            };
-        }).sort((a, b) => {
-            if (a.distance === null) return 1;
-            if (b.distance === null) return -1;
-            return a.distance - b.distance;
-        });
-        setSortedVendors(sorted);
-        setLoading(false);
-    };
-
-    const calculateDistance = (lat1, lon1, lat2, lon2) => {
-        const R = 6371;
-        const dLat = deg2rad(lat2 - lat1);
-        const dLon = deg2rad(lon2 - lon1);
-        const a =
-            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-            Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
-            Math.sin(dLon / 2) * Math.sin(dLon / 2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return R * c;
-    };
-
-    const deg2rad = (deg) => deg * (Math.PI / 180);
-
-    const formatDistance = (distance) => {
-        if (distance === null || distance === undefined) return null;
-        if (distance < 1) return `${Math.round(distance * 1000)} m`;
-        return `${distance.toFixed(1)} km`;
-    };
-
-    // Filter by search and category
-    const filteredVendors = sortedVendors.filter(v => {
-        const matchesSearch = v.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            v.address?.toLowerCase().includes(searchQuery.toLowerCase());
-        return matchesSearch;
-    });
-
-    // Handle category navigation
     const handleCategoryClick = (category) => {
         navigate(category.path);
     };
@@ -172,11 +56,9 @@ export default function Atm({ vendors, onSelectVendor }) {
         <div className="min-h-screen bg-white flex flex-col">
             {/* Header */}
             <header className="bg-white z-50">
-                {/* Main Header Bar */}
                 <div className="flex items-center justify-between px-4 py-3 gap-4">
                     {/* MRT Logo & Page Title */}
                     <div className="flex items-center gap-3">
-                        {/* MRT Icon */}
                         <div className="w-12 h-12 rounded-xl flex items-center justify-center overflow-hidden">
                             {logo.url ? (
                                 <img
@@ -196,27 +78,24 @@ export default function Atm({ vendors, onSelectVendor }) {
                                 {logo.text}
                             </span>
                         </div>
-                        {/* Page Title */}
                         <div className="flex flex-col">
                             <h1 className="font-display text-lg uppercase tracking-tight text-black leading-tight">
-                                ATM & Minimarket
+                                {title}
                             </h1>
                             <p className="text-highlight-blue font-semibold text-sm capitalize">
-                                Senayan Mastercard
+                                {subtitle}
                             </p>
                         </div>
                     </div>
 
                     {/* Right actions */}
                     <div className="flex items-center gap-4">
-                        {/* Search Button */}
                         <button
                             onClick={() => setIsSearchOpen(!isSearchOpen)}
                             className="w-10 h-10 border border-grey-300 rounded-full flex items-center justify-center hover:bg-grey-100 transition-colors"
                         >
                             <Search size={18} className="text-grey-600" />
                         </button>
-                        {/* Menu Dots */}
                         <button
                             onClick={() => setIsMenuOpen(true)}
                             className="flex flex-col gap-1 p-2"
@@ -241,7 +120,7 @@ export default function Atm({ vendors, onSelectVendor }) {
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-grey-300" size={18} />
                                 <input
                                     type="text"
-                                    placeholder="Cari ATM atau toko..."
+                                    placeholder="Cari..."
                                     className="w-full bg-grey-100 border border-grey-200 rounded-xl py-2.5 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-highlight-blue/20 transition-all text-sm"
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
@@ -264,8 +143,8 @@ export default function Atm({ vendors, onSelectVendor }) {
                             className="flex flex-col items-center gap-1.5 group"
                         >
                             <div
-                                className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl transition-all ${category.id === 'atm'
-                                    ? 'bg-gradient-to-b from-fuchsia-400 to-white shadow-md'
+                                className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl transition-all ${category.id === activeCategory
+                                    ? 'bg-gradient-to-b from-green-400 to-white shadow-md'
                                     : 'bg-transparent hover:bg-grey-100'
                                     }`}
                             >
@@ -280,52 +159,7 @@ export default function Atm({ vendors, onSelectVendor }) {
 
                 {/* Main Content Area */}
                 <main className="flex-1 bg-grey-100 rounded-tl-3xl overflow-y-auto">
-                    {/* ATM Bank Banners - Horizontal Scroll */}
-                    <div className="sticky top-0 z-10 bg-gradient-to-b from-grey-100 via-grey-100/80 to-transparent p-2.5">
-                        <div className="overflow-x-auto no-scrollbar">
-                            <div className="flex gap-1.5">
-                                {atmBanks.map((bank) => (
-                                    <div
-                                        key={bank.id}
-                                        className="w-32 h-24 rounded-2xl overflow-hidden flex-shrink-0 cursor-pointer relative group bg-white"
-                                    >
-                                        <div className="absolute inset-0 bg-gradient-to-br from-blue-100 to-blue-50 flex items-center justify-center">
-                                            <span className="text-3xl">🏧</span>
-                                        </div>
-                                        <div className="absolute bottom-2 left-0 right-0 flex justify-center">
-                                            <div className="bg-grey-100 px-2 py-1 rounded-lg">
-                                                <span className="text-sm font-semibold text-grey-400 lowercase">{bank.distance}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Vendor List */}
-                    <div className="flex flex-col gap-2.5 px-2.5 pb-24">
-                        {loading ? (
-                            <div className="flex items-center justify-center py-12">
-                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                            </div>
-                        ) : filteredVendors.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center py-12 text-grey-600">
-                                <span className="text-4xl mb-3">🏪</span>
-                                <p className="font-semibold">Belum ada toko</p>
-                                <p className="text-sm">Coba ubah filter atau cari yang lain</p>
-                            </div>
-                        ) : (
-                            filteredVendors.map((vendor) => (
-                                <VendorCard
-                                    key={vendor.id}
-                                    vendor={vendor}
-                                    distance={formatDistance(vendor.distance)}
-                                    onClick={() => onSelectVendor && onSelectVendor(vendor)}
-                                />
-                            ))
-                        )}
-                    </div>
+                    {children}
                 </main>
             </div>
 
@@ -383,50 +217,6 @@ export default function Atm({ vendors, onSelectVendor }) {
                     </>
                 )}
             </AnimatePresence>
-        </div>
-    );
-}
-
-// Vendor Card Component matching Figma design
-function VendorCard({ vendor, distance, onClick }) {
-    return (
-        <div
-            onClick={onClick}
-            className="bg-white border border-grey-200 rounded-2xl p-1.5 flex items-center gap-2.5 cursor-pointer hover:shadow-md transition-shadow relative"
-        >
-            {/* Thumbnail */}
-            <div className="w-14 h-16 rounded-xl overflow-hidden flex-shrink-0 bg-grey-100">
-                {vendor.image ? (
-                    <img src={vendor.image} alt={vendor.name} className="w-full h-full object-cover" />
-                ) : (
-                    <div className="w-full h-full flex items-center justify-center text-2xl">🏪</div>
-                )}
-            </div>
-
-            {/* Content */}
-            <div className="flex-1 min-w-0 py-1">
-                {/* Name */}
-                <h3 className="font-semibold text-sm text-gray-700 truncate capitalize">
-                    {vendor.name}
-                </h3>
-
-                {/* Address */}
-                <p className="text-xs text-highlight-blue truncate mt-1">
-                    {vendor.address || 'Alamat tidak tersedia'}
-                </p>
-
-                {/* Operating Hours */}
-                <p className="text-sm font-semibold text-grey-500 mt-1">
-                    {vendor.schedule?.open || '06:00'} - {vendor.schedule?.close || '21:00'}
-                </p>
-            </div>
-
-            {/* Distance Badge */}
-            {distance && (
-                <div className="absolute bottom-2 right-2.5 bg-grey-100 px-2 py-1 rounded-lg">
-                    <span className="text-sm font-semibold text-grey-400 lowercase">{distance}</span>
-                </div>
-            )}
         </div>
     );
 }

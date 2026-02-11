@@ -4,7 +4,7 @@ import { cors } from 'hono/cors';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import * as dotenv from 'dotenv';
-import { vendors, products, orders, settings, users, vouchers, assets, categories, navigationItems } from './db/schema';
+import { vendors, products, orders, settings, users, vouchers, assets, categories, navigationItems, destinations } from './db/schema';
 import { eq, desc, and, sql } from 'drizzle-orm';
 
 dotenv.config();
@@ -21,18 +21,7 @@ import { randomBytes } from 'crypto';
 
 import Redis from 'ioredis';
 
-// MinIO / S3 Client
-import { S3Client, PutObjectCommand, DeleteObjectCommand, ListObjectsV2Command, CreateBucketCommand, HeadBucketCommand } from '@aws-sdk/client-s3';
 
-const s3Client = new S3Client({
-    endpoint: process.env.MINIO_ENDPOINT || 'http://localhost:9000',
-    region: 'us-east-1',
-    credentials: {
-        accessKeyId: process.env.MINIO_ACCESS_KEY || 'umkmradar',
-        secretAccessKey: process.env.MINIO_SECRET_KEY || 'umkmradar123',
-    },
-    forcePathStyle: true, // Required for MinIO
-});
 
 // Database Connection
 const pool = new Pool({
@@ -1311,57 +1300,31 @@ app.post('/api/upload', async (c) => {
 });
 
 // ==========================================
-// ASSET MANAGEMENT API (MinIO + imgproxy)
+// ASSET MANAGEMENT API (Local Filesystem)
 // ==========================================
+import { existsSync, mkdirSync, unlinkSync, readFileSync } from 'fs';
+import { resolve, extname } from 'path';
 
-const MINIO_BUCKET = 'assets';
-const IMGPROXY_URL = process.env.IMGPROXY_URL || 'http://localhost:8088';
-const MINIO_PUBLIC_URL = process.env.MINIO_PUBLIC_URL || 'http://localhost:9000';
+const UPLOADS_DIR = resolve('./uploads/assets');
 
-// Ensure bucket exists
-async function ensureBucketExists() {
-    try {
-        await s3Client.send(new HeadBucketCommand({ Bucket: MINIO_BUCKET }));
-    } catch (err: any) {
-        if (err.name === 'NotFound' || err.$metadata?.httpStatusCode === 404) {
-            await s3Client.send(new CreateBucketCommand({ Bucket: MINIO_BUCKET }));
-            console.log(`✅ Created MinIO bucket: ${MINIO_BUCKET}`);
-        }
+// Ensure upload directories exist
+function ensureUploadDir(category: string) {
+    const dir = join(UPLOADS_DIR, category);
+    if (!existsSync(dir)) {
+        mkdirSync(dir, { recursive: true });
     }
+    return dir;
 }
 
-// Generate imgproxy URL with transformations
-function generateImgproxyUrl(storagePath: string, options: {
-    width?: number,
-    height?: number,
-    resize?: 'fit' | 'fill' | 'crop',
-    quality?: number,
-    format?: 'webp' | 'avif' | 'jpg' | 'png',
-    blur?: number,
-} = {}) {
-    const transforms: string[] = [];
-
-    if (options.resize && (options.width || options.height)) {
-        transforms.push(`rs:${options.resize}:${options.width || 0}:${options.height || 0}`);
-    } else if (options.width || options.height) {
-        transforms.push(`rs:fit:${options.width || 0}:${options.height || 0}`);
-    }
-
-    if (options.quality) transforms.push(`q:${options.quality}`);
-    if (options.format) transforms.push(`f:${options.format}`);
-    if (options.blur) transforms.push(`bl:${options.blur}`);
-
-    const transformPath = transforms.length > 0 ? transforms.join('/') + '/' : '';
-    const s3Path = `s3://${MINIO_BUCKET}/${storagePath}`;
-
-    return `${IMGPROXY_URL}/insecure/${transformPath}plain/${s3Path}`;
+// Ensure base upload dir exists on startup
+if (!existsSync(UPLOADS_DIR)) {
+    mkdirSync(UPLOADS_DIR, { recursive: true });
+    console.log('✅ Created uploads/assets directory');
 }
 
-// Upload asset to MinIO
+// Upload asset to local filesystem
 app.post('/api/assets/upload', async (c) => {
     try {
-        await ensureBucketExists();
-
         const formData = await c.req.formData();
         const file = formData.get('file') as File;
         const category = formData.get('category') as string || 'general';
@@ -1377,14 +1340,13 @@ app.post('/api/assets/upload', async (c) => {
         const randomId = randomBytes(8).toString('hex');
         const storagePath = `${category}/${timestamp}-${randomId}.${ext}`;
 
-        // Upload to MinIO
+        // Ensure category directory exists
+        ensureUploadDir(category);
+
+        // Save file to local filesystem
         const buffer = await file.arrayBuffer();
-        await s3Client.send(new PutObjectCommand({
-            Bucket: MINIO_BUCKET,
-            Key: storagePath,
-            Body: Buffer.from(buffer),
-            ContentType: file.type,
-        }));
+        const filePath = join(UPLOADS_DIR, storagePath);
+        await writeFile(filePath, Buffer.from(buffer));
 
         // Save metadata to database
         const [inserted] = await db.insert(assets).values({
@@ -1392,23 +1354,20 @@ app.post('/api/assets/upload', async (c) => {
             storagePath: storagePath,
             mimeType: file.type,
             size: file.size,
-            bucket: MINIO_BUCKET,
+            bucket: 'local',
             category: category,
             alt: alt,
         }).returning();
 
-        // Generate URLs - use /api/files/ proxy for external access
-        const directUrl = `/api/files/${MINIO_BUCKET}/${storagePath}`;
-        const imgproxyUrl = generateImgproxyUrl(storagePath);
-        const thumbnailUrl = generateImgproxyUrl(storagePath, { width: 200, height: 200, resize: 'fill', format: 'webp' });
+        const directUrl = `/uploads/assets/${storagePath}`;
 
         return c.json({
             id: inserted.id,
             filename: inserted.filename,
             storagePath: inserted.storagePath,
             directUrl,
-            imgproxyUrl,
-            thumbnailUrl,
+            thumbnailUrl: directUrl,
+            imgproxyUrl: directUrl,
             size: inserted.size,
             category: inserted.category,
         });
@@ -1423,19 +1382,20 @@ app.get('/api/assets', async (c) => {
     try {
         const category = c.req.query('category');
 
-        let query = db.select().from(assets).orderBy(desc(assets.createdAt));
-
         const result = category
             ? await db.select().from(assets).where(eq(assets.category, category)).orderBy(desc(assets.createdAt))
             : await db.select().from(assets).orderBy(desc(assets.createdAt));
 
-        // Add URLs to each asset
-        const assetsWithUrls = result.map(asset => ({
-            ...asset,
-            directUrl: `/api/files/${asset.bucket}/${asset.storagePath}`,
-            imgproxyUrl: generateImgproxyUrl(asset.storagePath),
-            thumbnailUrl: generateImgproxyUrl(asset.storagePath, { width: 200, height: 200, resize: 'fill', format: 'webp' }),
-        }));
+        // Add URLs to each asset - serve directly from /uploads/
+        const assetsWithUrls = result.map(asset => {
+            const directUrl = `/uploads/assets/${asset.storagePath}`;
+            return {
+                ...asset,
+                directUrl,
+                thumbnailUrl: directUrl,
+                imgproxyUrl: directUrl,
+            };
+        });
 
         return c.json(assetsWithUrls);
     } catch (error) {
@@ -1444,15 +1404,10 @@ app.get('/api/assets', async (c) => {
     }
 });
 
-// Get single asset with transformation options
+// Get single asset metadata
 app.get('/api/assets/:id', async (c) => {
     try {
         const id = parseInt(c.req.param('id'));
-        const width = c.req.query('w') ? parseInt(c.req.query('w')!) : undefined;
-        const height = c.req.query('h') ? parseInt(c.req.query('h')!) : undefined;
-        const quality = c.req.query('q') ? parseInt(c.req.query('q')!) : undefined;
-        const format = c.req.query('f') as 'webp' | 'avif' | 'jpg' | 'png' | undefined;
-        const resize = c.req.query('rs') as 'fit' | 'fill' | 'crop' | undefined;
 
         const [asset] = await db.select().from(assets).where(eq(assets.id, id));
 
@@ -1460,12 +1415,13 @@ app.get('/api/assets/:id', async (c) => {
             return c.json({ error: 'Asset not found' }, 404);
         }
 
-        const url = generateImgproxyUrl(asset.storagePath, { width, height, quality, format, resize });
+        const directUrl = `/uploads/assets/${asset.storagePath}`;
 
         return c.json({
             ...asset,
-            directUrl: `/api/files/${asset.bucket}/${asset.storagePath}`,
-            transformedUrl: url,
+            directUrl,
+            thumbnailUrl: directUrl,
+            imgproxyUrl: directUrl,
         });
     } catch (error) {
         console.error("Get asset error:", error);
@@ -1485,11 +1441,15 @@ app.delete('/api/assets/:id', async (c) => {
             return c.json({ error: 'Asset not found' }, 404);
         }
 
-        // Delete from MinIO
-        await s3Client.send(new DeleteObjectCommand({
-            Bucket: MINIO_BUCKET,
-            Key: asset.storagePath,
-        }));
+        // Delete file from local filesystem
+        const filePath = join(UPLOADS_DIR, asset.storagePath);
+        try {
+            if (existsSync(filePath)) {
+                unlinkSync(filePath);
+            }
+        } catch (e) {
+            console.warn("Could not delete file:", filePath);
+        }
 
         // Delete from database
         await db.delete(assets).where(eq(assets.id, id));
@@ -1498,65 +1458,6 @@ app.delete('/api/assets/:id', async (c) => {
     } catch (error) {
         console.error("Delete asset error:", error);
         return c.json({ error: 'Failed to delete asset' }, 500);
-    }
-});
-
-// Get imgproxy URL generator (for frontend to build URLs)
-app.get('/api/assets/url/:storagePath', async (c) => {
-    const storagePath = c.req.param('storagePath');
-    const width = c.req.query('w') ? parseInt(c.req.query('w')!) : undefined;
-    const height = c.req.query('h') ? parseInt(c.req.query('h')!) : undefined;
-    const quality = c.req.query('q') ? parseInt(c.req.query('q')!) : 80;
-    const format = c.req.query('f') as 'webp' | 'avif' | 'jpg' | 'png' || 'webp';
-    const resize = c.req.query('rs') as 'fit' | 'fill' | 'crop' || 'fit';
-
-    const url = generateImgproxyUrl(storagePath, { width, height, quality, format, resize });
-
-    return c.json({ url });
-});
-
-// Proxy route to serve MinIO files through backend (avoids localhost:9000 CORS issues)
-app.get('/api/files/:bucket/:filename{.+}', async (c) => {
-    try {
-        const bucket = c.req.param('bucket');
-        const filename = c.req.param('filename');
-
-        const { GetObjectCommand } = await import('@aws-sdk/client-s3');
-        const command = new GetObjectCommand({
-            Bucket: bucket,
-            Key: filename,
-        });
-
-        const response = await s3Client.send(command);
-
-        if (!response.Body) {
-            return c.json({ error: 'File not found' }, 404);
-        }
-
-        // Convert stream to buffer
-        const chunks: Uint8Array[] = [];
-        const reader = response.Body.transformToWebStream().getReader();
-
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            chunks.push(value);
-        }
-
-        const buffer = Buffer.concat(chunks);
-
-        // Set content type
-        const contentType = response.ContentType || 'application/octet-stream';
-
-        return new Response(buffer, {
-            headers: {
-                'Content-Type': contentType,
-                'Cache-Control': 'public, max-age=31536000', // Cache for 1 year
-            },
-        });
-    } catch (error) {
-        console.error("File proxy error:", error);
-        return c.json({ error: 'File not found' }, 404);
     }
 });
 
@@ -1850,68 +1751,6 @@ app.put('/api/settings/:key', async (c) => {
     }
 });
 
-// ==================== ASSETS API ====================
-// Get all assets
-app.get('/api/assets', async (c) => {
-    try {
-        const category = c.req.query('category');
-
-        let result;
-        if (category) {
-            result = await db.select().from(assets).where(eq(assets.category, category));
-        } else {
-            result = await db.select().from(assets);
-        }
-
-        return c.json(result);
-    } catch (error) {
-        console.error('Assets fetch error:', error);
-        return c.json({ error: 'Failed to fetch assets' }, 500);
-    }
-});
-
-// Get single asset by storage path (for serving files)
-app.get('/api/assets/:path{.+}', async (c) => {
-    const path = c.req.param('path'); // Get everything after /api/assets/
-
-    if (!path) {
-        return c.json({ error: 'Asset path required' }, 400);
-    }
-
-    try {
-        const result = await db.select().from(assets).where(eq(assets.storagePath, path)).limit(1);
-
-        if (result.length === 0) {
-            // Return placeholder SVG for missing assets
-            const placeholderSvg = `<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg">
-                <rect width="100" height="100" fill="#e5e7eb"/>
-                <text x="50" y="50" text-anchor="middle" dy=".3em" fill="#9ca3af" font-family="sans-serif" font-size="12">No Image</text>
-            </svg>`;
-            c.header('Content-Type', 'image/svg+xml');
-            return c.body(placeholderSvg);
-        }
-
-        const asset = result[0];
-
-        // For now, return a placeholder response
-        // In production, you would fetch from MinIO/S3 here
-        const placeholderSvg = `<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg">
-            <rect width="100" height="100" fill="#3b82f6"/>
-            <text x="50" y="50" text-anchor="middle" dy=".3em" fill="white" font-family="sans-serif" font-size="10">${asset.filename}</text>
-        </svg>`;
-
-        c.header('Content-Type', 'image/svg+xml');
-        c.header('Cache-Control', 'public, max-age=31536000'); // Cache for 1 year
-        return c.body(placeholderSvg);
-    } catch (error) {
-        console.error('Asset fetch error:', error);
-        return c.json({ error: 'Failed to fetch asset' }, 500);
-    }
-});
-
-
-
-
 
 
 // ==================== CLEANUP API ====================
@@ -1934,6 +1773,156 @@ app.post('/api/cleanup-products', async (c) => {
     } catch (error) {
         console.error("Cleanup error:", error);
         return c.json({ error: 'Failed to clean products' }, 500);
+    }
+});
+
+// ==================== DESTINATIONS API ====================
+
+// Get all destinations
+app.get('/api/destinations', async (c) => {
+    try {
+        const category = c.req.query('category');
+        const station = c.req.query('station');
+        const stationType = c.req.query('stationType');
+
+        let query = db.select().from(destinations).where(eq(destinations.isActive, true));
+
+        const result = await query;
+
+        // Filter by category if provided
+        let filtered = result;
+        if (category) {
+            filtered = filtered.filter(d => d.category.toLowerCase().includes(category.toLowerCase()));
+        }
+        if (station) {
+            filtered = filtered.filter(d => d.nearestStation.toLowerCase().includes(station.toLowerCase()));
+        }
+        if (stationType) {
+            filtered = filtered.filter(d => d.stationType.toLowerCase() === stationType.toLowerCase());
+        }
+
+        return c.json(filtered);
+    } catch (error) {
+        console.error("Error fetching destinations:", error);
+        return c.json({ error: 'Failed to fetch destinations' }, 500);
+    }
+});
+
+// Get destinations grouped by category
+app.get('/api/destinations/grouped', async (c) => {
+    try {
+        const result = await db.select().from(destinations).where(eq(destinations.isActive, true));
+
+        // Group by category
+        const grouped: Record<string, typeof result> = {};
+        result.forEach(dest => {
+            if (!grouped[dest.category]) {
+                grouped[dest.category] = [];
+            }
+            grouped[dest.category].push(dest);
+        });
+
+        return c.json(grouped);
+    } catch (error) {
+        console.error("Error fetching grouped destinations:", error);
+        return c.json({ error: 'Failed to fetch destinations' }, 500);
+    }
+});
+
+// Get destination by ID
+app.get('/api/destinations/:id', async (c) => {
+    try {
+        const id = parseInt(c.req.param('id'));
+        const result = await db.select().from(destinations).where(eq(destinations.id, id));
+
+        if (result.length === 0) {
+            return c.json({ error: 'Destination not found' }, 404);
+        }
+
+        return c.json(result[0]);
+    } catch (error) {
+        console.error("Error fetching destination:", error);
+        return c.json({ error: 'Failed to fetch destination' }, 500);
+    }
+});
+
+// Get transit directions to a destination
+app.get('/api/destinations/:id/directions', async (c) => {
+    try {
+        const id = parseInt(c.req.param('id'));
+        const from = c.req.query('from'); // e.g., 'bekasi', 'bogor', 'tangerang', 'depok'
+
+        const result = await db.select().from(destinations).where(eq(destinations.id, id));
+
+        if (result.length === 0) {
+            return c.json({ error: 'Destination not found' }, 404);
+        }
+
+        const dest = result[0];
+        const transitHints = dest.transitHints as Record<string, string> || {};
+
+        // Build response with directions
+        const response = {
+            destination: dest.name,
+            nearestStation: dest.nearestStation,
+            stationType: dest.stationType,
+            distanceFromStation: dest.distanceFromStation,
+            walkingTime: dest.walkingTimeMinutes,
+            allTransitHints: transitHints,
+            specificDirection: from ? transitHints[`from_${from.toLowerCase()}`] || `Tidak ada petunjuk untuk ${from}` : null
+        };
+
+        return c.json(response);
+    } catch (error) {
+        console.error("Error fetching directions:", error);
+        return c.json({ error: 'Failed to fetch directions' }, 500);
+    }
+});
+
+// Search destinations
+app.get('/api/destinations/search/:query', async (c) => {
+    try {
+        const query = c.req.param('query').toLowerCase();
+        const result = await db.select().from(destinations).where(eq(destinations.isActive, true));
+
+        // Search in name, description, category, subcategory, address
+        const filtered = result.filter(d =>
+            d.name.toLowerCase().includes(query) ||
+            (d.description && d.description.toLowerCase().includes(query)) ||
+            d.category.toLowerCase().includes(query) ||
+            (d.subcategory && d.subcategory.toLowerCase().includes(query)) ||
+            (d.address && d.address.toLowerCase().includes(query)) ||
+            d.nearestStation.toLowerCase().includes(query)
+        );
+
+        return c.json(filtered);
+    } catch (error) {
+        console.error("Error searching destinations:", error);
+        return c.json({ error: 'Failed to search destinations' }, 500);
+    }
+});
+
+// Get unique categories
+app.get('/api/destinations/meta/categories', async (c) => {
+    try {
+        const result = await db.select().from(destinations).where(eq(destinations.isActive, true));
+        const categories = [...new Set(result.map(d => d.category))];
+        return c.json(categories);
+    } catch (error) {
+        console.error("Error fetching categories:", error);
+        return c.json({ error: 'Failed to fetch categories' }, 500);
+    }
+});
+
+// Get unique stations
+app.get('/api/destinations/meta/stations', async (c) => {
+    try {
+        const result = await db.select().from(destinations).where(eq(destinations.isActive, true));
+        const stations = [...new Set(result.map(d => ({ name: d.nearestStation, type: d.stationType })))];
+        return c.json(stations);
+    } catch (error) {
+        console.error("Error fetching stations:", error);
+        return c.json({ error: 'Failed to fetch stations' }, 500);
     }
 });
 

@@ -38,6 +38,32 @@ export default function Ngopi({ vendors, onSelectVendor }) {
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [sortedVendors, setSortedVendors] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [logo, setLogo] = useState({ url: '', text: 'M' });
+
+    // Fetch logo from settings
+    useEffect(() => {
+        fetch('/api/settings')
+            .then(res => res.json())
+            .then(data => {
+                let logoUrl = '';
+                let logoText = 'M';
+
+                if (data.app_logo) {
+                    logoUrl = typeof data.app_logo === 'string'
+                        ? data.app_logo
+                        : (data.app_logo.url || data.app_logo.logo || '');
+                }
+
+                if (data.app_logo_text) {
+                    logoText = typeof data.app_logo_text === 'string'
+                        ? data.app_logo_text
+                        : (data.app_logo_text.text || 'M');
+                }
+
+                setLogo({ url: logoUrl, text: logoText });
+            })
+            .catch(err => console.error('Failed to load logo settings:', err));
+    }, []);
 
     // Filter vendors by ngopi/coffee category
     const safeVendors = Array.isArray(vendors) ? vendors : [];
@@ -146,8 +172,24 @@ export default function Ngopi({ vendors, onSelectVendor }) {
                     {/* MRT Logo & Page Title */}
                     <div className="flex items-center gap-3">
                         {/* MRT Icon */}
-                        <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-blue-800 rounded-xl flex items-center justify-center">
-                            <span className="text-white text-2xl font-bold">M</span>
+                        <div className="w-12 h-12 rounded-xl flex items-center justify-center overflow-hidden">
+                            {logo.url ? (
+                                <img
+                                    src={logo.url}
+                                    alt="Logo"
+                                    className="w-full h-full object-contain"
+                                    onError={(e) => {
+                                        e.target.style.display = 'none';
+                                        e.target.nextSibling.style.display = 'block';
+                                    }}
+                                />
+                            ) : null}
+                            <span
+                                className="text-grey-900 text-2xl font-bold"
+                                style={{ display: logo.url ? 'none' : 'block' }}
+                            >
+                                {logo.text}
+                            </span>
                         </div>
                         {/* Page Title */}
                         <div className="flex flex-col">
@@ -218,8 +260,8 @@ export default function Ngopi({ vendors, onSelectVendor }) {
                         >
                             <div
                                 className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl transition-all ${category.id === 'ngopi'
-                                        ? 'bg-gradient-to-b from-amber-600 to-white shadow-md'
-                                        : 'bg-transparent hover:bg-grey-100'
+                                    ? 'bg-gradient-to-b from-amber-600 to-white shadow-md'
+                                    : 'bg-transparent hover:bg-grey-100'
                                     }`}
                             >
                                 {category.icon}

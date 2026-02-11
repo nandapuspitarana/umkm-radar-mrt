@@ -62,8 +62,8 @@ export default function Home({ vendors, onSelectVendor }) {
                 if (data.app_logo) {
                     if (typeof data.app_logo === 'string') {
                         setAppLogo(data.app_logo);
-                    } else if (data.app_logo.logo) {
-                        setAppLogo(data.app_logo.logo);
+                    } else if (data.app_logo.url || data.app_logo.logo) {
+                        setAppLogo(data.app_logo.url || data.app_logo.logo);
                     }
                 }
 
@@ -175,24 +175,25 @@ export default function Home({ vendors, onSelectVendor }) {
                     <div className="flex items-center gap-[10px]">
                         {/* MRT Logo */}
                         <div className="px-[5px]">
-                            {appLogo ? (
-                                <div className="w-[50px] h-[50px] rounded-tl-[15px] rounded-tr-[15px] overflow-hidden flex items-center justify-center bg-white">
+                            <div className="w-12 h-12 rounded-xl flex items-center justify-center overflow-hidden">
+                                {appLogo ? (
                                     <img
                                         src={appLogo}
                                         alt="Logo"
                                         className="w-full h-full object-contain"
-                                        onError={() => setAppLogo(null)}
+                                        onError={(e) => {
+                                            e.target.style.display = 'none';
+                                            e.target.nextSibling.style.display = 'block';
+                                        }}
                                     />
-                                </div>
-                            ) : (
-                                <div className="w-[50px] h-[50px] flex items-center justify-center">
-                                    {/* MRT Icon SVG */}
-                                    <svg width="50" height="32" viewBox="0 0 50 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                        <rect x="5" y="0" width="40" height="28" rx="4" fill="#0969da" />
-                                        <text x="25" y="20" textAnchor="middle" fill="white" fontSize="14" fontWeight="bold">MRT</text>
-                                    </svg>
-                                </div>
-                            )}
+                                ) : null}
+                                <span
+                                    className="text-grey-900 text-2xl font-bold"
+                                    style={{ display: appLogo ? 'none' : 'block' }}
+                                >
+                                    M
+                                </span>
+                            </div>
                         </div>
 
                         {/* Station Name - Figma: Inter Bold, Black Ops One */}

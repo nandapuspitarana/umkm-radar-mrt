@@ -116,3 +116,35 @@ export const navigationItems = pgTable('navigation_items', {
     requiresAuth: boolean('requires_auth').default(false), // Login required?
     createdAt: timestamp('created_at').defaultNow(),
 });
+
+// Destinations - Tourist spots with transport navigation
+export const destinations = pgTable('destinations', {
+    id: serial('id').primaryKey(),
+    name: text('name').notNull(),
+    description: text('description'),
+    lat: doublePrecision('lat').notNull(),
+    lng: doublePrecision('lng').notNull(),
+    category: text('category').notNull(), // 'Wisata Alam', 'Wisata Budaya', 'Wisata Sejarah', 'Wisata Religi'
+    subcategory: text('subcategory'),
+    address: text('address'),
+    image: text('image'),
+
+    // Transport navigation fields
+    nearestStation: text('nearest_station').notNull(),
+    stationType: text('station_type').notNull(), // 'MRT', 'KRL', 'LRT', 'TransJakarta'
+    distanceFromStation: doublePrecision('distance_from_station'),
+    walkingTimeMinutes: integer('walking_time_minutes'),
+
+    // Additional info
+    openingHours: text('opening_hours'),
+    ticketPrice: text('ticket_price'),
+    contact: text('contact'),
+    website: text('website'),
+
+    // Transit hints for different origin stations
+    transitHints: jsonb('transit_hints'), // {"from_bekasi": "Naik KRL ke Sudirman", ...}
+
+    isActive: boolean('is_active').default(true),
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow(),
+});

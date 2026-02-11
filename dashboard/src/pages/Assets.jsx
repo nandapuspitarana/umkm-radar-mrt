@@ -123,7 +123,7 @@ export default function Assets() {
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="text-2xl font-bold text-gray-900">Asset Manager</h1>
-                        <p className="text-gray-500 text-sm">Kelola gambar dan media dengan MinIO + imgproxy</p>
+                        <p className="text-gray-500 text-sm">Kelola gambar dan media</p>
                     </div>
                     <div className="flex gap-2">
                         <button
@@ -341,36 +341,19 @@ export default function Assets() {
                                         </div>
                                     </div>
                                     <div>
-                                        <label className="text-xs text-gray-500 block mb-1">imgproxy URL (Auto WebP)</label>
+                                        <label className="text-xs text-gray-500 block mb-1">URL Gambar</label>
                                         <div className="flex gap-2">
                                             <input
                                                 type="text"
-                                                value={selectedAsset.imgproxyUrl}
+                                                value={selectedAsset.directUrl}
                                                 readOnly
                                                 className="flex-1 px-3 py-2 bg-gray-100 rounded text-sm"
                                             />
                                             <button
-                                                onClick={() => copyToClipboard(selectedAsset.imgproxyUrl, 'imgproxy')}
+                                                onClick={() => copyToClipboard(selectedAsset.directUrl, 'img')}
                                                 className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
                                             >
-                                                {copiedId === 'imgproxy' ? <Check size={18} /> : <Copy size={18} />}
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="text-xs text-gray-500 block mb-1">Thumbnail URL (200x200)</label>
-                                        <div className="flex gap-2">
-                                            <input
-                                                type="text"
-                                                value={selectedAsset.thumbnailUrl}
-                                                readOnly
-                                                className="flex-1 px-3 py-2 bg-gray-100 rounded text-sm"
-                                            />
-                                            <button
-                                                onClick={() => copyToClipboard(selectedAsset.thumbnailUrl, 'thumb')}
-                                                className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                                            >
-                                                {copiedId === 'thumb' ? <Check size={18} /> : <Copy size={18} />}
+                                                {copiedId === 'img' ? <Check size={18} /> : <Copy size={18} />}
                                             </button>
                                         </div>
                                     </div>
