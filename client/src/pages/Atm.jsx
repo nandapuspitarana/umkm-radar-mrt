@@ -171,7 +171,7 @@ export default function Atm({ vendors, onSelectVendor }) {
     return (
         <div className="min-h-screen bg-white flex flex-col">
             {/* Header */}
-            <header className="bg-white z-50">
+            <header className="fixed top-0 left-0 right-0 bg-white z-50 shadow-sm">
                 {/* Main Header Bar */}
                 <div className="flex items-center justify-between px-4 py-3 gap-4">
                     {/* MRT Logo & Page Title */}
@@ -254,9 +254,9 @@ export default function Atm({ vendors, onSelectVendor }) {
             </header>
 
             {/* Main Layout */}
-            <div className="flex flex-1 overflow-hidden">
+            <div className="fixed top-[73px] left-0 right-0 bottom-0 flex">
                 {/* Left Sidebar - Category Menu */}
-                <div className="flex flex-col gap-6 py-4 px-2 bg-white h-full w-20 flex-shrink-0">
+                <div className="flex flex-col gap-6 py-4 px-2 bg-white w-20 flex-shrink-0 overflow-y-auto">
                     {categories.map((category) => (
                         <button
                             key={category.id}
@@ -279,7 +279,7 @@ export default function Atm({ vendors, onSelectVendor }) {
                 </div>
 
                 {/* Main Content Area */}
-                <main className="flex-1 bg-grey-100 rounded-tl-3xl overflow-y-auto">
+                <main className="flex-1 bg-grey-100 rounded-tl-3xl overflow-y-auto pb-20">
                     {/* ATM Bank Banners - Horizontal Scroll */}
                     <div className="sticky top-0 z-10 bg-gradient-to-b from-grey-100 via-grey-100/80 to-transparent p-2.5">
                         <div className="overflow-x-auto no-scrollbar">

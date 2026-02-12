@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { MapPin, ChevronRight, Play } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { ChevronRight, MapPin } from 'lucide-react';
 import AppLayout from '../components/AppLayout';
 
-// Category mapping for display titles
+// Category titles matching database categories
 const categoryTitles = {
     'sejarah-museum': 'Wisata Sejarah & Museum',
     'budaya-seni': 'Wisata Budaya & Seni',
@@ -50,18 +51,14 @@ export default function Wisata() {
             activeCategory="wisata"
         >
             <div className="pb-6">
-                {/* Video Banner Placeholder */}
-                <div className="p-2.5">
-                    <div className="relative w-full aspect-[3/2] max-h-[200px] bg-grey-300 rounded-2xl overflow-hidden flex items-center justify-center">
+                {/* Static Banner Image */}
+                <div className="p-[10px]">
+                    <div className="relative w-full aspect-[3/2] max-h-[200px] bg-grey-300 rounded-[20px] overflow-hidden">
                         <img
                             src="https://images.unsplash.com/photo-1555993539-1732b0258235?w=600&h=400&fit=crop"
                             alt="Jakarta cityscape"
                             className="w-full h-full object-cover"
                         />
-                        <div className="absolute inset-0 bg-black/20" />
-                        <button className="absolute w-20 h-20 bg-white/90 rounded-full flex items-center justify-center shadow-lg hover:bg-white transition-colors">
-                            <Play size={32} className="text-grey-600 ml-1" fill="currentColor" />
-                        </button>
                     </div>
                 </div>
 
@@ -93,18 +90,22 @@ export default function Wisata() {
 // Section Component
 function DestinationSection({ section }) {
     return (
-        <div className="py-2">
+        <div className="flex flex-col gap-[10px] py-[5px] pr-[10px]">
             {/* Section Header */}
-            <div className="flex items-center justify-between px-5 pt-3 pb-2">
-                <h2 className="font-bold text-[15px] text-black capitalize">
-                    {section.title}
+            <div className="flex items-center gap-[5px] pl-[20px] pr-[10px] pt-[10px]">
+                <h2 className="font-bold text-[15px] text-black capitalize flex-1 leading-[0]">
+                    <p className="leading-normal">{section.title}</p>
                 </h2>
-                <ChevronRight size={16} className="text-grey-600" />
+                <div className="flex items-center pt-[3px]">
+                    <div className="transform -rotate-90">
+                        <ChevronRight size={11} className="text-grey-600" />
+                    </div>
+                </div>
             </div>
 
             {/* Horizontal Scroll Cards */}
-            <div className="overflow-x-auto no-scrollbar px-2.5">
-                <div className="flex gap-1.5">
+            <div className="overflow-x-auto no-scrollbar px-[10px]">
+                <div className="flex gap-[5px]">
                     {section.destinations.map((dest) => (
                         <DestinationCard key={dest.id} destination={dest} />
                     ))}
@@ -116,13 +117,30 @@ function DestinationSection({ section }) {
 
 // Destination Card Component matching Figma design
 function DestinationCard({ destination }) {
-    const imageUrl = destination.image_url || 'https://images.unsplash.com/photo-1555993539-1732b0258235?w=400&h=300&fit=crop';
-    const distance = destination.distance_from_station
-        ? `${(destination.distance_from_station / 1000).toFixed(1)} km`
-        : 'N/A';
+    const navigate = useNavigate();
+    const imageUrl = destination.image || 'https://images.unsplash.com/photo-1555993539-1732b0258235?w=400&h=300&fit=crop';
+
+    // Format distance properly - distance_from_station is in kilometers (DECIMAL format from DB)
+    const formatDistance = (distanceInKm) => {
+        if (!distanceInKm || distanceInKm === 0) return '0 m';
+
+        // Convert to meters if less than 1 km
+        if (distanceInKm < 1) {
+            const meters = Math.round(distanceInKm * 1000);
+            return `${meters} m`;
+        }
+
+        // Show in km if 1 km or more
+        return `${distanceInKm.toFixed(1)} km`;
+    };
+
+    const distance = formatDistance(destination.distance_from_station);
 
     return (
-        <div className="w-[200px] h-[133px] rounded-[15px] overflow-hidden flex-shrink-0 cursor-pointer relative group">
+        <div
+            onClick={() => navigate(`/wisata/${destination.id}`)}
+            className="w-[200px] h-[133px] rounded-[15px] overflow-hidden flex-shrink-0 cursor-pointer relative group"
+        >
             {/* Background Image */}
             <img
                 src={imageUrl}
@@ -145,15 +163,10 @@ function DestinationCard({ destination }) {
             </div>
 
             {/* Title (Bottom) */}
-            <div className="absolute bottom-4 left-5 right-5">
-                <p className="text-grey-200 text-sm font-semibold capitalize leading-tight">
+            <div className="absolute bottom-0 left-0 right-0 pb-[15px] px-5">
+                <p className="text-grey-200 text-sm font-semibold capitalize leading-normal">
                     {destination.name}
                 </p>
-                {destination.description && (
-                    <p className="text-grey-200 text-xs opacity-80 leading-tight mt-0.5 line-clamp-2">
-                        {destination.description}
-                    </p>
-                )}
             </div>
         </div>
     );

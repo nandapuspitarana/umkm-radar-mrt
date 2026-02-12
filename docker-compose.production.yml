@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  # MinIO - S3 Compatible Object Storage
+  minio:
+    image: minio/minio:latest
+    container_name: umkmradar_minio_prod
+    restart: unless-stopped
+    ports:
+      - "9000:9000" # API (internal only, proxied by Nginx)
+      - "9001:9001" # Console (for admin access)
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-umkmradar}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-umkmradar123}
+      # Enable virtual-host-style requests
+      MINIO_DOMAIN: assets.pengaruh.my.id
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: [ "CMD", "mc", "ready", "local" ]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    networks:
+      - umkmradar_network
+
+  # Nginx - Reverse Proxy for MinIO
+  nginx:
+    image: nginx:alpine
+    container_name: umkmradar_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/assets.pengaruh.my.id.conf:/etc/nginx/conf.d/assets.pengaruh.my.id.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - nginx_logs:/var/log/nginx
+    depends_on:
+      - minio
+    networks:
+      - umkmradar_network
+
+  # Certbot - SSL Certificate Management (optional, for Let's Encrypt)
+  certbot:
+    image: certbot/certbot
+    container_name: umkmradar_certbot
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt
+      - /var/lib/letsencrypt:/var/lib/letsencrypt
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+    networks:
+      - umkmradar_network
+
+volumes:
+  minio_data:
+    driver: local
+  nginx_logs:
+    driver: local
+
+networks:
+  umkmradar_network:
+    driver: bridge

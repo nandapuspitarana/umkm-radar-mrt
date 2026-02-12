@@ -1,5 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Upload, X, Loader2, Image as ImageIcon, Video } from 'lucide-react';
+import { API_ENDPOINTS } from '../config/api';
+import { getImageUrl } from '../utils/api';
 
 /**
  * ImageUploader - Reusable component for uploading images/videos to MinIO
@@ -49,7 +51,7 @@ export default function ImageUploader({
         formData.append('alt', file.name);
 
         try {
-            const res = await fetch('/api/assets/upload', {
+            const res = await fetch(API_ENDPOINTS.assetsUpload, {
                 method: 'POST',
                 body: formData,
             });
@@ -111,11 +113,16 @@ export default function ImageUploader({
                         />
                     ) : (
                         <img
-                            src={value}
+                            src={getImageUrl(value, { w: 400, resize: 'fit' })}
                             alt="Preview"
                             className="w-full h-full object-cover"
                             onError={(e) => {
-                                e.target.style.display = 'none';
+                                // If proxy fails (e.g. local blob), try direct url
+                                if (e.target.src !== value) {
+                                    e.target.src = value;
+                                } else {
+                                    e.target.style.display = 'none';
+                                }
                             }}
                         />
                     )}

@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { MapPin, Search, X, HelpCircle, User, ShoppingBag } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { getImageUrl, getAssetUrl } from '../utils/api';
 import CategorySidebar from '../components/CategorySidebar';
 import TransportLinks from '../components/TransportLinks';
 import ContentSection, { ContentCard, FavoriteCard, StackedCards } from '../components/ContentSection';
@@ -41,6 +42,110 @@ const favoritePlaces = [
     { id: 4, image: 'https://images.unsplash.com/photo-1567521464027-f127ff144326?w=400&h=300&fit=crop', title: 'Senayan City', distance: '900 m' },
     { id: 5, image: 'https://images.unsplash.com/photo-1555529669-e69e7aa0ba9a?w=400&h=300&fit=crop', title: 'Senayan Park', distance: '1.2 km' },
 ];
+
+// Optimized Video/Image Banner Component
+function StoryBanner({ story, onClick }) {
+    const [isLoaded, setIsLoaded] = useState(false);
+    const [loadError, setLoadError] = useState(false);
+    const videoRef = useRef(null);
+
+    // Robust video detection: check extension OR data:video
+    const isVideo = React.useMemo(() => {
+        if (!story.image) return false;
+        return story.image.match(/\.(mp4|webm|mov|m4v)$/i) ||
+            story.image.includes('data:video');
+    }, [story.image]);
+
+    // Timeout safety
+    useEffect(() => {
+        // If loaded state doesn't trigger within 5s, force it to prevent stuck skeleton
+        const timer = setTimeout(() => {
+            if (!isLoaded) {
+                setIsLoaded(true);
+            }
+        }, 5000);
+        return () => clearTimeout(timer);
+    }, [isLoaded]);
+
+    // Handle video play manually to avoid autoplay blocking
+    const handleVideoLoad = () => {
+        setIsLoaded(true);
+        if (videoRef.current) {
+            // Try to play, but don't fail if blocked
+            const playPromise = videoRef.current.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(err => {
+                    // Autoplay was prevented, that's okay
+                    console.log('Autoplay prevented for:', story.title);
+                });
+            }
+        }
+    };
+
+    return (
+        <div
+            onClick={onClick}
+            className="w-[175px] h-[300px] rounded-[20px] overflow-hidden flex-shrink-0 cursor-pointer relative group bg-grey-200"
+        >
+            {/* Loading Skeleton */}
+            {!isLoaded && !loadError && (
+                <div className="absolute inset-0 bg-grey-300 animate-pulse z-10" />
+            )}
+
+            {isVideo ? (
+                <video
+                    ref={videoRef}
+                    src={getAssetUrl(story.image)}
+                    className={`w-full h-full object-cover transition-transform group-hover:scale-105 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
+                    muted
+                    loop
+                    playsInline
+                    preload="metadata"
+                    onLoadedMetadata={handleVideoLoad}
+                    onLoadedData={handleVideoLoad}
+                    onError={(e) => {
+                        console.error('Video load error for:', story.image, e);
+                        setLoadError(true);
+                        setIsLoaded(true);
+                    }}
+                />
+            ) : (
+                <img
+                    src={getImageUrl(story.image, { w: 350, resize: 'fill' })}
+                    alt={story.title}
+                    className={`w-full h-full object-cover transition-transform group-hover:scale-105 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
+                    loading="lazy"
+                    onLoad={() => setIsLoaded(true)}
+                    onError={(e) => {
+                        console.error('Image load error for:', story.image, e);
+                        e.target.style.display = 'none';
+                        setLoadError(true);
+                        setIsLoaded(true);
+                    }}
+                />
+            )}
+
+            {/* Error State */}
+            {loadError && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-grey-200 text-grey-500 p-4 text-center">
+                    <span className="text-2xl mb-2">⚠️</span>
+                    <span className="text-[10px] break-all opacity-50 mt-1 max-w-[80%] mx-auto">{story.image?.substring(0, 30)}...</span>
+                </div>
+            )}
+
+            {/* Gradient overlay - Only show if not error */}
+            {!loadError && (
+                <>
+                    <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/80 pointer-events-none" />
+                    <div className="absolute bottom-[15px] left-[20px] right-[20px] pointer-events-none">
+                        <p className="text-grey-200 font-bold text-[18px] capitalize leading-normal">{story.title}</p>
+                        <p className="text-grey-200/80 text-[14px] capitalize">{story.subtitle}</p>
+                    </div>
+                </>
+            )}
+        </div>
+    );
+}
 
 export default function Home({ vendors, onSelectVendor }) {
     const [sortedVendors, setSortedVendors] = useState([]);
@@ -168,7 +273,7 @@ export default function Home({ vendors, onSelectVendor }) {
     return (
         <div className="min-h-screen bg-white flex flex-col">
             {/* Header - Figma: Headbar component */}
-            <header className="bg-white z-50">
+            <header className="fixed top-0 left-0 right-0 bg-white z-50 shadow-sm">
                 {/* Main Header Bar - Figma: HEAD */}
                 <div className="flex items-center justify-between px-[10px] py-[17px] gap-[20px]">
                     {/* MRT Logo & Station Info */}
@@ -254,14 +359,14 @@ export default function Home({ vendors, onSelectVendor }) {
             </header>
 
             {/* Main Layout - Figma: flex row */}
-            <div className="flex flex-1 overflow-hidden">
+            <div className="fixed top-[73px] left-0 right-0 bottom-0 flex">
                 {/* Left Sidebar - Figma: 80px width, Main Menu */}
-                <div className="bg-white w-[80px] flex-shrink-0">
+                <div className="bg-white w-[80px] flex-shrink-0 overflow-y-auto">
                     <CategorySidebar activeCategory="rekomen" />
                 </div>
 
                 {/* Main Content Area - Figma: content/homepage/rekomendasi */}
-                <main className="flex-1 bg-grey-100 rounded-tl-[30px] overflow-y-auto overflow-x-hidden">
+                <main className="flex-1 bg-grey-100 rounded-tl-[30px] overflow-y-auto overflow-x-hidden pb-20">
                     {/* Story Banners - Figma: 175x300 portrait */}
                     <div className="overflow-x-auto no-scrollbar pt-[10px] px-[10px]">
                         <div className="flex gap-[5px] pr-[10px]">
@@ -274,42 +379,13 @@ export default function Home({ vendors, onSelectVendor }) {
                             ))}
 
                             {/* Actual Banners from Database */}
-                            {!bannersLoading && storyBanners.map((story) => {
-                                const isVideo = story.image && (story.image.match(/\.(mp4|webm|mov)$/i) || story.image.includes('data:video'));
-                                return (
-                                    <div
-                                        key={story.id}
-                                        onClick={() => setSelectedStory(story)}
-                                        className="w-[175px] h-[300px] rounded-[20px] overflow-hidden flex-shrink-0 cursor-pointer relative group"
-                                    >
-                                        {isVideo ? (
-                                            <video
-                                                src={story.image}
-                                                className="w-full h-full object-cover transition-transform group-hover:scale-105"
-                                                autoPlay
-                                                muted
-                                                loop
-                                                playsInline
-                                            />
-                                        ) : (
-                                            <img
-                                                src={story.image}
-                                                alt={story.title}
-                                                className="w-full h-full object-cover transition-transform group-hover:scale-105"
-                                                onError={(e) => {
-                                                    e.target.style.display = 'none';
-                                                }}
-                                            />
-                                        )}
-                                        {/* Gradient overlay - Figma spec */}
-                                        <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/80" />
-                                        <div className="absolute bottom-[15px] left-[20px] right-[20px]">
-                                            <p className="text-grey-200 font-bold text-[18px] capitalize leading-normal">{story.title}</p>
-                                            <p className="text-grey-200/80 text-[14px] capitalize">{story.subtitle}</p>
-                                        </div>
-                                    </div>
-                                );
-                            })}
+                            {!bannersLoading && storyBanners.map((story) => (
+                                <StoryBanner
+                                    key={story.id}
+                                    story={story}
+                                    onClick={() => setSelectedStory(story)}
+                                />
+                            ))}
 
                             {/* Empty State */}
                             {!bannersLoading && storyBanners.length === 0 && (

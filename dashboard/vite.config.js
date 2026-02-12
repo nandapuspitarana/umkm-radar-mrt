@@ -8,15 +8,17 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 8083,
     strictPort: true,
-    allowedHosts: ['admin-freshmart.pengaruh.my.id'],
+    allowedHosts: true, // Allow all domains
     proxy: {
       '/api': {
-        target: 'http://localhost:3000',
+        // Use environment variable or fallback to localhost
+        // For network access, set VITE_BACKEND_URL=http://192.168.1.x:3000
+        target: process.env.VITE_BACKEND_URL || 'http://localhost:3000',
         changeOrigin: true,
         secure: false,
       },
       '/uploads': {
-        target: 'http://localhost:3000',
+        target: process.env.VITE_BACKEND_URL || 'http://localhost:3000',
         changeOrigin: true,
         secure: false,
       },

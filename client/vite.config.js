@@ -8,15 +8,17 @@ export default defineConfig({
     host: '0.0.0.0', // Allow external access (needed for tunnels/docker)
     port: 8082,
     strictPort: true,
-    allowedHosts: ['freshmart.pengaruh.my.id'], // Allow Cloudflare domain
+    allowedHosts: true, // Allow all domains
     proxy: {
       '/api': {
-        target: 'http://localhost:3000',
+        // Use environment variable or fallback to localhost
+        // For network access, set VITE_BACKEND_URL=http://192.168.1.x:3000
+        target: process.env.VITE_BACKEND_URL || 'http://localhost:3000',
         changeOrigin: true,
         secure: false,
       },
       '/uploads': {
-        target: 'http://localhost:3000',
+        target: process.env.VITE_BACKEND_URL || 'http://localhost:3000',
         changeOrigin: true,
         secure: false,
       },

@@ -55,7 +55,7 @@ export default function AppLayout({ children, title = 'UMKM Radar', subtitle = '
     return (
         <div className="min-h-screen bg-white flex flex-col">
             {/* Header - Fixed */}
-            <header className="fixed top-0 left-0 right-0 bg-white z-50 border-b border-grey-200">
+            <header className="fixed top-0 left-0 right-0 bg-white z-50">
                 <div className="flex items-center justify-between px-4 py-3 gap-4">
                     {/* MRT Logo & Page Title */}
                     <div className="flex items-center gap-3">
@@ -135,7 +135,7 @@ export default function AppLayout({ children, title = 'UMKM Radar', subtitle = '
             {/* Main Layout - Fixed positioning */}
             <div className="fixed top-[73px] left-0 right-0 bottom-0 flex">
                 {/* Left Sidebar - Category Menu (Fixed) */}
-                <div className="flex flex-col gap-6 py-4 px-2 bg-white w-20 flex-shrink-0 border-r border-grey-200 overflow-y-auto">
+                <div className="flex flex-col gap-6 py-4 px-2 bg-white w-20 flex-shrink-0 overflow-y-auto">
                     {categories.map((category) => (
                         <button
                             key={category.id}
@@ -144,8 +144,8 @@ export default function AppLayout({ children, title = 'UMKM Radar', subtitle = '
                         >
                             <div
                                 className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl transition-all ${category.id === activeCategory
-                                        ? 'bg-gradient-to-b from-green-400 to-white shadow-md'
-                                        : 'bg-transparent hover:bg-grey-100'
+                                    ? 'bg-gradient-to-b from-green-400 to-white shadow-md'
+                                    : 'bg-transparent hover:bg-grey-100'
                                     }`}
                             >
                                 {category.icon}

@@ -5,6 +5,7 @@ import Kuliner from './pages/Kuliner';
 import Ngopi from './pages/Ngopi';
 import Publik from './pages/Publik';
 import Wisata from './pages/Wisata';
+import DestinationDetail from './pages/DestinationDetail';
 import Atm from './pages/Atm';
 import Vendor from './pages/Vendor';
 import CartSheet from './components/CartSheet';
@@ -353,6 +354,11 @@ export default function App() {
         <div className="antialiased text-gray-800">
           <Wisata />
 
+        </div>
+      } />
+      <Route path="/wisata/:id" element={
+        <div className="antialiased text-gray-800">
+          <DestinationDetail />
         </div>
       } />
       <Route path="/atm" element={

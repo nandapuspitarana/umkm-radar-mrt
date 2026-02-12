@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Save, FileText, Globe, Store, Upload, X, MapPin, Image, Train, Plus, Trash2, GripVertical, Link } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
 import ImageUploader from '../components/ImageUploader';
+import { getImageUrl, getAssetUrl } from '../utils/api';
 
 export default function Settings() {
     const [activeTab, setActiveTab] = useState(''); // general | pages | profile | banners | transport
@@ -382,19 +383,29 @@ export default function Settings() {
                                                     {banner.image ? (
                                                         (banner.image.match(/\.(mp4|webm|mov)$/i) || banner.image.includes('data:video')) ? (
                                                             <video
-                                                                src={banner.image}
+                                                                src={getAssetUrl(banner.image)}
                                                                 className="w-full h-full object-cover"
                                                                 controls
                                                                 muted
+                                                                onError={(e) => {
+                                                                    console.error('Video preview error:', banner.image, e);
+                                                                }}
+                                                                onLoadedMetadata={() => {
+                                                                    console.log('Video loaded:', banner.image);
+                                                                }}
                                                             />
                                                         ) : (
                                                             <img
-                                                                src={banner.image}
+                                                                src={getImageUrl(banner.image, { w: 300, h: 533, resize: 'fill' })}
                                                                 alt={banner.title}
                                                                 className="w-full h-full object-cover"
                                                                 onError={(e) => {
+                                                                    console.error('Image preview error:', banner.image);
                                                                     e.target.style.display = 'none';
                                                                     e.target.nextSibling.style.display = 'flex';
+                                                                }}
+                                                                onLoad={() => {
+                                                                    console.log('Image loaded:', banner.image);
                                                                 }}
                                                             />
                                                         )
@@ -514,7 +525,7 @@ export default function Settings() {
                                     <div className="w-20 h-16 bg-white rounded-lg border border-gray-200 flex-shrink-0 overflow-hidden flex items-center justify-center">
                                         {link.logo ? (
                                             <img
-                                                src={link.logo}
+                                                src={getImageUrl(link.logo, { w: 100, h: 100, resize: 'fit' })}
                                                 alt={link.name}
                                                 className="max-h-12 max-w-full object-contain"
                                                 onError={(e) => e.target.style.display = 'none'}
