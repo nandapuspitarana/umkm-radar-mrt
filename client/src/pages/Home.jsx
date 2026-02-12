@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MapPin, Search, X, HelpCircle, User, ShoppingBag } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { MapPin } from 'lucide-react';
 import { getImageUrl, getAssetUrl } from '../utils/api';
-import CategorySidebar from '../components/CategorySidebar';
+import AppLayout from '../components/AppLayout';
 import TransportLinks from '../components/TransportLinks';
 import ContentSection, { ContentCard, FavoriteCard, StackedCards } from '../components/ContentSection';
 import StoryModal from '../components/StoryModal';
@@ -58,26 +57,18 @@ function StoryBanner({ story, onClick }) {
 
     // Timeout safety
     useEffect(() => {
-        // If loaded state doesn't trigger within 5s, force it to prevent stuck skeleton
         const timer = setTimeout(() => {
-            if (!isLoaded) {
-                setIsLoaded(true);
-            }
+            if (!isLoaded) setIsLoaded(true);
         }, 5000);
         return () => clearTimeout(timer);
     }, [isLoaded]);
 
-    // Handle video play manually to avoid autoplay blocking
     const handleVideoLoad = () => {
         setIsLoaded(true);
         if (videoRef.current) {
-            // Try to play, but don't fail if blocked
             const playPromise = videoRef.current.play();
             if (playPromise !== undefined) {
-                playPromise.catch(err => {
-                    // Autoplay was prevented, that's okay
-                    console.log('Autoplay prevented for:', story.title);
-                });
+                playPromise.catch(() => { });
             }
         }
     };
@@ -129,7 +120,6 @@ function StoryBanner({ story, onClick }) {
             {loadError && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-grey-200 text-grey-500 p-4 text-center">
                     <span className="text-2xl mb-2">⚠️</span>
-                    <span className="text-[10px] break-all opacity-50 mt-1 max-w-[80%] mx-auto">{story.image?.substring(0, 30)}...</span>
                 </div>
             )}
 
@@ -150,13 +140,10 @@ function StoryBanner({ story, onClick }) {
 export default function Home({ vendors, onSelectVendor }) {
     const [sortedVendors, setSortedVendors] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedStory, setSelectedStory] = useState(null);
-    const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [storyBanners, setStoryBanners] = useState([]);
     const [bannersLoading, setBannersLoading] = useState(true);
-    const [appLogo, setAppLogo] = useState('');
 
     // Fetch banners from settings API
     useEffect(() => {
@@ -164,14 +151,6 @@ export default function Home({ vendors, onSelectVendor }) {
         fetch('/api/settings')
             .then(res => res.json())
             .then(data => {
-                if (data.app_logo) {
-                    if (typeof data.app_logo === 'string') {
-                        setAppLogo(data.app_logo);
-                    } else if (data.app_logo.url || data.app_logo.logo) {
-                        setAppLogo(data.app_logo.url || data.app_logo.logo);
-                    }
-                }
-
                 if (data.homepage_banners) {
                     let banners = [];
                     if (Array.isArray(data.homepage_banners)) {
@@ -198,7 +177,7 @@ export default function Home({ vendors, onSelectVendor }) {
         let isMounted = true;
         const timer = setTimeout(() => {
             if (isMounted && loading) {
-                setSortedVendors(Array.isArray(vendors) ? vendors : []);
+                setSortedVendors(safeVendors);
                 setLoading(false);
             }
         }, 5000);
@@ -213,14 +192,14 @@ export default function Home({ vendors, onSelectVendor }) {
                 },
                 (error) => {
                     if (!isMounted) return;
-                    setSortedVendors(Array.isArray(vendors) ? vendors : []);
+                    setSortedVendors(safeVendors);
                     setLoading(false);
                     clearTimeout(timer);
                 },
                 { timeout: 5000, enableHighAccuracy: false }
             );
         } else {
-            setSortedVendors(Array.isArray(vendors) ? vendors : []);
+            setSortedVendors(safeVendors);
             setLoading(false);
             clearTimeout(timer);
         }
@@ -270,278 +249,149 @@ export default function Home({ vendors, onSelectVendor }) {
 
     const deg2rad = (deg) => deg * (Math.PI / 180);
 
+    const handleNextStory = () => {
+        if (!selectedStory || storyBanners.length === 0) return;
+        const currentIndex = storyBanners.findIndex(s => s.id === selectedStory.id);
+        if (currentIndex < storyBanners.length - 1) {
+            setSelectedStory(storyBanners[currentIndex + 1]);
+        } else {
+            setSelectedStory(null);
+        }
+    };
+
+    const handlePrevStory = () => {
+        if (!selectedStory || storyBanners.length === 0) return;
+        const currentIndex = storyBanners.findIndex(s => s.id === selectedStory.id);
+        if (currentIndex > 0) {
+            setSelectedStory(storyBanners[currentIndex - 1]);
+        }
+    };
+
     return (
-        <div className="min-h-screen bg-white flex flex-col">
-            {/* Header - Figma: Headbar component */}
-            <header className="fixed top-0 left-0 right-0 bg-white z-50 shadow-sm">
-                {/* Main Header Bar - Figma: HEAD */}
-                <div className="flex items-center justify-between px-[10px] py-[17px] gap-[20px]">
-                    {/* MRT Logo & Station Info */}
-                    <div className="flex items-center gap-[10px]">
-                        {/* MRT Logo */}
-                        <div className="px-[5px]">
-                            <div className="w-12 h-12 rounded-xl flex items-center justify-center overflow-hidden">
-                                {appLogo ? (
-                                    <img
-                                        src={appLogo}
-                                        alt="Logo"
-                                        className="w-full h-full object-contain"
-                                        onError={(e) => {
-                                            e.target.style.display = 'none';
-                                            e.target.nextSibling.style.display = 'block';
-                                        }}
-                                    />
-                                ) : null}
-                                <span
-                                    className="text-grey-900 text-2xl font-bold"
-                                    style={{ display: appLogo ? 'none' : 'block' }}
-                                >
-                                    M
-                                </span>
-                            </div>
+        <AppLayout
+            activeCategory="rekomen"
+            searchValue={searchQuery}
+            onSearch={setSearchQuery}
+        >
+            {/* Story Banners */}
+            <div className="overflow-x-auto no-scrollbar pt-[10px] px-[10px]">
+                <div className="flex gap-[5px] pr-[10px]">
+                    {/* Loading Skeleton */}
+                    {bannersLoading && [1, 2, 3].map((i) => (
+                        <div
+                            key={`loading-${i}`}
+                            className="w-[175px] h-[300px] rounded-[20px] bg-grey-200 flex-shrink-0 animate-pulse"
+                        />
+                    ))}
+
+                    {/* Actual Banners from Database */}
+                    {!bannersLoading && storyBanners.map((story) => (
+                        <StoryBanner
+                            key={story.id}
+                            story={story}
+                            onClick={() => setSelectedStory(story)}
+                        />
+                    ))}
+
+                    {/* Empty State */}
+                    {!bannersLoading && storyBanners.length === 0 && (
+                        <div className="w-full py-8 text-center text-grey-400">
+                            <p className="text-sm">Belum ada banner story.</p>
+                            <p className="text-xs">Kelola di Admin Dashboard → Settings</p>
                         </div>
-
-                        {/* Station Name - Figma: Inter Bold, Black Ops One */}
-                        <div className="flex flex-col gap-[5px]">
-                            <h1 className="font-display text-[18px] uppercase tracking-[-0.05px] text-black leading-[17px]">
-                                Senayan Mastercard
-                            </h1>
-                            <p className="font-semibold text-[14px] text-highlight-blue capitalize leading-[10px] tracking-[-0.05px]">
-                                Jakarta Pusat
-                            </p>
-                        </div>
-                    </div>
-
-                    {/* Right actions - Figma: search + menu dots */}
-                    <div className="flex items-center gap-[30px] pl-[5px] pr-[10px]">
-                        {/* Search Button - Figma: border circle */}
-                        <button
-                            onClick={() => setIsSearchOpen(!isSearchOpen)}
-                            className="w-[34px] h-[34px] border border-grey-300 rounded-full flex items-center justify-center hover:bg-grey-100 transition-colors p-[5px]"
-                        >
-                            <Search size={24} className="text-grey-600" />
-                        </button>
-                        {/* Menu Dots - Figma: 3 dots vertical */}
-                        <button
-                            onClick={() => setIsMenuOpen(true)}
-                            className="flex flex-col gap-[3px] w-[12px]"
-                        >
-                            <div className="w-full aspect-square bg-grey-600 rounded-full" />
-                            <div className="w-full aspect-square bg-grey-600 rounded-full" />
-                            <div className="w-full aspect-square bg-grey-600 rounded-full" />
-                        </button>
-                    </div>
-                </div>
-
-                {/* Search Bar (expandable) */}
-                <AnimatePresence>
-                    {isSearchOpen && (
-                        <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: 'auto', opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            className="overflow-hidden px-4 pb-3"
-                        >
-                            <div className="relative">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-grey-300" size={18} />
-                                <input
-                                    type="text"
-                                    placeholder="Cari toko, tempat, atau fasilitas..."
-                                    className="w-full bg-grey-100 border border-grey-200 rounded-xl py-2.5 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-highlight-blue/20 transition-all text-sm"
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    autoFocus
-                                />
-                            </div>
-                        </motion.div>
                     )}
-                </AnimatePresence>
-            </header>
-
-            {/* Main Layout - Figma: flex row */}
-            <div className="fixed top-[73px] left-0 right-0 bottom-0 flex">
-                {/* Left Sidebar - Figma: 80px width, Main Menu */}
-                <div className="bg-white w-[80px] flex-shrink-0 overflow-y-auto">
-                    <CategorySidebar activeCategory="rekomen" />
                 </div>
-
-                {/* Main Content Area - Figma: content/homepage/rekomendasi */}
-                <main className="flex-1 bg-grey-100 rounded-tl-[30px] overflow-y-auto overflow-x-hidden pb-20">
-                    {/* Story Banners - Figma: 175x300 portrait */}
-                    <div className="overflow-x-auto no-scrollbar pt-[10px] px-[10px]">
-                        <div className="flex gap-[5px] pr-[10px]">
-                            {/* Loading Skeleton */}
-                            {bannersLoading && [1, 2, 3].map((i) => (
-                                <div
-                                    key={`loading-${i}`}
-                                    className="w-[175px] h-[300px] rounded-[20px] bg-grey-200 flex-shrink-0 animate-pulse"
-                                />
-                            ))}
-
-                            {/* Actual Banners from Database */}
-                            {!bannersLoading && storyBanners.map((story) => (
-                                <StoryBanner
-                                    key={story.id}
-                                    story={story}
-                                    onClick={() => setSelectedStory(story)}
-                                />
-                            ))}
-
-                            {/* Empty State */}
-                            {!bannersLoading && storyBanners.length === 0 && (
-                                <div className="w-full py-8 text-center text-grey-400">
-                                    <p className="text-sm">Belum ada banner story.</p>
-                                    <p className="text-xs">Kelola di Admin Dashboard → Settings</p>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Transport Links Section - Figma: section moda */}
-                    <TransportLinks />
-
-                    {/* Quick Access Section - Figma: section cepat dekat */}
-                    <ContentSection title="Butuh Cepat Dan Dekat">
-                        {quickAccessContent.map((item) => (
-                            <ContentCard
-                                key={item.id}
-                                image={item.image}
-                                title={item.title}
-                                subtitle={item.subtitle}
-                                size="medium"
-                            />
-                        ))}
-                        {/* Stacked cards */}
-                        <StackedCards items={stackedItems1} />
-                        <StackedCards items={stackedItems2} />
-                    </ContentSection>
-
-                    {/* WFA Section - Figma: section nunggu + wfa */}
-                    <ContentSection title="Nunggu Sekalian WFA">
-                        {wfaContent.map((item) => (
-                            <ContentCard
-                                key={item.id}
-                                image={item.image}
-                                title={item.title}
-                                subtitle={item.subtitle}
-                                size="large"
-                            />
-                        ))}
-                    </ContentSection>
-
-                    {/* Favorite Places Section - Figma: section tempat favorit */}
-                    <ContentSection title="Tempat Favorit">
-                        {favoritePlaces.map((item) => (
-                            <FavoriteCard
-                                key={item.id}
-                                image={item.image}
-                                title={item.title}
-                                distance={item.distance}
-                            />
-                        ))}
-                    </ContentSection>
-
-                    {/* Vendor Search Results */}
-                    {searchQuery && (
-                        <ContentSection title={`Hasil Pencarian "${searchQuery}"`}>
-                            {filteredVendors.length > 0 ? (
-                                filteredVendors.map(vendor => (
-                                    <div
-                                        key={vendor.id}
-                                        onClick={() => onSelectVendor(vendor)}
-                                        className="w-48 flex-shrink-0 bg-white p-3 rounded-xl cursor-pointer hover:shadow-md transition-shadow"
-                                    >
-                                        <div className="w-full h-24 bg-grey-100 rounded-lg mb-2 overflow-hidden">
-                                            {vendor.image ? (
-                                                <img src={vendor.image} alt={vendor.name} className="w-full h-full object-cover" />
-                                            ) : (
-                                                <div className="w-full h-full flex items-center justify-center text-2xl">🏪</div>
-                                            )}
-                                        </div>
-                                        <h4 className="font-bold text-sm text-black truncate">{vendor.name}</h4>
-                                        <div className="flex items-center gap-1 text-xs text-grey-600">
-                                            <MapPin size={12} />
-                                            <span className="truncate">{vendor.address}</span>
-                                        </div>
-                                        {vendor.distance && (
-                                            <p className="text-xs font-bold text-primary mt-1">{vendor.distance.toFixed(1)} km</p>
-                                        )}
-                                    </div>
-                                ))
-                            ) : (
-                                <div className="w-full py-8 text-center text-grey-600">
-                                    Tidak ada hasil ditemukan
-                                </div>
-                            )}
-                        </ContentSection>
-                    )}
-
-                    {/* Bottom Padding */}
-                    <div className="h-24" />
-                </main>
             </div>
+
+            {/* Transport Links Section */}
+            <TransportLinks />
+
+            {/* Quick Access Section */}
+            <ContentSection title="Butuh Cepat Dan Dekat">
+                {quickAccessContent.map((item) => (
+                    <ContentCard
+                        key={item.id}
+                        image={item.image}
+                        title={item.title}
+                        subtitle={item.subtitle}
+                        size="medium"
+                    />
+                ))}
+                <StackedCards items={stackedItems1} />
+                <StackedCards items={stackedItems2} />
+            </ContentSection>
+
+            {/* WFA Section */}
+            <ContentSection title="Nunggu Sekalian WFA">
+                {wfaContent.map((item) => (
+                    <ContentCard
+                        key={item.id}
+                        image={item.image}
+                        title={item.title}
+                        subtitle={item.subtitle}
+                        size="large"
+                    />
+                ))}
+            </ContentSection>
+
+            {/* Favorite Places Section */}
+            <ContentSection title="Tempat Favorit">
+                {favoritePlaces.map((item) => (
+                    <FavoriteCard
+                        key={item.id}
+                        image={item.image}
+                        title={item.title}
+                        distance={item.distance}
+                    />
+                ))}
+            </ContentSection>
+
+            {/* Vendor List or Search Results */}
+            {searchQuery && (
+                <ContentSection title={`Hasil Pencarian "${searchQuery}"`}>
+                    {filteredVendors.length > 0 ? (
+                        filteredVendors.map(vendor => (
+                            <div
+                                key={vendor.id}
+                                onClick={() => onSelectVendor(vendor)}
+                                className="w-48 flex-shrink-0 bg-white p-3 rounded-xl cursor-pointer hover:shadow-md transition-shadow"
+                            >
+                                <div className="w-full h-24 bg-grey-100 rounded-lg mb-2 overflow-hidden">
+                                    {vendor.image ? (
+                                        <img src={getImageUrl(vendor.image, { w: 200, resize: 'fit' })} alt={vendor.name} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center text-2xl">🏪</div>
+                                    )}
+                                </div>
+                                <h4 className="font-bold text-sm text-black truncate">{vendor.name}</h4>
+                                <div className="flex items-center gap-1 text-xs text-grey-600">
+                                    <MapPin size={12} />
+                                    <span className="truncate">{vendor.address}</span>
+                                </div>
+                                {vendor.distance && (
+                                    <p className="text-xs font-bold text-primary mt-1">{vendor.distance.toFixed(1)} km</p>
+                                )}
+                            </div>
+                        ))
+                    ) : (
+                        <div className="w-full py-8 text-center text-grey-600">
+                            Tidak ada hasil ditemukan
+                        </div>
+                    )}
+                </ContentSection>
+            )}
+
+            {/* Bottom Padding */}
+            <div className="h-24" />
 
             {/* Story Modal */}
             <StoryModal
                 isOpen={!!selectedStory}
                 onClose={() => setSelectedStory(null)}
                 story={selectedStory}
+                onNext={handleNextStory}
+                onPrev={handlePrevStory}
             />
-
-            {/* Sidebar Drawer */}
-            <AnimatePresence>
-                {isMenuOpen && (
-                    <>
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 0.5 }}
-                            exit={{ opacity: 0 }}
-                            onClick={() => setIsMenuOpen(false)}
-                            className="fixed inset-0 bg-black z-50 backdrop-blur-sm"
-                        />
-                        <motion.div
-                            initial={{ x: '-100%' }}
-                            animate={{ x: 0 }}
-                            exit={{ x: '-100%' }}
-                            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                            className="fixed top-0 left-0 bottom-0 w-64 bg-white z-[60] shadow-2xl p-6"
-                        >
-                            <div className="flex justify-between items-center mb-8">
-                                <span className="font-display text-lg text-black uppercase">UMKM Radar</span>
-                                <button onClick={() => setIsMenuOpen(false)} className="p-1 hover:bg-grey-100 rounded-full">
-                                    <X size={20} className="text-grey-600" />
-                                </button>
-                            </div>
-
-                            <nav className="space-y-2">
-                                <a href="#" className="flex items-center gap-3 px-4 py-3 text-grey-600 hover:bg-grey-100 hover:text-primary rounded-xl transition-colors">
-                                    <User size={20} />
-                                    <span className="font-medium">Akun Saya</span>
-                                </a>
-                                <a href="#" className="flex items-center gap-3 px-4 py-3 text-grey-600 hover:bg-grey-100 hover:text-primary rounded-xl transition-colors">
-                                    <ShoppingBag size={20} />
-                                    <span className="font-medium">Pesanan Saya</span>
-                                </a>
-                                <a href="/about" className="flex items-center gap-3 px-4 py-3 text-grey-600 hover:bg-grey-100 hover:text-primary rounded-xl transition-colors">
-                                    <HelpCircle size={20} />
-                                    <span className="font-medium">Tentang Kami</span>
-                                </a>
-                            </nav>
-
-                            <div className="absolute bottom-6 left-6 right-6">
-                                <div className="bg-primary/10 p-4 rounded-xl">
-                                    <p className="text-xs text-primary font-bold mb-1">Butuh Bantuan?</p>
-                                    <p className="text-[10px] text-primary/70 mb-3">Hubungi CS kami jika ada kendala pemesanan.</p>
-                                    <button className="w-full bg-primary text-white text-xs font-bold py-2 rounded-lg hover:bg-primary-dark transition-colors">
-                                        Chat CS
-                                    </button>
-                                </div>
-                                <p className="text-[10px] text-grey-300 text-center mt-4">v1.0.0 UMKM Radar MRT</p>
-                            </div>
-                        </motion.div>
-                    </>
-                )}
-            </AnimatePresence>
-        </div>
+        </AppLayout>
     );
 }

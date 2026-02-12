@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { getImageUrl } from '../utils/api';
 import { ArrowLeft, ChevronRight, Star, Clock, MapPin, CreditCard, Wallet, Banknote, X, User, ShoppingBag, HelpCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -129,7 +130,7 @@ export default function Vendor({ vendor, products, onBack, onAddToCart, cart }) 
             <div className="relative h-[320px] w-full bg-grey-200 overflow-hidden">
                 {vendor?.image ? (
                     <img
-                        src={vendor.image}
+                        src={getImageUrl(vendor.image, { w: 800, h: 400, resize: 'cover' })}
                         alt={vendor.name}
                         className="w-full h-full object-cover"
                     />
@@ -226,7 +227,7 @@ function ProductCard({ product, onAdd }) {
             <div className="w-[60px] h-[60px] rounded-[15px] overflow-hidden flex-shrink-0 bg-grey-100">
                 {product.image ? (
                     <img
-                        src={product.image}
+                        src={getImageUrl(product.image, { w: 120, h: 120, resize: 'crop' })}
                         alt={product.name}
                         className="w-full h-full object-cover"
                     />

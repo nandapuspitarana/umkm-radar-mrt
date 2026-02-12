@@ -1,25 +1,37 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { getImageUrl } from '../utils/api';
 import { Search, X, User, ShoppingBag, HelpCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import CategorySidebar from './CategorySidebar';
 
-// Category menu items
-const categories = [
-    { id: 'rekomen', label: 'Rekomen', icon: '📢', path: '/' },
-    { id: 'publik', label: 'Publik', icon: '🛋️', path: '/publik' },
-    { id: 'kuliner', label: 'Kuliner', icon: '🍳', path: '/kuliner' },
-    { id: 'ngopi', label: 'Ngopi', icon: '☕', path: '/ngopi' },
-    { id: 'wisata', label: 'Wisata', icon: '🏛️', path: '/wisata' },
-    { id: 'atm', label: 'ATM & Belanja', icon: '🏪', path: '/atm' },
-];
-
-export default function AppLayout({ children, title = 'UMKM Radar', subtitle = 'Senayan Mastercard', activeCategory = 'rekomen' }) {
+export default function AppLayout({
+    children,
+    title = 'Senayan Mastercard',
+    subtitle = 'Jakarta Pusat',
+    activeCategory,
+    // Search props
+    onSearch,
+    searchValue
+}) {
     const navigate = useNavigate();
     const location = useLocation();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isSearchOpen, setIsSearchOpen] = useState(false);
-    const [searchQuery, setSearchQuery] = useState('');
+    const [internalSearchQuery, setInternalSearchQuery] = useState('');
     const [logo, setLogo] = useState({ url: '', text: 'M' });
+    const [isScrolled, setIsScrolled] = useState(false);
+
+    // Detect Active Category if not provided
+    const currentActive = activeCategory || (location.pathname === '/' ? 'rekomen' : location.pathname.substring(1));
+
+    // Handle Search
+    const currentSearchValue = searchValue !== undefined ? searchValue : internalSearchQuery;
+    const handleSearchChange = (e) => {
+        const val = e.target.value;
+        setInternalSearchQuery(val);
+        if (onSearch) onSearch(val);
+    };
 
     useEffect(() => {
         // Fetch logo from settings
@@ -48,61 +60,65 @@ export default function AppLayout({ children, title = 'UMKM Radar', subtitle = '
             .catch(err => console.error('Failed to load logo settings:', err));
     }, []);
 
-    const handleCategoryClick = (category) => {
-        navigate(category.path);
-    };
-
     return (
         <div className="min-h-screen bg-white flex flex-col">
             {/* Header - Fixed */}
-            <header className="fixed top-0 left-0 right-0 bg-white z-50">
-                <div className="flex items-center justify-between px-4 py-3 gap-4">
-                    {/* MRT Logo & Page Title */}
-                    <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-xl flex items-center justify-center overflow-hidden">
-                            {logo.url ? (
-                                <img
-                                    src={logo.url}
-                                    alt="Logo"
-                                    className="w-full h-full object-contain"
-                                    onError={(e) => {
-                                        e.target.style.display = 'none';
-                                        e.target.nextSibling.style.display = 'block';
-                                    }}
-                                />
-                            ) : null}
-                            <span
-                                className="text-grey-900 text-2xl font-bold"
-                                style={{ display: logo.url ? 'none' : 'block' }}
-                            >
-                                {logo.text}
-                            </span>
+            <header className={`fixed top-0 left-0 right-0 bg-white z-50 transition-shadow ${isScrolled ? 'shadow-sm' : ''}`}>
+                {/* Main Header Bar - Figma: HEAD */}
+                <div className="flex items-center justify-between px-[10px] py-[5px] gap-[20px]">
+                    {/* MRT Logo & Station Info */}
+                    <div className="flex items-center gap-[10px]">
+                        {/* MRT Logo */}
+                        <div className="px-[5px]">
+                            <div className="w-12 h-12 rounded-xl flex items-center justify-center overflow-hidden">
+                                {logo.url ? (
+                                    <img
+                                        src={getImageUrl(logo.url, { w: 100, h: 100, resize: 'fit' })}
+                                        alt="Logo"
+                                        className="w-full h-full object-contain"
+                                        onError={(e) => {
+                                            e.target.style.display = 'none';
+                                            if (e.target.nextSibling) e.target.nextSibling.style.display = 'block';
+                                        }}
+                                    />
+                                ) : null}
+                                <span
+                                    className="text-grey-900 text-2xl font-bold"
+                                    style={{ display: logo.url ? 'none' : 'block' }}
+                                >
+                                    {logo.text}
+                                </span>
+                            </div>
                         </div>
-                        <div className="flex flex-col">
-                            <h1 className="font-display text-lg uppercase tracking-tight text-black leading-tight">
+
+                        {/* Station Name - Figma: Inter Bold, Black Ops One */}
+                        <div className="flex flex-col gap-[5px]">
+                            <h1 className="font-display text-[18px] uppercase tracking-[-0.05px] text-black leading-[17px]">
                                 {title}
                             </h1>
-                            <p className="text-highlight-blue font-semibold text-sm capitalize">
+                            <p className="font-semibold text-[14px] text-highlight-blue capitalize leading-[10px] tracking-[-0.05px]">
                                 {subtitle}
                             </p>
                         </div>
                     </div>
 
-                    {/* Right actions */}
-                    <div className="flex items-center gap-4">
+                    {/* Right actions - Figma: search + menu dots */}
+                    <div className="flex items-center gap-[30px] pl-[5px] pr-[10px]">
+                        {/* Search Button - Figma: border circle */}
                         <button
                             onClick={() => setIsSearchOpen(!isSearchOpen)}
-                            className="w-10 h-10 border border-grey-300 rounded-full flex items-center justify-center hover:bg-grey-100 transition-colors"
+                            className="w-[34px] h-[34px] border border-grey-300 rounded-full flex items-center justify-center hover:bg-grey-100 transition-colors p-[5px]"
                         >
-                            <Search size={18} className="text-grey-600" />
+                            <Search size={24} className="text-grey-600" />
                         </button>
+                        {/* Menu Dots - Figma: 3 dots vertical */}
                         <button
                             onClick={() => setIsMenuOpen(true)}
-                            className="flex flex-col gap-1 p-2"
+                            className="flex flex-col gap-[3px] w-[12px]"
                         >
-                            <div className="w-1.5 h-1.5 bg-grey-600 rounded-full" />
-                            <div className="w-1.5 h-1.5 bg-grey-600 rounded-full" />
-                            <div className="w-1.5 h-1.5 bg-grey-600 rounded-full" />
+                            <div className="w-full aspect-square bg-grey-600 rounded-full" />
+                            <div className="w-full aspect-square bg-grey-600 rounded-full" />
+                            <div className="w-full aspect-square bg-grey-600 rounded-full" />
                         </button>
                     </div>
                 </div>
@@ -120,10 +136,10 @@ export default function AppLayout({ children, title = 'UMKM Radar', subtitle = '
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-grey-300" size={18} />
                                 <input
                                     type="text"
-                                    placeholder="Cari..."
+                                    placeholder="Cari toko, tempat, atau fasilitas..."
                                     className="w-full bg-grey-100 border border-grey-200 rounded-xl py-2.5 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-highlight-blue/20 transition-all text-sm"
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    value={currentSearchValue}
+                                    onChange={handleSearchChange}
                                     autoFocus
                                 />
                             </div>
@@ -132,33 +148,21 @@ export default function AppLayout({ children, title = 'UMKM Radar', subtitle = '
                 </AnimatePresence>
             </header>
 
-            {/* Main Layout - Fixed positioning */}
-            <div className="fixed top-[73px] left-0 right-0 bottom-0 flex">
-                {/* Left Sidebar - Category Menu (Fixed) */}
-                <div className="flex flex-col gap-6 py-4 px-2 bg-white w-20 flex-shrink-0 overflow-y-auto">
-                    {categories.map((category) => (
-                        <button
-                            key={category.id}
-                            onClick={() => handleCategoryClick(category)}
-                            className="flex flex-col items-center gap-1.5 group"
-                        >
-                            <div
-                                className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl transition-all ${category.id === activeCategory
-                                    ? 'bg-gradient-to-b from-green-400 to-white shadow-md'
-                                    : 'bg-transparent hover:bg-grey-100'
-                                    }`}
-                            >
-                                {category.icon}
-                            </div>
-                            <span className="text-xs font-semibold text-center leading-tight text-grey-600">
-                                {category.label}
-                            </span>
-                        </button>
-                    ))}
+            {/* Main Layout - Figma: flex row */}
+            <div
+                className="fixed left-0 right-0 bottom-0 flex transition-all duration-300 ease-in-out"
+                style={{ top: isSearchOpen ? '114px' : '58px' }}
+            >
+                {/* Left Sidebar - Figma: 80px width, Main Menu */}
+                <div className="bg-white w-[80px] flex-shrink-0 overflow-y-auto">
+                    <CategorySidebar activeCategory={currentActive} />
                 </div>
 
-                {/* Main Content Area - Scrollable */}
-                <main className="flex-1 bg-grey-100 rounded-tl-3xl overflow-y-auto">
+                {/* Main Content Area - Figma: content/homepage/rekomendasi */}
+                <main
+                    className="flex-1 bg-grey-100 rounded-tl-[30px] overflow-y-auto overflow-x-hidden pb-24 pt-0"
+                    onScroll={(e) => setIsScrolled(e.currentTarget.scrollTop > 10)}
+                >
                     {children}
                 </main>
             </div>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { getImageUrl } from '../utils/api';
 
 export default function TransportLinks() {
     const [transportModa, setTransportModa] = useState([]); // Fetched from database
@@ -119,7 +120,7 @@ function TransportLinkItem({ moda, heightClass }) {
                 </span>
             ) : (
                 <img
-                    src={moda.logo}
+                    src={getImageUrl(moda.logo, { w: 200, resize: 'fit' })}
                     alt={moda.name}
                     className={`${imgMaxHeight} max-w-[70%] object-contain`}
                     onError={() => setImgError(true)}

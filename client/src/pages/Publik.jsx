@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { getImageUrl } from '../utils/api';
 import { MapPin, ChevronRight } from 'lucide-react';
 import AppLayout from '../components/AppLayout';
 
@@ -134,7 +135,7 @@ function DestinationCard({ destination }) {
         <div className="w-[200px] h-[133px] rounded-[15px] overflow-hidden flex-shrink-0 cursor-pointer relative group">
             {/* Background Image */}
             <img
-                src={imageUrl}
+                src={getImageUrl(destination.image, { w: 400, h: 300, resize: 'crop' }) || 'https://images.unsplash.com/photo-1519331379826-f10be5486c6f?w=600&h=400&fit=crop'}
                 alt={destination.name}
                 className="absolute inset-0 w-full h-full object-cover transition-transform group-hover:scale-105"
                 onError={(e) => {

@@ -1,14 +1,50 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { getImageUrl } from '../utils/api';
 
 // Category icons data with routes
 const categories = [
-    { id: 'rekomen', label: 'Rekomen', icon: '📢', path: '/' },
-    { id: 'publik', label: 'Publik', icon: '🛋️', path: '/publik' },
-    { id: 'kuliner', label: 'Kuliner', icon: '🍳', path: '/kuliner' },
-    { id: 'ngopi', label: 'Ngopi', icon: '☕', path: '/ngopi' },
-    { id: 'wisata', label: 'Wisata', icon: '🏛️', path: '/wisata' },
-    { id: 'atm', label: 'ATM & Belanja', icon: '🏪', path: '/atm' },
+    {
+        id: 'rekomen',
+        label: 'Rekomen',
+        // Using uploaded SVG logo for Rekomen
+        icon: <img
+            src={getImageUrl('logo/1770871772731-a529bdeb385aa123.svg')}
+            alt="Rekomen"
+            className="w-8 h-8 object-contain"
+        />,
+        path: '/'
+    },
+    {
+        id: 'publik',
+        label: 'Publik',
+        icon: <img src={getImageUrl('logo/1770871919071-e53b8faf71ab40a1.svg')} alt="Publik" className="w-8 h-8 object-contain" />,
+        path: '/publik'
+    },
+    {
+        id: 'kuliner',
+        label: 'Kuliner',
+        icon: <img src={getImageUrl('logo/1770871967519-646c77da94660157.svg')} alt="Kuliner" className="w-8 h-8 object-contain" />,
+        path: '/kuliner'
+    },
+    {
+        id: 'ngopi',
+        label: 'Ngopi',
+        icon: <img src={getImageUrl('logo/1770872009104-0e2cddbda4e360c3.svg')} alt="Ngopi" className="w-8 h-8 object-contain" />,
+        path: '/ngopi'
+    },
+    {
+        id: 'wisata',
+        label: 'Wisata',
+        icon: <img src={getImageUrl('logo/1770872135119-8992ba618988025c.svg')} alt="Wisata" className="w-8 h-8 object-contain" />,
+        path: '/wisata'
+    },
+    {
+        id: 'atm',
+        label: 'ATM & Belanja',
+        icon: <img src={getImageUrl('logo/1770872210180-6a935e4293a50f53.svg')} alt="ATM" className="w-8 h-8 object-contain" />,
+        path: '/atm'
+    },
 ];
 
 export default function CategorySidebar({ activeCategory }) {
