@@ -55,47 +55,28 @@ function StoryBanner({ story, onClick }) {
             story.image.includes('data:video');
     }, [story.image]);
 
-    // Timeout safety
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            if (!isLoaded) setIsLoaded(true);
-        }, 5000);
-        return () => clearTimeout(timer);
-    }, [isLoaded]);
-
-    const handleVideoLoad = () => {
-        setIsLoaded(true);
-        if (videoRef.current) {
-            const playPromise = videoRef.current.play();
-            if (playPromise !== undefined) {
-                playPromise.catch(() => { });
-            }
-        }
-    };
-
     return (
         <div
             onClick={onClick}
-            className="w-[175px] h-[300px] rounded-[20px] overflow-hidden flex-shrink-0 cursor-pointer relative group bg-grey-200"
+            className="w-[175px] h-[300px] rounded-[20px] overflow-hidden flex-shrink-0 cursor-pointer relative group bg-black shadow-lg border border-zinc-800"
         >
-            {/* Loading Skeleton */}
+            {/* Loading Skeleton - Dark Mode */}
             {!isLoaded && !loadError && (
-                <div className="absolute inset-0 bg-grey-300 animate-pulse z-10" />
+                <div className="absolute inset-0 bg-zinc-800 animate-pulse z-0" />
             )}
 
             {isVideo ? (
                 <video
                     ref={videoRef}
                     src={getAssetUrl(story.image)}
-                    className={`w-full h-full object-cover transition-transform group-hover:scale-105 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
+                    className="w-full h-full object-cover transition-transform group-hover:scale-105"
                     muted
                     loop
                     playsInline
-                    preload="metadata"
-                    onLoadedMetadata={handleVideoLoad}
-                    onLoadedData={handleVideoLoad}
+                    autoPlay
+                    onLoadedData={() => setIsLoaded(true)}
                     onError={(e) => {
-                        console.error('Video load error for:', story.image, e);
+                        console.error('Video thumbnail error:', story.image, e);
                         setLoadError(true);
                         setIsLoaded(true);
                     }}
@@ -104,12 +85,11 @@ function StoryBanner({ story, onClick }) {
                 <img
                     src={getImageUrl(story.image, { w: 350, resize: 'fill' })}
                     alt={story.title}
-                    className={`w-full h-full object-cover transition-transform group-hover:scale-105 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
+                    className="w-full h-full object-cover transition-transform group-hover:scale-105"
                     loading="lazy"
                     onLoad={() => setIsLoaded(true)}
                     onError={(e) => {
                         console.error('Image load error for:', story.image, e);
-                        e.target.style.display = 'none';
                         setLoadError(true);
                         setIsLoaded(true);
                     }}
@@ -118,21 +98,20 @@ function StoryBanner({ story, onClick }) {
 
             {/* Error State */}
             {loadError && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-grey-200 text-grey-500 p-4 text-center">
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-900 text-grey-500 p-4 text-center z-10">
                     <span className="text-2xl mb-2">⚠️</span>
+                    <span className="text-xs text-grey-400">Gagal memuat</span>
                 </div>
             )}
 
-            {/* Gradient overlay - Only show if not error */}
-            {!loadError && (
-                <>
-                    <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/80 pointer-events-none" />
-                    <div className="absolute bottom-[15px] left-[20px] right-[20px] pointer-events-none">
-                        <p className="text-grey-200 font-bold text-[18px] capitalize leading-normal">{story.title}</p>
-                        <p className="text-grey-200/80 text-[14px] capitalize">{story.subtitle}</p>
-                    </div>
-                </>
-            )}
+            {/* Gradient & Text Overlay - Always visible */}
+            <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/90 pointer-events-none z-20" />
+            <div className="absolute bottom-[15px] left-[15px] right-[15px] pointer-events-none z-30">
+                <p className="text-white font-bold text-[16px] capitalize leading-tight drop-shadow-md pb-1">{story.title}</p>
+                {story.subtitle && (
+                    <p className="text-grey-300 text-[12px] capitalize drop-shadow-md font-medium">{story.subtitle}</p>
+                )}
+            </div>
         </div>
     );
 }
@@ -389,6 +368,8 @@ export default function Home({ vendors, onSelectVendor }) {
                 isOpen={!!selectedStory}
                 onClose={() => setSelectedStory(null)}
                 story={selectedStory}
+                stories={storyBanners}
+                currentIndex={selectedStory ? storyBanners.findIndex(s => s.id === selectedStory.id) : 0}
                 onNext={handleNextStory}
                 onPrev={handlePrevStory}
             />
