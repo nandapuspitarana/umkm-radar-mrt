@@ -89,9 +89,9 @@ export default function CategorySidebar({ activeCategory }) {
                     className="flex flex-col items-center gap-1.5 group"
                 >
                     <div
-                        className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl transition-all ${currentActive === category.id
-                            ? `${getActiveGradient(category.id)} shadow-md`
-                            : 'bg-transparent hover:bg-grey-100'
+                        className={`w-12 h-12 rounded-t-2xl flex items-center justify-center text-2xl transition-all ${currentActive === category.id
+                            ? getActiveGradient(category.id)
+                            : 'bg-transparent hover:bg-grey-100 hover:rounded-t-2xl'
                             }`}
                     >
                         {category.icon}
