@@ -11,6 +11,20 @@ const categoryTitles = {
     'sosial-keagamaan': 'Fasilitas Sosial & Keagamaan',
 };
 
+// Helper function to extract YouTube video ID
+const getYouTubeVideoId = (url) => {
+    if (!url) return null;
+    const patterns = [
+        /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
+        /^([a-zA-Z0-9_-]{11})$/
+    ];
+    for (const pattern of patterns) {
+        const match = url.match(pattern);
+        if (match && match[1]) return match[1];
+    }
+    return null;
+};
+
 export default function Publik() {
     const [destinations, setDestinations] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -55,6 +69,8 @@ export default function Publik() {
         };
     }).filter(section => section.destinations.length > 0);
 
+    const videoId = getYouTubeVideoId(bannerImage);
+
     return (
         <AppLayout
             title="Fasilitas Umum / Ruang Publik"
@@ -64,67 +80,46 @@ export default function Publik() {
             <div className="pb-6">
                 {/* Banner Image/Video */}
                 <div className="p-2.5">
-                    <div className="relative w-full aspect-[3/2] max-h-[200px] max-w-[600px] bg-grey-900 rounded-[20px] overflow-hidden">
-                        {(() => {
-                            // Helper function to extract YouTube video ID
-                            const getYouTubeVideoId = (url) => {
-                                if (!url) return null;
-
-                                // Match various YouTube URL formats
-                                const patterns = [
-                                    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
-                                    /^([a-zA-Z0-9_-]{11})$/ // Direct video ID
-                                ];
-
-                                for (const pattern of patterns) {
-                                    const match = url.match(pattern);
-                                    if (match && match[1]) {
-                                        return match[1];
-                                    }
-                                }
-                                return null;
-                            };
-
-                            const videoId = getYouTubeVideoId(bannerImage);
-
-                            if (videoId) {
-                                // Render YouTube iframe
-                                return (
-                                    <iframe
-                                        src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=0&showinfo=0&rel=0&modestbranding=1`}
-                                        className="w-full h-full object-cover"
-                                        frameBorder="0"
-                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                        allowFullScreen
-                                        title="Banner Video"
-                                    />
-                                );
-                            } else if (bannerImage && (bannerImage.endsWith('.mp4') || bannerImage.endsWith('.webm') || bannerImage.includes('video'))) {
-                                // Render HTML5 video for direct video files
-                                return (
-                                    <video
-                                        src={bannerImage}
-                                        className="w-full h-full object-cover"
-                                        autoPlay
-                                        muted
-                                        loop
-                                        playsInline
-                                    />
-                                );
-                            } else {
-                                // Render image
-                                return (
-                                    <img
-                                        src={bannerImage}
-                                        alt="Ruang Publik"
-                                        className="w-full h-full object-cover"
-                                        onError={(e) => {
-                                            e.target.src = 'https://images.unsplash.com/photo-1519331379826-f10be5486c6f?w=600&h=400&fit=crop';
-                                        }}
-                                    />
-                                );
-                            }
-                        })()}
+                    <div className="relative w-full aspect-video bg-grey-900 rounded-[20px] overflow-hidden">
+                        {videoId ? (
+                            /* YouTube: iframe dibuat full cover tanpa black bars */
+                            <iframe
+                                src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=0&showinfo=0&rel=0&modestbranding=1&vq=hd720`}
+                                style={{
+                                    position: 'absolute',
+                                    top: '50%',
+                                    left: '50%',
+                                    /* Overscan sedikit untuk menghilangkan black bars:
+                                       container 16:9, YT secara internal bisa ada UI bar.
+                                       Scale 1.05 cukup untuk cover penuh */
+                                    width: '100%',
+                                    height: '100%',
+                                    transform: 'translate(-50%, -50%) scale(1.05)',
+                                    border: 'none',
+                                }}
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowFullScreen
+                                title="Banner Video"
+                            />
+                        ) : bannerImage && (bannerImage.endsWith('.mp4') || bannerImage.endsWith('.webm') || bannerImage.includes('video')) ? (
+                            <video
+                                src={bannerImage}
+                                className="w-full h-full object-cover"
+                                autoPlay
+                                muted
+                                loop
+                                playsInline
+                            />
+                        ) : (
+                            <img
+                                src={bannerImage}
+                                alt="Ruang Publik"
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                    e.target.src = 'https://images.unsplash.com/photo-1519331379826-f10be5486c6f?w=600&h=400&fit=crop';
+                                }}
+                            />
+                        )}
                     </div>
                 </div>
 
@@ -183,18 +178,12 @@ function DestinationSection({ section }) {
 
 // Destination Card Component matching Figma design
 function DestinationCard({ destination }) {
-    // Use 'image' field from database
-    const imageUrl = destination.image || 'https://images.unsplash.com/photo-1519331379826-f10be5486c6f?w=600&h=400&fit=crop';
-
     // Format distance properly - distance_from_station is in kilometers
     const formatDistance = (distanceKm) => {
         if (!distanceKm && distanceKm !== 0) return '0 m';
-
         if (distanceKm < 1) {
-            // Convert to meters for distances less than 1 km
             return `${Math.round(distanceKm * 1000)} m`;
         }
-        // Show in km for distances >= 1 km
         return `${distanceKm.toFixed(1)} km`;
     };
 

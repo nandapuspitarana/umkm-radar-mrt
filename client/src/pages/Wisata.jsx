@@ -69,12 +69,10 @@ export default function Wisata() {
     // Group destinations by category
     const destinationSections = Object.entries(categoryTitles).map(([key, title]) => {
         const categoryDestinations = destinations.filter(dest => dest.category === key);
-        return {
-            id: key,
-            title,
-            destinations: categoryDestinations
-        };
+        return { id: key, title, destinations: categoryDestinations };
     }).filter(section => section.destinations.length > 0);
+
+    const videoId = getYouTubeVideoId(bannerUrl);
 
     return (
         <AppLayout
@@ -85,46 +83,45 @@ export default function Wisata() {
             <div className="pb-6">
                 {/* Dynamic Banner */}
                 <div className="p-[10px]">
-                    <div className="relative w-full aspect-[3/2] max-h-[200px] bg-grey-300 rounded-[20px] overflow-hidden">
+                    <div className="relative w-full aspect-video bg-grey-300 rounded-[20px] overflow-hidden">
                         {bannerLoading ? (
                             <div className="w-full h-full bg-grey-200 animate-pulse" />
-                        ) : (() => {
-                            const videoId = getYouTubeVideoId(bannerUrl);
-                            if (videoId) {
-                                return (
-                                    <iframe
-                                        src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=0&showinfo=0&rel=0&modestbranding=1`}
-                                        className="w-full h-full"
-                                        frameBorder="0"
-                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                        allowFullScreen
-                                        title="Wisata Banner"
-                                    />
-                                );
-                            } else if (bannerUrl && (bannerUrl.endsWith('.mp4') || bannerUrl.endsWith('.webm'))) {
-                                return (
-                                    <video
-                                        src={bannerUrl}
-                                        className="w-full h-full object-cover"
-                                        autoPlay
-                                        muted
-                                        loop
-                                        playsInline
-                                    />
-                                );
-                            } else {
-                                return (
-                                    <img
-                                        src={bannerUrl || 'https://images.unsplash.com/photo-1555993539-1732b0258235?w=600&h=400&fit=crop'}
-                                        alt="Jakarta cityscape"
-                                        className="w-full h-full object-cover"
-                                        onError={(e) => {
-                                            e.target.src = 'https://images.unsplash.com/photo-1555993539-1732b0258235?w=600&h=400&fit=crop';
-                                        }}
-                                    />
-                                );
-                            }
-                        })()}
+                        ) : videoId ? (
+                            /* YouTube: scale(1.05) agar cover penuh tanpa black bars */
+                            <iframe
+                                src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=0&showinfo=0&rel=0&modestbranding=1&vq=hd720`}
+                                style={{
+                                    position: 'absolute',
+                                    top: '50%',
+                                    left: '50%',
+                                    width: '100%',
+                                    height: '100%',
+                                    transform: 'translate(-50%, -50%) scale(1.05)',
+                                    border: 'none',
+                                }}
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowFullScreen
+                                title="Wisata Banner"
+                            />
+                        ) : bannerUrl && (bannerUrl.endsWith('.mp4') || bannerUrl.endsWith('.webm')) ? (
+                            <video
+                                src={bannerUrl}
+                                className="w-full h-full object-cover"
+                                autoPlay
+                                muted
+                                loop
+                                playsInline
+                            />
+                        ) : (
+                            <img
+                                src={bannerUrl || 'https://images.unsplash.com/photo-1555993539-1732b0258235?w=600&h=400&fit=crop'}
+                                alt="Jakarta cityscape"
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                    e.target.src = 'https://images.unsplash.com/photo-1555993539-1732b0258235?w=600&h=400&fit=crop';
+                                }}
+                            />
+                        )}
                     </div>
                 </div>
 
@@ -186,17 +183,11 @@ function DestinationCard({ destination }) {
     const navigate = useNavigate();
     const imageUrl = destination.image || 'https://images.unsplash.com/photo-1555993539-1732b0258235?w=400&h=300&fit=crop';
 
-    // Format distance properly - distance_from_station is in kilometers (DECIMAL format from DB)
     const formatDistance = (distanceInKm) => {
         if (!distanceInKm || distanceInKm === 0) return '0 m';
-
-        // Convert to meters if less than 1 km
         if (distanceInKm < 1) {
-            const meters = Math.round(distanceInKm * 1000);
-            return `${meters} m`;
+            return `${Math.round(distanceInKm * 1000)} m`;
         }
-
-        // Show in km if 1 km or more
         return `${distanceInKm.toFixed(1)} km`;
     };
 
