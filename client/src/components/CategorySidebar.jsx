@@ -11,38 +11,38 @@ const categories = [
         icon: <img
             src={getImageUrl('logo/1770871772731-a529bdeb385aa123.svg')}
             alt="Rekomen"
-            className="w-8 h-8 object-contain"
+            className="w-[38px] h-[38px] object-contain"
         />,
         path: '/'
     },
     {
         id: 'publik',
         label: 'Publik',
-        icon: <img src={getImageUrl('logo/1770871919071-e53b8faf71ab40a1.svg')} alt="Publik" className="w-8 h-8 object-contain" />,
+        icon: <img src={getImageUrl('logo/1770871919071-e53b8faf71ab40a1.svg')} alt="Publik" className="w-[38px] h-[38px] object-contain" />,
         path: '/publik'
     },
     {
         id: 'kuliner',
         label: 'Kuliner',
-        icon: <img src={getImageUrl('logo/1770871967519-646c77da94660157.svg')} alt="Kuliner" className="w-8 h-8 object-contain" />,
+        icon: <img src={getImageUrl('logo/1770871967519-646c77da94660157.svg')} alt="Kuliner" className="w-[38px] h-[38px] object-contain" />,
         path: '/kuliner'
     },
     {
         id: 'ngopi',
         label: 'Ngopi',
-        icon: <img src={getImageUrl('logo/1770872009104-0e2cddbda4e360c3.svg')} alt="Ngopi" className="w-8 h-8 object-contain" />,
+        icon: <img src={getImageUrl('logo/1770872009104-0e2cddbda4e360c3.svg')} alt="Ngopi" className="w-[38px] h-[38px] object-contain" />,
         path: '/ngopi'
     },
     {
         id: 'wisata',
         label: 'Wisata',
-        icon: <img src={getImageUrl('logo/1770872135119-8992ba618988025c.svg')} alt="Wisata" className="w-8 h-8 object-contain" />,
+        icon: <img src={getImageUrl('logo/1770872135119-8992ba618988025c.svg')} alt="Wisata" className="w-[38px] h-[38px] object-contain" />,
         path: '/wisata'
     },
     {
         id: 'atm',
         label: 'ATM & Belanja',
-        icon: <img src={getImageUrl('logo/1770872210180-6a935e4293a50f53.svg')} alt="ATM" className="w-8 h-8 object-contain" />,
+        icon: <img src={getImageUrl('logo/1770872210180-6a935e4293a50f53.svg')} alt="ATM" className="w-[38px] h-[38px] object-contain" />,
         path: '/atm'
     },
 ];
@@ -89,7 +89,7 @@ export default function CategorySidebar({ activeCategory }) {
                     className="flex flex-col items-center gap-1.5 group"
                 >
                     <div
-                        className={`w-12 h-12 rounded-t-2xl flex items-center justify-center text-2xl transition-all ${currentActive === category.id
+                        className={`w-[50px] h-[50px] rounded-t-2xl flex items-center justify-center text-2xl transition-all ${currentActive === category.id
                             ? getActiveGradient(category.id)
                             : 'bg-transparent hover:bg-grey-100 hover:rounded-t-2xl'
                             }`}
