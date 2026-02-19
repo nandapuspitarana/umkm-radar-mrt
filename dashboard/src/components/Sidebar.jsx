@@ -15,7 +15,8 @@ import {
     FileImage,
     CreditCard,
     Utensils,
-    Coffee
+    Coffee,
+    Landmark
 } from 'lucide-react';
 
 export default function Sidebar() {
@@ -139,6 +140,15 @@ export default function Sidebar() {
                         label="Banner Ngopi"
                         active={location.pathname === '/ngopi-banners'}
                         onClick={() => navigate('/ngopi-banners')}
+                    />
+                )}
+
+                {auth.role === 'admin' && (
+                    <SidebarItem
+                        icon={<Landmark size={20} />}
+                        label="Banner Wisata"
+                        active={location.pathname === '/wisata-banner'}
+                        onClick={() => navigate('/wisata-banner')}
                     />
                 )}
 

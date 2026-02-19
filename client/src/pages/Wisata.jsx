@@ -3,6 +3,20 @@ import { useNavigate } from 'react-router-dom';
 import { ChevronRight, MapPin } from 'lucide-react';
 import AppLayout from '../components/AppLayout';
 
+// Helper to extract YouTube video ID
+const getYouTubeVideoId = (url) => {
+    if (!url) return null;
+    const patterns = [
+        /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
+        /^([a-zA-Z0-9_-]{11})$/
+    ];
+    for (const pattern of patterns) {
+        const match = url.match(pattern);
+        if (match && match[1]) return match[1];
+    }
+    return null;
+};
+
 // Category titles matching database categories
 const categoryTitles = {
     'sejarah-museum': 'Wisata Sejarah & Museum',
@@ -17,10 +31,28 @@ const categoryTitles = {
 export default function Wisata() {
     const [destinations, setDestinations] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [bannerUrl, setBannerUrl] = useState('');
+    const [bannerLoading, setBannerLoading] = useState(true);
 
     useEffect(() => {
         fetchDestinations();
+        fetchBanner();
     }, []);
+
+    const fetchBanner = async () => {
+        setBannerLoading(true);
+        try {
+            const res = await fetch('/api/settings');
+            const data = await res.json();
+            if (data.wisata_banner) {
+                setBannerUrl(data.wisata_banner);
+            }
+        } catch (error) {
+            console.error('Failed to fetch wisata banner:', error);
+        } finally {
+            setBannerLoading(false);
+        }
+    };
 
     const fetchDestinations = async () => {
         try {
@@ -51,14 +83,48 @@ export default function Wisata() {
             activeCategory="wisata"
         >
             <div className="pb-6">
-                {/* Static Banner Image */}
+                {/* Dynamic Banner */}
                 <div className="p-[10px]">
                     <div className="relative w-full aspect-[3/2] max-h-[200px] bg-grey-300 rounded-[20px] overflow-hidden">
-                        <img
-                            src="https://images.unsplash.com/photo-1555993539-1732b0258235?w=600&h=400&fit=crop"
-                            alt="Jakarta cityscape"
-                            className="w-full h-full object-cover"
-                        />
+                        {bannerLoading ? (
+                            <div className="w-full h-full bg-grey-200 animate-pulse" />
+                        ) : (() => {
+                            const videoId = getYouTubeVideoId(bannerUrl);
+                            if (videoId) {
+                                return (
+                                    <iframe
+                                        src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=0&showinfo=0&rel=0&modestbranding=1`}
+                                        className="w-full h-full"
+                                        frameBorder="0"
+                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                        allowFullScreen
+                                        title="Wisata Banner"
+                                    />
+                                );
+                            } else if (bannerUrl && (bannerUrl.endsWith('.mp4') || bannerUrl.endsWith('.webm'))) {
+                                return (
+                                    <video
+                                        src={bannerUrl}
+                                        className="w-full h-full object-cover"
+                                        autoPlay
+                                        muted
+                                        loop
+                                        playsInline
+                                    />
+                                );
+                            } else {
+                                return (
+                                    <img
+                                        src={bannerUrl || 'https://images.unsplash.com/photo-1555993539-1732b0258235?w=600&h=400&fit=crop'}
+                                        alt="Jakarta cityscape"
+                                        className="w-full h-full object-cover"
+                                        onError={(e) => {
+                                            e.target.src = 'https://images.unsplash.com/photo-1555993539-1732b0258235?w=600&h=400&fit=crop';
+                                        }}
+                                    />
+                                );
+                            }
+                        })()}
                     </div>
                 </div>
 
