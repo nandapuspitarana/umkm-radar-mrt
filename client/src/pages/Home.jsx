@@ -58,7 +58,7 @@ function StoryBanner({ story, onClick }) {
     return (
         <div
             onClick={onClick}
-            className="w-[175px] h-[300px] rounded-[20px] overflow-hidden flex-shrink-0 cursor-pointer relative group bg-black shadow-lg border border-zinc-800"
+            className="w-[175px] h-[300px] rounded-[20px] overflow-hidden flex-shrink-0 cursor-pointer relative group bg-black shadow-lg"
         >
             {/* Loading Skeleton - Dark Mode */}
             {!isLoaded && !loadError && (

@@ -7,10 +7,11 @@ export default function AdminVendors() {
     const [vendors, setVendors] = useState([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
+    const [filterCategory, setFilterCategory] = useState('all');
     const [loading, setLoading] = useState(true);
+    const [editingId, setEditingId] = useState(null);
 
-    // Form State
-    const [formData, setFormData] = useState({
+    const initialForm = {
         name: '',
         whatsapp: '',
         category: 'Umum',
@@ -18,8 +19,10 @@ export default function AdminVendors() {
         lat: '',
         lng: '',
         locationTags: '',
-        image: '' // Store image
-    });
+        image: ''
+    };
+
+    const [formData, setFormData] = useState(initialForm);
 
     useEffect(() => {
         fetchVendors();
@@ -39,31 +42,75 @@ export default function AdminVendors() {
         }
     };
 
-    const handleCreate = async (e) => {
+    const handleAdd = () => {
+        setEditingId(null);
+        setFormData(initialForm);
+        setIsModalOpen(true);
+    };
+
+    const handleEdit = (vendor) => {
+        setEditingId(vendor.id);
+        setFormData({
+            name: vendor.name,
+            whatsapp: vendor.whatsapp,
+            category: vendor.category || 'Umum',
+            address: vendor.address,
+            lat: vendor.lat,
+            lng: vendor.lng,
+            locationTags: vendor.locationTags || '',
+            image: vendor.image || ''
+        });
+        setIsModalOpen(true);
+    };
+
+    const handleDelete = async (id) => {
+        if (!window.confirm("Yakin ingin menghapus mitra ini? Aksi tidak dapat dibatalkan.")) return;
+        try {
+            const res = await fetch(`/api/vendors/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                fetchVendors();
+            } else {
+                alert("Gagal menghapus mitra");
+            }
+        } catch (error) {
+            console.error(error);
+            alert("Terjadi kesalahan koneksi");
+        }
+    };
+
+    const handleSubmit = async (e) => {
         e.preventDefault();
         try {
             const payload = {
                 ...formData,
                 lat: parseFloat(formData.lat),
                 lng: parseFloat(formData.lng),
-                rating: 5.0 // Default start rating
+                rating: 5.0 // Default logic kept
             };
 
-            const res = await fetch('/api/vendors', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
+            let res;
+            if (editingId) {
+                res = await fetch(`/api/vendors/${editingId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+            } else {
+                res = await fetch('/api/vendors', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+            }
 
             if (res.ok) {
-                alert("Berhasil menambahkan Mitra baru!");
+                alert(editingId ? "Data Mitra diperbarui!" : "Mitra baru ditambahkan!");
                 setIsModalOpen(false);
-                setFormData({
-                    name: '', whatsapp: '', category: 'Umum', address: '', lat: '', lng: '', locationTags: '', image: ''
-                });
+                setEditingId(null);
+                setFormData(initialForm);
                 fetchVendors();
             } else {
-                alert("Gagal menambahkan mitra.");
+                alert("Gagal menyimpan data mitra.");
             }
         } catch (error) {
             console.error(error);
@@ -71,10 +118,14 @@ export default function AdminVendors() {
         }
     };
 
-    const filteredVendors = vendors.filter(v =>
-        v.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (v.locationTags && v.locationTags.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
+    const filteredVendors = vendors.filter(v => {
+        const matchesSearch = v.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (v.locationTags && v.locationTags.toLowerCase().includes(searchTerm.toLowerCase()));
+
+        const matchesCategory = filterCategory === 'all' || v.category === filterCategory;
+
+        return matchesSearch && matchesCategory;
+    });
 
     return (
         <div className="min-h-screen bg-bg flex">
@@ -87,7 +138,7 @@ export default function AdminVendors() {
                     </div>
                     <button
                         data-testid="add-vendor-btn"
-                        onClick={() => setIsModalOpen(true)}
+                        onClick={handleAdd}
                         className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-600/20 transition-all font-bold text-sm"
                     >
                         <Plus size={18} />
@@ -112,15 +163,28 @@ export default function AdminVendors() {
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
                     <div className="p-6 border-b border-gray-100 flex justify-between items-center">
                         <h2 className="font-bold text-lg text-gray-800">Daftar Toko & Titik</h2>
-                        <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-                            <input
-                                type="text"
-                                placeholder="Cari mitra / lokasi..."
-                                className="pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-64"
-                                value={searchTerm}
-                                onChange={e => setSearchTerm(e.target.value)}
-                            />
+                        <div className="flex items-center gap-3">
+                            <select
+                                value={filterCategory}
+                                onChange={(e) => setFilterCategory(e.target.value)}
+                                className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                            >
+                                <option value="all">Semua Kategori</option>
+                                {Array.from(new Set(vendors.map(v => v.category))).filter(Boolean).map(cat => (
+                                    <option key={cat} value={cat}>{cat}</option>
+                                ))}
+                            </select>
+
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                                <input
+                                    type="text"
+                                    placeholder="Cari mitra / lokasi..."
+                                    className="pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-64"
+                                    value={searchTerm}
+                                    onChange={e => setSearchTerm(e.target.value)}
+                                />
+                            </div>
                         </div>
                     </div>
 
@@ -133,7 +197,7 @@ export default function AdminVendors() {
                                     <th className="px-6 py-4 font-medium">Kategori</th>
                                     <th className="px-6 py-4 font-medium">Lokasi / Tag</th>
                                     <th className="px-6 py-4 font-medium">Koordinat</th>
-                                    <th className="px-6 py-4 font-medium">Aksi</th>
+                                    <th className="px-6 py-4 font-medium text-center">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
@@ -165,10 +229,23 @@ export default function AdminVendors() {
                                         <td className="px-6 py-4 text-xs font-mono text-gray-500">
                                             {vendor.lat.toFixed(4)}, {vendor.lng.toFixed(4)}
                                         </td>
-                                        <td className="px-6 py-4">
-                                            <button className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-600">
-                                                <Edit size={16} />
-                                            </button>
+                                        <td className="px-6 py-4 text-center">
+                                            <div className="flex justify-center gap-2">
+                                                <button
+                                                    onClick={() => handleEdit(vendor)}
+                                                    className="p-2 hover:bg-blue-50 rounded-lg text-blue-600 transition"
+                                                    title="Edit"
+                                                >
+                                                    <Edit size={16} />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDelete(vendor.id)}
+                                                    className="p-2 hover:bg-red-50 rounded-lg text-red-600 transition"
+                                                    title="Hapus"
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
@@ -182,8 +259,8 @@ export default function AdminVendors() {
             {isModalOpen && (
                 <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
                     <div className="bg-white rounded-2xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
-                        <h2 className="text-xl font-bold mb-6">Tambah Mitra Baru</h2>
-                        <form onSubmit={handleCreate} className="space-y-4">
+                        <h2 className="text-xl font-bold mb-6">{editingId ? 'Edit Mitra' : 'Tambah Mitra Baru'}</h2>
+                        <form onSubmit={handleSubmit} className="space-y-4">
                             <div>
                                 <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">Nama Toko</label>
                                 <input
@@ -211,6 +288,9 @@ export default function AdminVendors() {
                                         <option value="Sayur">Sayur</option>
                                         <option value="Buah">Buah</option>
                                         <option value="Daging">Daging</option>
+                                        <option value="Kuliner">Kuliner</option>
+                                        <option value="Minuman">Minuman</option>
+                                        <option value="Jasa">Jasa</option>
                                     </select>
                                 </div>
                                 <div>
@@ -308,7 +388,7 @@ export default function AdminVendors() {
                                     type="submit"
                                     className="flex-1 px-4 py-2 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-600/20"
                                 >
-                                    Simpan Mitra
+                                    {editingId ? 'Simpan Perubahan' : 'Simpan Mitra'}
                                 </button>
                             </div>
                         </form>

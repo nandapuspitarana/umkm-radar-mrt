@@ -5,16 +5,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import AppLayout from '../components/AppLayout';
 import { getImageUrl } from '../utils/api';
 
-// ATM Bank data with static images
-const atmBanks = [
-    { id: 1, name: 'Bank BCA', image: 'https://images.unsplash.com/photo-1601597111158-2fceff292cdc?w=400&h=300&fit=crop', distance: '30 m' },
-    { id: 2, name: 'Bank Mandiri', image: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=400&h=300&fit=crop', distance: '30 m' },
-    { id: 3, name: 'Bank BNI', image: 'https://images.unsplash.com/photo-1556742393-d75f468bfcb0?w=400&h=300&fit=crop', distance: '52 m' },
-    { id: 4, name: 'Bank BTPN', image: 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400&h=300&fit=crop', distance: '52 m' },
-    { id: 5, name: 'Bank BTN', image: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=400&h=300&fit=crop', distance: '224 m' },
-    { id: 6, name: 'Bank Danamon', image: 'https://images.unsplash.com/photo-1501167786227-4cba60f6d58f?w=400&h=300&fit=crop', distance: '318 m' },
-];
-
 // ATM & Shopping categories for filter
 const atmCategories = [
     'Semua Kategori',
@@ -31,6 +21,34 @@ export default function Atm({ vendors, onSelectVendor }) {
     const [searchQuery, setSearchQuery] = useState('');
     const [sortedVendors, setSortedVendors] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [atmBanners, setAtmBanners] = useState([]);
+    const [bannersLoading, setBannersLoading] = useState(true);
+
+    // Fetch ATM banners from settings
+    useEffect(() => {
+        setBannersLoading(true);
+        fetch('/api/settings')
+            .then(res => res.json())
+            .then(data => {
+                if (data.atm_banners) {
+                    let banners = [];
+                    if (Array.isArray(data.atm_banners)) {
+                        banners = data.atm_banners;
+                    } else if (data.atm_banners.banners && Array.isArray(data.atm_banners.banners)) {
+                        banners = data.atm_banners.banners;
+                    }
+
+                    if (banners.length > 0) {
+                        const validBanners = banners.filter(b =>
+                            b.image && b.image.trim() !== ''
+                        );
+                        setAtmBanners(validBanners);
+                    }
+                }
+            })
+            .catch(err => console.error("Failed to load ATM banners", err))
+            .finally(() => setBannersLoading(false));
+    }, []);
 
     // Filter vendors by ATM/Shopping category
     const safeVendors = Array.isArray(vendors) ? vendors : [];
@@ -127,6 +145,18 @@ export default function Atm({ vendors, onSelectVendor }) {
         return matchesSearch;
     });
 
+    const handleBannerClick = (banner) => {
+        if (!banner.link) return;
+
+        // Check if it's an external link
+        if (banner.link.startsWith('http://') || banner.link.startsWith('https://')) {
+            window.open(banner.link, '_blank');
+        } else {
+            // Internal link - use navigate
+            navigate(banner.link);
+        }
+    };
+
     return (
         <AppLayout
             activeCategory="atm"
@@ -139,25 +169,48 @@ export default function Atm({ vendors, onSelectVendor }) {
             <div className="sticky top-0 z-10 bg-gradient-to-b from-grey-100 via-grey-100/80 to-transparent p-2.5">
                 <div className="overflow-x-auto no-scrollbar">
                     <div className="flex gap-1.5">
-                        {atmBanks.map((bank) => (
+                        {/* Loading Skeleton */}
+                        {bannersLoading && [1, 2, 3, 4].map((i) => (
                             <div
-                                key={bank.id}
-                                className="w-32 h-24 rounded-2xl overflow-hidden flex-shrink-0 cursor-pointer relative group bg-white"
+                                key={`loading-${i}`}
+                                className="w-32 h-24 rounded-2xl bg-grey-200 flex-shrink-0 animate-pulse"
+                            />
+                        ))}
+
+                        {/* Actual Banners from Database */}
+                        {!bannersLoading && atmBanners.map((banner) => (
+                            <div
+                                key={banner.id}
+                                onClick={() => handleBannerClick(banner)}
+                                className={`w-32 h-24 rounded-2xl overflow-hidden flex-shrink-0 relative group bg-white shadow-sm ${banner.link ? 'cursor-pointer hover:shadow-md transition-shadow' : ''
+                                    }`}
                             >
-                                <div className="absolute inset-0 bg-gradient-to-br from-blue-100 to-blue-50 flex items-center justify-center">
-                                    <span className="text-3xl">🏧</span>
-                                </div>
-                                {/* Image Overlay if available */}
-                                {bank.image && (
-                                    <img src={bank.image} className="absolute inset-0 w-full h-full object-cover opacity-80" alt={bank.name} />
+                                {banner.image && (
+                                    <img
+                                        src={banner.image}
+                                        className="absolute inset-0 w-full h-full object-cover"
+                                        alt={banner.title || 'ATM Banner'}
+                                        onError={(e) => {
+                                            e.target.style.display = 'none';
+                                        }}
+                                    />
                                 )}
-                                <div className="absolute bottom-2 left-0 right-0 flex justify-center">
-                                    <div className="bg-grey-100 px-2 py-1 rounded-lg z-10">
-                                        <span className="text-sm font-semibold text-grey-400 lowercase">{bank.distance}</span>
+                                {banner.title && (
+                                    <div className="absolute bottom-2 left-0 right-0 flex justify-center">
+                                        <div className="bg-grey-100/90 px-2 py-1 rounded-lg z-10">
+                                            <span className="text-xs font-semibold text-grey-700">{banner.title}</span>
+                                        </div>
                                     </div>
-                                </div>
+                                )}
                             </div>
                         ))}
+
+                        {/* Empty State */}
+                        {!bannersLoading && atmBanners.length === 0 && (
+                            <div className="w-full py-4 text-center text-grey-400">
+                                <p className="text-sm">Belum ada banner ATM</p>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

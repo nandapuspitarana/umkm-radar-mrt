@@ -10,7 +10,10 @@ import {
     Store,
     Image,
     Tag,
-    Navigation2
+    Navigation2,
+    MapPin,
+    FileImage,
+    CreditCard
 } from 'lucide-react';
 
 export default function Sidebar() {
@@ -89,6 +92,33 @@ export default function Sidebar() {
                         label="Navigasi"
                         active={location.pathname === '/navigation'}
                         onClick={() => navigate('/navigation')}
+                    />
+                )}
+
+                {auth.role === 'admin' && (
+                    <SidebarItem
+                        icon={<MapPin size={20} />}
+                        label="Destinations"
+                        active={location.pathname === '/destinations'}
+                        onClick={() => navigate('/destinations')}
+                    />
+                )}
+
+                {auth.role === 'admin' && (
+                    <SidebarItem
+                        icon={<FileImage size={20} />}
+                        label="Banner Publik"
+                        active={location.pathname === '/publik-banner'}
+                        onClick={() => navigate('/publik-banner')}
+                    />
+                )}
+
+                {auth.role === 'admin' && (
+                    <SidebarItem
+                        icon={<CreditCard size={20} />}
+                        label="Banner ATM"
+                        active={location.pathname === '/atm-banners'}
+                        onClick={() => navigate('/atm-banners')}
                     />
                 )}
 

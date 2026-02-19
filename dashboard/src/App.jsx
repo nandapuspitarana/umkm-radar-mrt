@@ -9,6 +9,9 @@ import AdminVendors from './pages/AdminVendors';
 import Assets from './pages/Assets';
 import Categories from './pages/Categories';
 import Navigation from './pages/Navigation';
+import Destinations from './pages/Destinations';
+import PublikBanner from './pages/PublikBanner';
+import AtmBanners from './pages/AtmBanners';
 
 function PrivateRoute({ children }) {
   const auth = JSON.parse(localStorage.getItem('grocries_auth'));
@@ -89,6 +92,30 @@ export default function App() {
           element={
             <PrivateRoute>
               <Navigation />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/destinations"
+          element={
+            <PrivateRoute>
+              <Destinations />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/publik-banner"
+          element={
+            <PrivateRoute>
+              <PublikBanner />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/atm-banners"
+          element={
+            <PrivateRoute>
+              <AtmBanners />
             </PrivateRoute>
           }
         />

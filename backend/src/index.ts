@@ -107,6 +107,48 @@ app.get('/api/proxy/minio/*', async (c) => {
         return c.json({ error: 'File not found in MinIO' }, 404);
     }
 });
+
+// Simplified uploads proxy endpoint - serves files from MinIO using relative paths
+// Example: /uploads/banners/123.jpg -> MinIO: banners/123.jpg
+app.get('/uploads/*', async (c) => {
+    try {
+        const { minioClient, BUCKET_NAME } = await import('./storage');
+        // Remove /uploads/ prefix to get the actual path in MinIO
+        const path = c.req.path.replace('/uploads/', '');
+
+        // Get object from MinIO
+        const stream = await minioClient.getObject(BUCKET_NAME, path);
+
+        // Determine content type
+        const ext = path.split('.').pop()?.toLowerCase();
+        const mimeTypes: Record<string, string> = {
+            'mp4': 'video/mp4',
+            'webm': 'video/webm',
+            'mov': 'video/quicktime',
+            'jpg': 'image/jpeg',
+            'jpeg': 'image/jpeg',
+            'png': 'image/png',
+            'gif': 'image/gif',
+            'svg': 'image/svg+xml',
+            'webp': 'image/webp'
+        };
+
+        const contentType = mimeTypes[ext || ''] || 'application/octet-stream';
+
+        // Stream the file
+        return new Response(stream as any, {
+            headers: {
+                'Content-Type': contentType,
+                'Cache-Control': 'public, max-age=31536000',
+                'Access-Control-Allow-Origin': '*',
+            }
+        });
+    } catch (error) {
+        console.error('Uploads proxy error:', error);
+        return c.json({ error: 'File not found' }, 404);
+    }
+});
+
 // Imgproxy Proxy Endpoint
 const IMGPROXY_URL = process.env.IMGPROXY_URL || 'http://localhost:8088';
 
@@ -267,10 +309,13 @@ app.post('/api/assets/upload', async (c) => {
             alt: file.name,
         }).returning();
 
+        // Return relative path for proxying instead of full MinIO URL
+        const relativePath = `/uploads/${folder}/${filename}`;
+
         return c.json({
             success: true,
-            directUrl: inserted.storagePath, // Return relative path for storage
-            fullUrl: publicUrl, // Return full URL for immediate preview if needed
+            directUrl: relativePath, // Relative path for proxy
+            fullUrl: publicUrl, // Full MinIO URL for debugging
             filename,
             size: buffer.length,
             id: inserted.id,
@@ -492,6 +537,26 @@ app.put('/api/vendors/:id', async (c) => {
     }
 });
 
+// 1d. Delete Vendor (Invalidate Cache)
+app.delete('/api/vendors/:id', async (c) => {
+    const id = c.req.param('id');
+    try {
+        // First delete all products associated with this vendor
+        await db.delete(products).where(eq(products.vendorId, parseInt(id)));
+
+        // Then delete the vendor
+        await db.delete(vendors).where(eq(vendors.id, parseInt(id)));
+
+        // Invalidate cache
+        await redis.del('vendors_list');
+
+        return c.json({ message: 'Vendor and associated products deleted successfully' });
+    } catch (error) {
+        console.error('Delete Vendor Error:', error);
+        return c.json({ error: 'Failed to delete vendor' }, 500);
+    }
+});
+
 // 2. Get Products by Vendor
 app.get('/api/products', async (c) => {
     const vendorId = c.req.query('vendorId');
@@ -526,6 +591,51 @@ app.get('/api/destinations/:id', async (c) => {
     } catch (error) {
         console.error('Destination endpoint error:', error);
         return c.json({ error: 'Failed to fetch destination' }, 500);
+    }
+});
+
+// 2d. Create Destination
+app.post('/api/destinations', async (c) => {
+    try {
+        const body = await c.req.json();
+        // Basic validation
+        if (!body.name || !body.lat || !body.lng) {
+            return c.json({ error: 'Name, Latitude, and Longitude are required' }, 400);
+        }
+
+        const result = await db.insert(destinations).values(body).returning();
+        return c.json(result[0]);
+    } catch (error) {
+        console.error("Create Destination Error:", error);
+        return c.json({ error: 'Failed to create destination' }, 500);
+    }
+});
+
+// 2e. Update Destination
+app.put('/api/destinations/:id', async (c) => {
+    const id = c.req.param('id');
+    try {
+        const body = await c.req.json();
+        const result = await db.update(destinations)
+            .set({ ...body, updatedAt: new Date() })
+            .where(eq(destinations.id, parseInt(id)))
+            .returning();
+        return c.json(result[0]);
+    } catch (error) {
+        console.error("Update Destination Error:", error);
+        return c.json({ error: 'Failed to update destination' }, 500);
+    }
+});
+
+// 2f. Delete Destination
+app.delete('/api/destinations/:id', async (c) => {
+    const id = c.req.param('id');
+    try {
+        await db.delete(destinations).where(eq(destinations.id, parseInt(id)));
+        return c.json({ success: true });
+    } catch (error) {
+        console.error("Delete Destination Error:", error);
+        return c.json({ error: 'Failed to delete destination' }, 500);
     }
 });
 

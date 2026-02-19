@@ -1,6 +1,5 @@
 import React, { useState, useRef } from 'react';
 import { Upload, X, Loader2, Image as ImageIcon, Video } from 'lucide-react';
-import { API_ENDPOINTS } from '../config/api';
 import { getImageUrl } from '../utils/api';
 
 /**
@@ -51,7 +50,8 @@ export default function ImageUploader({
         formData.append('alt', file.name);
 
         try {
-            const res = await fetch(API_ENDPOINTS.assetsUpload, {
+            // Use relative URL to leverage Vite proxy
+            const res = await fetch('/api/assets/upload', {
                 method: 'POST',
                 body: formData,
             });

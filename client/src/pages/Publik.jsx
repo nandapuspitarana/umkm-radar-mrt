@@ -14,10 +14,24 @@ const categoryTitles = {
 export default function Publik() {
     const [destinations, setDestinations] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [bannerImage, setBannerImage] = useState('https://images.unsplash.com/photo-1519331379826-f10be5486c6f?w=600&h=400&fit=crop');
 
     useEffect(() => {
         fetchDestinations();
+        fetchBanner();
     }, []);
+
+    const fetchBanner = async () => {
+        try {
+            const response = await fetch('/api/settings');
+            const data = await response.json();
+            if (data.publik_banner && data.publik_banner.trim() !== '') {
+                setBannerImage(data.publik_banner);
+            }
+        } catch (error) {
+            console.error('Failed to fetch banner:', error);
+        }
+    };
 
     const fetchDestinations = async () => {
         try {
@@ -48,14 +62,69 @@ export default function Publik() {
             activeCategory="publik"
         >
             <div className="pb-6">
-                {/* Banner Image */}
+                {/* Banner Image/Video */}
                 <div className="p-2.5">
                     <div className="relative w-full aspect-[3/2] max-h-[200px] max-w-[600px] bg-grey-900 rounded-[20px] overflow-hidden">
-                        <img
-                            src="https://images.unsplash.com/photo-1519331379826-f10be5486c6f?w=600&h=400&fit=crop"
-                            alt="Ruang Publik"
-                            className="w-full h-full object-cover"
-                        />
+                        {(() => {
+                            // Helper function to extract YouTube video ID
+                            const getYouTubeVideoId = (url) => {
+                                if (!url) return null;
+
+                                // Match various YouTube URL formats
+                                const patterns = [
+                                    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
+                                    /^([a-zA-Z0-9_-]{11})$/ // Direct video ID
+                                ];
+
+                                for (const pattern of patterns) {
+                                    const match = url.match(pattern);
+                                    if (match && match[1]) {
+                                        return match[1];
+                                    }
+                                }
+                                return null;
+                            };
+
+                            const videoId = getYouTubeVideoId(bannerImage);
+
+                            if (videoId) {
+                                // Render YouTube iframe
+                                return (
+                                    <iframe
+                                        src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=0&showinfo=0&rel=0&modestbranding=1`}
+                                        className="w-full h-full object-cover"
+                                        frameBorder="0"
+                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                        allowFullScreen
+                                        title="Banner Video"
+                                    />
+                                );
+                            } else if (bannerImage && (bannerImage.endsWith('.mp4') || bannerImage.endsWith('.webm') || bannerImage.includes('video'))) {
+                                // Render HTML5 video for direct video files
+                                return (
+                                    <video
+                                        src={bannerImage}
+                                        className="w-full h-full object-cover"
+                                        autoPlay
+                                        muted
+                                        loop
+                                        playsInline
+                                    />
+                                );
+                            } else {
+                                // Render image
+                                return (
+                                    <img
+                                        src={bannerImage}
+                                        alt="Ruang Publik"
+                                        className="w-full h-full object-cover"
+                                        onError={(e) => {
+                                            e.target.src = 'https://images.unsplash.com/photo-1519331379826-f10be5486c6f?w=600&h=400&fit=crop';
+                                        }}
+                                    />
+                                );
+                            }
+                        })()}
                     </div>
                 </div>
 
