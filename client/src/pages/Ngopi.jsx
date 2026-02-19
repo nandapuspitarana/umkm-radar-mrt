@@ -5,12 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import AppLayout from '../components/AppLayout';
 import { getImageUrl } from '../utils/api';
 
-// Promotional banners data for coffee
-const promoBanners = [
-    { id: 1, image: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=400&h=400&fit=crop', title: 'Promo Kopi' },
-    { id: 2, image: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400&h=400&fit=crop', title: 'Kopi Kenangan' },
-    { id: 3, image: 'https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=400&h=400&fit=crop', title: 'Indomaret Point' },
-];
+// Ngopi banners will be fetched from API
 
 // Ngopi categories for filter
 const ngopiCategories = [
@@ -28,6 +23,27 @@ export default function Ngopi({ vendors, onSelectVendor }) {
     const [searchQuery, setSearchQuery] = useState('');
     const [sortedVendors, setSortedVendors] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [ngopiBanners, setNgopiBanners] = useState([]);
+    const [bannersLoading, setBannersLoading] = useState(true);
+
+    // Fetch ngopi banners from API
+    useEffect(() => {
+        const fetchBanners = async () => {
+            setBannersLoading(true);
+            try {
+                const res = await fetch('/api/settings');
+                const data = await res.json();
+                if (data.ngopi_banners && Array.isArray(data.ngopi_banners)) {
+                    setNgopiBanners(data.ngopi_banners);
+                }
+            } catch (error) {
+                console.error('Failed to fetch ngopi banners:', error);
+            } finally {
+                setBannersLoading(false);
+            }
+        };
+        fetchBanners();
+    }, []);
 
     // Filter vendors by ngopi/coffee category
     const safeVendors = Array.isArray(vendors) ? vendors : [];
@@ -122,6 +138,15 @@ export default function Ngopi({ vendors, onSelectVendor }) {
         return matchesSearch;
     });
 
+    const handleBannerClick = (banner) => {
+        if (!banner.link) return;
+        if (banner.link.startsWith('http://') || banner.link.startsWith('https://')) {
+            window.open(banner.link, '_blank');
+        } else {
+            navigate(banner.link);
+        }
+    };
+
     return (
         <AppLayout
             activeCategory="ngopi"
@@ -167,22 +192,50 @@ export default function Ngopi({ vendors, onSelectVendor }) {
                 </AnimatePresence>
             </div>
 
-            {/* Promo Banners */}
+            {/* Ngopi Banners */}
             <div className="overflow-x-auto no-scrollbar px-2.5">
                 <div className="flex gap-1.5 pb-2.5">
-                    {promoBanners.map((banner) => (
+                    {/* Loading Skeleton */}
+                    {bannersLoading && [1, 2, 3].map((i) => (
+                        <div
+                            key={`loading-${i}`}
+                            className="w-48 h-48 rounded-2xl bg-grey-200 flex-shrink-0 animate-pulse"
+                        />
+                    ))}
+
+                    {/* Actual Banners from Database */}
+                    {!bannersLoading && ngopiBanners.map((banner) => (
                         <div
                             key={banner.id}
-                            className="w-48 h-48 rounded-2xl overflow-hidden flex-shrink-0 cursor-pointer relative group"
+                            onClick={() => handleBannerClick(banner)}
+                            className={`w-48 h-48 rounded-2xl overflow-hidden flex-shrink-0 relative group ${banner.link ? 'cursor-pointer hover:shadow-lg transition-shadow' : ''
+                                }`}
                         >
-                            <img
-                                src={banner.image}
-                                alt={banner.title}
-                                className="w-full h-full object-cover transition-transform group-hover:scale-105"
-                            />
+                            {banner.image && (
+                                <img
+                                    src={banner.image}
+                                    alt={banner.title || 'Ngopi Banner'}
+                                    className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                                    onError={(e) => { e.target.style.display = 'none'; }}
+                                />
+                            )}
                             <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                            {banner.title && (
+                                <div className="absolute bottom-3 left-3 right-3">
+                                    <div className="bg-white/90 px-3 py-1.5 rounded-lg">
+                                        <span className="text-sm font-semibold text-grey-800">{banner.title}</span>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     ))}
+
+                    {/* Empty State */}
+                    {!bannersLoading && ngopiBanners.length === 0 && (
+                        <div className="w-full py-8 text-center text-grey-400">
+                            <p className="text-sm">Belum ada banner ngopi</p>
+                        </div>
+                    )}
                 </div>
             </div>
 

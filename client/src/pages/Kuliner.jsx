@@ -5,13 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import AppLayout from '../components/AppLayout';
 import { getImageUrl } from '../utils/api';
 
-// Promotional banners data
-const promoBanners = [
-    { id: 1, image: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&h=400&fit=crop', title: 'Diskon 12.900' },
-    { id: 2, image: 'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=400&h=400&fit=crop', title: 'Sarapan Indo' },
-    { id: 3, image: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400&h=400&fit=crop', title: 'Promo Pizza' },
-    { id: 4, image: 'https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?w=400&h=400&fit=crop', title: 'Fresh Salad' },
-];
+// Kuliner banners will be fetched from API
 
 // Kuliner categories for filter
 const kulinerCategories = [
@@ -30,6 +24,27 @@ export default function Kuliner({ vendors, onSelectVendor }) {
     const [searchQuery, setSearchQuery] = useState('');
     const [sortedVendors, setSortedVendors] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [kulinerBanners, setKulinerBanners] = useState([]);
+    const [bannersLoading, setBannersLoading] = useState(true);
+
+    // Fetch kuliner banners from API
+    useEffect(() => {
+        const fetchBanners = async () => {
+            setBannersLoading(true);
+            try {
+                const res = await fetch('/api/settings');
+                const data = await res.json();
+                if (data.kuliner_banners && Array.isArray(data.kuliner_banners)) {
+                    setKulinerBanners(data.kuliner_banners);
+                }
+            } catch (error) {
+                console.error('Failed to fetch kuliner banners:', error);
+            } finally {
+                setBannersLoading(false);
+            }
+        };
+        fetchBanners();
+    }, []);
 
     // Filter vendors by kuliner category
     const safeVendors = Array.isArray(vendors) ? vendors : [];
@@ -123,15 +138,21 @@ export default function Kuliner({ vendors, onSelectVendor }) {
     const filteredVendors = sortedVendors.filter(v => {
         const matchesSearch = v.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
             v.address?.toLowerCase().includes(searchQuery.toLowerCase());
-
-        // Note: Category filtering could be improved if `v.category` matches `selectedCategory`
-        // For now, keeping legacy behavior or minimal category filter if data support it
-        // Assuming `kulinerCategories` are sub-categories not available in data yet, or partial match?
-        // Since `v.category` is usually "Kuliner" or "Makanan", exact match with "Nasi & Lontong" might fail unless data is rich.
-        // I will keep it as generic search filter for now to avoid empty list.
-
-        return matchesSearch;
+        const matchesCategory = selectedCategory === 'Semua Kategori' || v.category === selectedCategory;
+        return matchesSearch && matchesCategory;
     });
+
+    const handleBannerClick = (banner) => {
+        if (!banner.link) return;
+
+        // Check if it's an external link
+        if (banner.link.startsWith('http://') || banner.link.startsWith('https://')) {
+            window.open(banner.link, '_blank');
+        } else {
+            // Internal link - use navigate
+            navigate(banner.link);
+        }
+    };
 
     return (
         <AppLayout
@@ -178,22 +199,52 @@ export default function Kuliner({ vendors, onSelectVendor }) {
                 </AnimatePresence>
             </div>
 
-            {/* Promo Banners */}
+            {/* Kuliner Banners */}
             <div className="overflow-x-auto no-scrollbar px-2.5">
                 <div className="flex gap-1.5 pb-2.5">
-                    {promoBanners.map((banner) => (
+                    {/* Loading Skeleton */}
+                    {bannersLoading && [1, 2, 3, 4].map((i) => (
+                        <div
+                            key={`loading-${i}`}
+                            className="w-48 h-48 rounded-2xl bg-grey-200 flex-shrink-0 animate-pulse"
+                        />
+                    ))}
+
+                    {/* Actual Banners from Database */}
+                    {!bannersLoading && kulinerBanners.map((banner) => (
                         <div
                             key={banner.id}
-                            className="w-48 h-48 rounded-2xl overflow-hidden flex-shrink-0 cursor-pointer relative group"
+                            onClick={() => handleBannerClick(banner)}
+                            className={`w-48 h-48 rounded-2xl overflow-hidden flex-shrink-0 relative group ${banner.link ? 'cursor-pointer hover:shadow-lg transition-shadow' : ''
+                                }`}
                         >
-                            <img
-                                src={banner.image}
-                                alt={banner.title}
-                                className="w-full h-full object-cover transition-transform group-hover:scale-105"
-                            />
+                            {banner.image && (
+                                <img
+                                    src={banner.image}
+                                    alt={banner.title || 'Kuliner Banner'}
+                                    className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                                    onError={(e) => {
+                                        e.target.style.display = 'none';
+                                    }}
+                                />
+                            )}
                             <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                            {banner.title && (
+                                <div className="absolute bottom-3 left-3 right-3">
+                                    <div className="bg-white/90 px-3 py-1.5 rounded-lg">
+                                        <span className="text-sm font-semibold text-grey-800">{banner.title}</span>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     ))}
+
+                    {/* Empty State */}
+                    {!bannersLoading && kulinerBanners.length === 0 && (
+                        <div className="w-full py-8 text-center text-grey-400">
+                            <p className="text-sm">Belum ada banner kuliner</p>
+                        </div>
+                    )}
                 </div>
             </div>
 

@@ -67,7 +67,7 @@ export async function apiUpload(endpoint, formData) {
 
 /**
  * Get processed image URL via backend proxy (Imgproxy)
- * @param {string} path - Image path (e.g., 'banners/image.jpg')
+ * @param {string} path - Image path (e.g., 'banners/image.jpg' or '/uploads/banners/image.jpg')
  * @param {object} options - Processing options (w, h, resize, etc)
  * @returns {string} Processed URL
  */
@@ -104,7 +104,8 @@ export function getImageUrl(path, options = {}) {
     if (enlarge) query.append('enlarge', enlarge);
     if (ext) query.append('ext', ext);
 
-    return `${API_URL}/api/image/${cleanPath}?${query.toString()}`;
+    // Use relative path for Vite proxy
+    return `/api/image/${cleanPath}?${query.toString()}`;
 }
 
 /**
@@ -120,14 +121,15 @@ export function getAssetUrl(path) {
     let cleanPath = path;
     if (path.includes('localhost:9000/assets/')) {
         cleanPath = path.replace(/https?:\/\/localhost:9000\/assets\//, '');
-    } else if (path.startsWith('http') && !path.includes(API_URL)) {
-        return path; // Return external URLs as is (unless it's our API)
+    } else if (path.startsWith('http')) {
+        return path; // Return external URLs as is
     }
 
     // Clean leading slash
     cleanPath = cleanPath.startsWith('/') ? cleanPath.substring(1) : cleanPath;
 
-    return `${API_URL}/api/raw/${cleanPath}`;
+    // Use relative path for Vite proxy
+    return `/api/raw/${cleanPath}`;
 }
 
 export default apiFetch;

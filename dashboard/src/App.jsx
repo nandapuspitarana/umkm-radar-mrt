@@ -12,6 +12,8 @@ import Navigation from './pages/Navigation';
 import Destinations from './pages/Destinations';
 import PublikBanner from './pages/PublikBanner';
 import AtmBanners from './pages/AtmBanners';
+import KulinerBanners from './pages/KulinerBanners';
+import NgopiBanners from './pages/NgopiBanners';
 
 function PrivateRoute({ children }) {
   const auth = JSON.parse(localStorage.getItem('grocries_auth'));
@@ -116,6 +118,22 @@ export default function App() {
           element={
             <PrivateRoute>
               <AtmBanners />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/kuliner-banners"
+          element={
+            <PrivateRoute>
+              <KulinerBanners />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/ngopi-banners"
+          element={
+            <PrivateRoute>
+              <NgopiBanners />
             </PrivateRoute>
           }
         />

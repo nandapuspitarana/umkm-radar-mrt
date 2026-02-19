@@ -13,7 +13,9 @@ import {
     Navigation2,
     MapPin,
     FileImage,
-    CreditCard
+    CreditCard,
+    Utensils,
+    Coffee
 } from 'lucide-react';
 
 export default function Sidebar() {
@@ -119,6 +121,24 @@ export default function Sidebar() {
                         label="Banner ATM"
                         active={location.pathname === '/atm-banners'}
                         onClick={() => navigate('/atm-banners')}
+                    />
+                )}
+
+                {auth.role === 'admin' && (
+                    <SidebarItem
+                        icon={<Utensils size={20} />}
+                        label="Banner Kuliner"
+                        active={location.pathname === '/kuliner-banners'}
+                        onClick={() => navigate('/kuliner-banners')}
+                    />
+                )}
+
+                {auth.role === 'admin' && (
+                    <SidebarItem
+                        icon={<Coffee size={20} />}
+                        label="Banner Ngopi"
+                        active={location.pathname === '/ngopi-banners'}
+                        onClick={() => navigate('/ngopi-banners')}
                     />
                 )}
 
