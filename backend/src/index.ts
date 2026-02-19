@@ -570,6 +570,72 @@ app.get('/api/products', async (c) => {
     }
 });
 
+// 2a. Create Product
+app.post('/api/products', async (c) => {
+    try {
+        const body = await c.req.json();
+        if (!body.vendorId || !body.name || body.price === undefined) {
+            return c.json({ error: 'vendorId, name, and price are required' }, 400);
+        }
+        const result = await db.insert(products).values({
+            vendorId: parseInt(body.vendorId),
+            name: body.name,
+            price: parseInt(body.price),
+            originalPrice: body.originalPrice ? parseInt(body.originalPrice) : null,
+            discountPrice: body.discountPrice ? parseInt(body.discountPrice) : null,
+            category: body.category || 'Umum',
+            image: body.image || '',
+            description: body.description || null,
+            isAvailable: body.isAvailable !== undefined ? body.isAvailable : true,
+            rating: 0,
+        }).returning();
+        return c.json(result[0]);
+    } catch (error) {
+        console.error('Create Product Error:', error);
+        return c.json({ error: 'Failed to create product' }, 500);
+    }
+});
+
+// 2b. Update Product
+app.put('/api/products/:id', async (c) => {
+    const id = c.req.param('id');
+    try {
+        const body = await c.req.json();
+        const updateData: Record<string, any> = {};
+        if (body.name !== undefined) updateData.name = body.name;
+        if (body.price !== undefined) updateData.price = parseInt(body.price);
+        if (body.originalPrice !== undefined) updateData.originalPrice = body.originalPrice ? parseInt(body.originalPrice) : null;
+        if (body.discountPrice !== undefined) updateData.discountPrice = body.discountPrice ? parseInt(body.discountPrice) : null;
+        if (body.category !== undefined) updateData.category = body.category;
+        if (body.image !== undefined) updateData.image = body.image;
+        if (body.description !== undefined) updateData.description = body.description;
+        if (body.isAvailable !== undefined) updateData.isAvailable = body.isAvailable;
+
+        const result = await db.update(products)
+            .set(updateData)
+            .where(eq(products.id, parseInt(id)))
+            .returning();
+
+        if (result.length === 0) return c.json({ error: 'Product not found' }, 404);
+        return c.json(result[0]);
+    } catch (error) {
+        console.error('Update Product Error:', error);
+        return c.json({ error: 'Failed to update product' }, 500);
+    }
+});
+
+// 2c. Delete Product
+app.delete('/api/products/:id', async (c) => {
+    const id = c.req.param('id');
+    try {
+        await db.delete(products).where(eq(products.id, parseInt(id)));
+        return c.json({ message: 'Product deleted successfully' });
+    } catch (error) {
+        console.error('Delete Product Error:', error);
+        return c.json({ error: 'Failed to delete product' }, 500);
+    }
+});
+
 // 2b. Get All Destinations
 app.get('/api/destinations', async (c) => {
     try {
