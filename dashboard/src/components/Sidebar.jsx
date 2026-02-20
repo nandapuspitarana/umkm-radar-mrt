@@ -16,7 +16,8 @@ import {
     CreditCard,
     Utensils,
     Coffee,
-    Landmark
+    Landmark,
+    LayoutGrid
 } from 'lucide-react';
 
 export default function Sidebar() {
@@ -149,6 +150,15 @@ export default function Sidebar() {
                         label="Banner Wisata"
                         active={location.pathname === '/wisata-banner'}
                         onClick={() => navigate('/wisata-banner')}
+                    />
+                )}
+
+                {auth.role === 'admin' && (
+                    <SidebarItem
+                        icon={<LayoutGrid size={20} />}
+                        label="Banner Quick Access"
+                        active={location.pathname === '/quick-access-banners'}
+                        onClick={() => navigate('/quick-access-banners')}
                     />
                 )}
 
