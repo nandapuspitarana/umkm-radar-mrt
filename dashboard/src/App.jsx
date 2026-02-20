@@ -16,6 +16,7 @@ import KulinerBanners from './pages/KulinerBanners';
 import NgopiBanners from './pages/NgopiBanners';
 import WisataBanner from './pages/WisataBanner';
 import QuickAccessBanners from './pages/QuickAccessBanners';
+import WfaBanners from './pages/WfaBanners';
 
 function PrivateRoute({ children }) {
   const auth = JSON.parse(localStorage.getItem('grocries_auth'));
@@ -152,6 +153,14 @@ export default function App() {
           element={
             <PrivateRoute>
               <QuickAccessBanners />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/wfa-banners"
+          element={
+            <PrivateRoute>
+              <WfaBanners />
             </PrivateRoute>
           }
         />

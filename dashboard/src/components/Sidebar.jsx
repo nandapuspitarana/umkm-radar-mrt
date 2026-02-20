@@ -17,7 +17,8 @@ import {
     Utensils,
     Coffee,
     Landmark,
-    LayoutGrid
+    LayoutGrid,
+    Laptop
 } from 'lucide-react';
 
 export default function Sidebar() {
@@ -159,6 +160,15 @@ export default function Sidebar() {
                         label="Banner Quick Access"
                         active={location.pathname === '/quick-access-banners'}
                         onClick={() => navigate('/quick-access-banners')}
+                    />
+                )}
+
+                {auth.role === 'admin' && (
+                    <SidebarItem
+                        icon={<Laptop size={20} />}
+                        label="Banner WFA"
+                        active={location.pathname === '/wfa-banners'}
+                        onClick={() => navigate('/wfa-banners')}
                     />
                 )}
 

@@ -18,11 +18,11 @@ const FALLBACK_QUICK_ACCESS = [
     { id: 8, image: 'https://images.unsplash.com/photo-1586075010923-2dd4570fb338?w=400&h=200&fit=crop', title: 'Photocopy & ATK', subtitle: '', link: '', type: 'stacked', group: 2 },
 ];
 
-const wfaContent = [
-    { id: 1, image: 'https://images.unsplash.com/photo-1521017432531-fbd92d768814?w=400&h=300&fit=crop', title: 'Cafe Nyaman', subtitle: 'Free Wifi' },
-    { id: 2, image: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=400&h=300&fit=crop', title: 'Co-working', subtitle: 'Space' },
-    { id: 3, image: 'https://images.unsplash.com/photo-1585320806297-9794b3e4eeae?w=400&h=300&fit=crop', title: 'Taman /', subtitle: 'Ruang Publik' },
-    { id: 4, image: 'https://images.unsplash.com/photo-1529543544277-750ee00a0b68?w=400&h=300&fit=crop', title: 'Kulineran', subtitle: 'Aja Yuk!' },
+const FALLBACK_WFA = [
+    { id: 1, image: 'https://images.unsplash.com/photo-1521017432531-fbd92d768814?w=400&h=300&fit=crop', title: 'Cafe Nyaman', subtitle: 'Free Wifi', link: '' },
+    { id: 2, image: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=400&h=300&fit=crop', title: 'Co-working', subtitle: 'Space', link: '' },
+    { id: 3, image: 'https://images.unsplash.com/photo-1585320806297-9794b3e4eeae?w=400&h=300&fit=crop', title: 'Taman /', subtitle: 'Ruang Publik', link: '' },
+    { id: 4, image: 'https://images.unsplash.com/photo-1529543544277-750ee00a0b68?w=400&h=300&fit=crop', title: 'Kulineran', subtitle: 'Aja Yuk!', link: '' },
 ];
 
 // Favorite places - Figma matching
@@ -116,6 +116,7 @@ export default function Home({ vendors, onSelectVendor }) {
     const [storyBanners, setStoryBanners] = useState([]);
     const [bannersLoading, setBannersLoading] = useState(true);
     const [quickAccessItems, setQuickAccessItems] = useState(FALLBACK_QUICK_ACCESS);
+    const [wfaItems, setWfaItems] = useState(FALLBACK_WFA);
 
     // Fetch banners from settings API
     useEffect(() => {
@@ -137,6 +138,10 @@ export default function Home({ vendors, onSelectVendor }) {
                 // Quick access banners
                 if (data.quick_access_banners && Array.isArray(data.quick_access_banners) && data.quick_access_banners.length > 0) {
                     setQuickAccessItems(data.quick_access_banners);
+                }
+                // WFA banners
+                if (data.wfa_banners && Array.isArray(data.wfa_banners) && data.wfa_banners.length > 0) {
+                    setWfaItems(data.wfa_banners);
                 }
             })
             .catch(err => console.error("Failed to load settings", err))
@@ -316,15 +321,16 @@ export default function Home({ vendors, onSelectVendor }) {
                 })()}
             </ContentSection>
 
-            {/* WFA Section */}
+            {/* WFA Section — data dari dashboard */}
             <ContentSection title="Nunggu Sekalian WFA">
-                {wfaContent.map((item) => (
+                {wfaItems.map((item) => (
                     <ContentCard
                         key={item.id}
                         image={item.image}
                         title={item.title}
                         subtitle={item.subtitle}
                         size="large"
+                        onClick={() => item.link && (window.location.href = item.link)}
                     />
                 ))}
             </ContentSection>
