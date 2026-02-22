@@ -19,6 +19,10 @@ import {
     LayoutGrid,
     Laptop,
     Train,
+    Bus,
+    Layers,
+    Users,
+    ClipboardList,
     ChevronDown,
     ChevronRight
 } from 'lucide-react';
@@ -41,6 +45,8 @@ const ADMIN_MENU = [
             { icon: Train, label: 'Stasiun MRT', path: '/station-categories' },
             { icon: MapPin, label: 'Destinasi Wisata', path: '/destinations' },
             { icon: LayoutGrid, label: 'Menu Utama App', path: '/main-menu' },
+            { icon: Bus, label: 'Icon Transport', path: '/transport-icons' },
+            { icon: Layers, label: 'Sub-Kategori', path: '/sub-kategori' },
         ]
     },
     {
@@ -61,6 +67,14 @@ const ADMIN_MENU = [
         group: null,
         items: [
             { icon: Settings, label: 'Pengaturan', path: '/settings' },
+        ]
+    },
+    {
+        group: 'Sistem & Admin',
+        adminOnly: true,
+        items: [
+            { icon: Users, label: 'Manajemen User', path: '/users' },
+            { icon: ClipboardList, label: 'Log Aktivitas', path: '/audit-logs' },
         ]
     },
 ];

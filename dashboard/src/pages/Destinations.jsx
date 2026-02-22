@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Edit2, Trash2, MapPin, X, Save, Image as ImageIcon } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
+import ImageUploader from '../components/ImageUploader';
 
 export default function Destinations() {
     const [destinations, setDestinations] = useState([]);
@@ -58,13 +59,25 @@ export default function Destinations() {
 
     const handleEdit = (dest) => {
         setCurrentDest(dest);
+        // Hanya ambil field form — strip id, createdAt, updatedAt
         setFormData({
-            ...dest,
-            // Ensure numbers are numbers
-            lat: parseFloat(dest.lat),
-            lng: parseFloat(dest.lng),
-            distanceFromStation: parseFloat(dest.distanceFromStation || 0),
-            walkingTimeMinutes: parseInt(dest.walkingTimeMinutes || 0),
+            name: dest.name || '',
+            description: dest.description || '',
+            category: dest.category || 'Wisata Alam',
+            subcategory: dest.subcategory || '',
+            address: dest.address || '',
+            image: dest.image || '',
+            lat: parseFloat(dest.lat) || -6.1944,
+            lng: parseFloat(dest.lng) || 106.8229,
+            nearestStation: dest.nearestStation || '',
+            stationType: dest.stationType || 'MRT',
+            distanceFromStation: parseFloat(dest.distanceFromStation) || 0,
+            walkingTimeMinutes: parseInt(dest.walkingTimeMinutes) || 0,
+            openingHours: dest.openingHours || '',
+            ticketPrice: dest.ticketPrice || '',
+            contact: dest.contact || '',
+            website: dest.website || '',
+            isActive: dest.isActive !== false,
         });
         setIsModalOpen(true);
     };
@@ -182,8 +195,8 @@ export default function Destinations() {
                                     </td>
                                     <td className="px-6 py-4">
                                         <span className={`px-2 py-1 rounded-full text-xs font-bold ${dest.category.includes('Alam') ? 'bg-green-100 text-green-700' :
-                                                dest.category.includes('Sejarah') ? 'bg-amber-100 text-amber-700' :
-                                                    'bg-blue-100 text-blue-700'
+                                            dest.category.includes('Sejarah') ? 'bg-amber-100 text-amber-700' :
+                                                'bg-blue-100 text-blue-700'
                                             }`}>
                                             {dest.category}
                                         </span>
@@ -269,10 +282,20 @@ export default function Destinations() {
                                     </div>
 
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Image URL</label>
-                                        <input className="w-full border p-2 rounded-lg" value={formData.image} onChange={e => setFormData({ ...formData, image: e.target.value })} placeholder="https://... atau path assets" />
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Gambar Destinasi</label>
+                                        <ImageUploader
+                                            value={formData.image}
+                                            onChange={(url) => setFormData({ ...formData, image: url })}
+                                            category="destination"
+                                            placeholder="Upload foto destinasi atau masukkan URL"
+                                        />
                                         {formData.image && (
-                                            <img src={formData.image.startsWith('http') ? formData.image : `/api/assets/${formData.image}`} alt="Preview" className="mt-2 h-32 w-full object-cover rounded-lg border" onError={(e) => e.target.style.display = 'none'} />
+                                            <img
+                                                src={formData.image}
+                                                alt="Preview"
+                                                className="mt-2 h-32 w-full object-cover rounded-lg border"
+                                                onError={(e) => e.target.style.display = 'none'}
+                                            />
                                         )}
                                     </div>
                                 </div>

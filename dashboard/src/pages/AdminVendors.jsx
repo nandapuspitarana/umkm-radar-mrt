@@ -172,8 +172,8 @@ function ProductModal({ vendorId, product, onClose, onSaved }) {
                             type="button"
                             onClick={() => setForm({ ...form, isAvailable: !form.isAvailable })}
                             className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition ${form.isAvailable
-                                    ? 'bg-green-100 text-green-700'
-                                    : 'bg-gray-200 text-gray-500'
+                                ? 'bg-green-100 text-green-700'
+                                : 'bg-gray-200 text-gray-500'
                                 }`}
                         >
                             {form.isAvailable
@@ -314,8 +314,8 @@ function ProductPanel({ vendor, onClose }) {
                                         <div
                                             key={product.id}
                                             className={`flex items-center gap-4 p-3 rounded-xl border bg-white transition ${product.isAvailable
-                                                    ? 'border-gray-200'
-                                                    : 'border-red-100 opacity-60'
+                                                ? 'border-gray-200'
+                                                : 'border-red-100 opacity-60'
                                                 }`}
                                         >
                                             {/* Foto */}
@@ -367,8 +367,8 @@ function ProductPanel({ vendor, onClose }) {
                                                 <button
                                                     onClick={() => handleToggleAvailable(product)}
                                                     className={`p-2 rounded-lg text-sm transition ${product.isAvailable
-                                                            ? 'hover:bg-green-50 text-green-600'
-                                                            : 'hover:bg-gray-100 text-gray-400'
+                                                        ? 'hover:bg-green-50 text-green-600'
+                                                        : 'hover:bg-gray-100 text-gray-400'
                                                         }`}
                                                     title={product.isAvailable ? 'Tandai Habis' : 'Tandai Tersedia'}
                                                 >
@@ -644,8 +644,8 @@ export default function AdminVendors() {
                                                     <button
                                                         onClick={() => toggleProducts(vendor.id)}
                                                         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${expandedVendorId === vendor.id
-                                                                ? 'bg-blue-600 text-white'
-                                                                : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
+                                                            ? 'bg-blue-600 text-white'
+                                                            : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
                                                             }`}
                                                         title="Kelola Produk"
                                                     >
@@ -693,7 +693,24 @@ export default function AdminVendors() {
             {isModalOpen && (
                 <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
                     <div className="bg-white rounded-2xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
-                        <h2 className="text-xl font-bold mb-6">{editingId ? 'Edit Mitra' : 'Tambah Mitra Baru'}</h2>
+                        <h2 className="text-xl font-bold mb-2">{editingId ? 'Edit Mitra' : 'Tambah Mitra Baru'}</h2>
+
+                        {/* Warning — bukan untuk wisata */}
+                        {!editingId && (
+                            <div className="mb-4 flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+                                <span className="text-amber-500 text-lg flex-shrink-0">⚠️</span>
+                                <div>
+                                    <p className="text-sm font-semibold text-amber-800">Halaman ini untuk Mitra / UMKM</p>
+                                    <p className="text-xs text-amber-700 mt-0.5">
+                                        Jika ingin tambahkan <strong>destinasi wisata</strong> (museum, taman, dll),
+                                        gunakan halaman{' '}
+                                        <a href="/destinations" className="underline font-bold text-amber-900 hover:text-amber-700">Destinasi Wisata</a>
+                                        {' '}— bukan di sini.
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div>
                                 <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">Nama Toko</label>
@@ -716,12 +733,12 @@ export default function AdminVendors() {
                                         onChange={e => setFormData({ ...formData, category: e.target.value })}
                                     >
                                         <option value="Umum">Umum</option>
-                                        <option value="Sayur">Sayur</option>
-                                        <option value="Buah">Buah</option>
-                                        <option value="Daging">Daging</option>
-                                        <option value="Kuliner">Kuliner</option>
-                                        <option value="Minuman">Minuman</option>
-                                        <option value="Jasa">Jasa</option>
+                                        <option value="Kuliner">🍽️ Kuliner</option>
+                                        <option value="Ngopi">☕ Ngopi</option>
+                                        <option value="ATM & Belanja">🏪 ATM &amp; Belanja</option>
+                                        <option value="Jasa">🔧 Jasa</option>
+                                        <option value="Ritel">🛍️ Ritel</option>
+                                        <option value="Rekomen">⭐ Rekomen</option>
                                     </select>
                                 </div>
                                 <div>

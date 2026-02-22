@@ -19,6 +19,10 @@ import QuickAccessBanners from './pages/QuickAccessBanners';
 import WfaBanners from './pages/WfaBanners';
 import StationCategories from './pages/StationCategories';
 import MainMenu from './pages/MainMenu';
+import TransportIcons from './pages/TransportIcons';
+import SubKategori from './pages/SubKategori';
+import UserManagement from './pages/UserManagement';
+import AuditLogs from './pages/AuditLogs';
 
 function PrivateRoute({ children }) {
   const auth = JSON.parse(localStorage.getItem('grocries_auth'));
@@ -179,6 +183,38 @@ export default function App() {
           element={
             <PrivateRoute>
               <MainMenu />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/transport-icons"
+          element={
+            <PrivateRoute>
+              <TransportIcons />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/sub-kategori"
+          element={
+            <PrivateRoute>
+              <SubKategori />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/users"
+          element={
+            <PrivateRoute>
+              <UserManagement />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/audit-logs"
+          element={
+            <PrivateRoute>
+              <AuditLogs />
             </PrivateRoute>
           }
         />

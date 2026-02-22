@@ -17,6 +17,59 @@ export const app = new Hono();
 // Middleware
 app.use('/*', cors());
 
+// ==================== AUDIT LOG HELPER ====================
+async function writeAuditLog(params: {
+    entity: string;       // 'user' | 'vendor' | 'destination'
+    entityId: number;
+    entityName?: string;
+    action: string;       // 'CREATE' | 'UPDATE' | 'DELETE'
+    actorId?: number;
+    actorName?: string;
+    actorRole?: string;
+    oldData?: any;
+    newData?: any;
+    changes?: Record<string, { from: any; to: any }>;
+    ip?: string;
+    userAgent?: string;
+}) {
+    try {
+        // Compute field-level changes if both old and new data provided
+        let changes = params.changes;
+        if (!changes && params.oldData && params.newData) {
+            changes = {};
+            const allKeys = new Set([...Object.keys(params.oldData), ...Object.keys(params.newData)]);
+            for (const k of allKeys) {
+                if (['password', 'created_at', 'updated_at'].includes(k)) continue;
+                const from = params.oldData[k];
+                const to = params.newData[k];
+                if (JSON.stringify(from) !== JSON.stringify(to)) {
+                    changes[k] = { from, to };
+                }
+            }
+        }
+        await pool.query(
+            `INSERT INTO audit_logs (entity, entity_id, entity_name, action, actor_id, actor_name, actor_role, old_data, new_data, changes, ip_address, user_agent)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
+            [
+                params.entity,
+                params.entityId,
+                params.entityName || null,
+                params.action,
+                params.actorId || null,
+                params.actorName || 'Admin',
+                params.actorRole || 'admin',
+                params.oldData ? JSON.stringify(params.oldData) : null,
+                params.newData ? JSON.stringify(params.newData) : null,
+                changes ? JSON.stringify(changes) : null,
+                params.ip || null,
+                params.userAgent || null,
+            ]
+        );
+    } catch (e) {
+        console.error('[AuditLog] Failed to write log:', e);
+    }
+}
+
 
 
 // Database Connection
@@ -432,12 +485,16 @@ app.post('/api/login', async (c) => {
             return c.json({ error: `Akun ini tidak memiliki akses sebagai ${roleName}.` }, 403);
         }
 
-        // Return user info
+        // Return user info (fetch is_super_admin via raw query since schema may not include it yet)
+        const fullUser = await pool.query('SELECT * FROM users WHERE id = $1', [user.id]);
+        const u = fullUser.rows[0];
         return c.json({
-            email: user.email,
-            role: user.role,
-            vendorId: user.vendorId,
-            name: user.name,
+            id: u.id,
+            email: u.email,
+            role: u.role,
+            vendorId: u.vendor_id,
+            name: u.name,
+            isSuperAdmin: u.is_super_admin === true,
             token: 'mock-jwt-token'
         });
     } catch (error) {
@@ -514,15 +571,20 @@ app.get('/api/vendors/:id', async (c) => {
 app.post('/api/vendors', async (c) => {
     try {
         const body = await c.req.json();
-        // body should include: name, lat, lng, whatsapp, address, category, locationTags, etc.
         const result = await db.insert(vendors).values(body).returning();
+        const created = result[0];
 
-        // Invalidate cache
+        await writeAuditLog({
+            entity: 'vendor', entityId: created.id, entityName: created.name,
+            action: 'CREATE',
+            actorName: c.req.header('X-Actor-Name') || 'Admin',
+            newData: created,
+        });
+
         await redis.del('vendors_list');
-
-        return c.json(result[0]);
+        return c.json(created);
     } catch (error) {
-        console.error("Create Vendor Error:", error);
+        console.error('Create Vendor Error:', error);
         return c.json({ error: 'Failed to create vendor' }, 500);
     }
 });
@@ -532,16 +594,26 @@ app.put('/api/vendors/:id', async (c) => {
     const id = c.req.param('id');
     try {
         const body = await c.req.json();
-        // Allow updating name, address, whatsapp, lat, lng, image
-        // (Clean or validate body as needed)
+
+        // Fetch old data for audit
+        const oldResult = await db.select().from(vendors).where(eq(vendors.id, parseInt(id)));
+        const oldData = oldResult[0];
+
         const result = await db.update(vendors)
             .set(body)
             .where(eq(vendors.id, parseInt(id)))
             .returning();
 
-        // Invalidate cache
-        await redis.del('vendors_list');
+        if (oldData && result[0]) {
+            await writeAuditLog({
+                entity: 'vendor', entityId: parseInt(id), entityName: result[0].name,
+                action: 'UPDATE',
+                actorName: c.req.header('X-Actor-Name') || 'Admin',
+                oldData, newData: result[0],
+            });
+        }
 
+        await redis.del('vendors_list');
         return c.json(result[0]);
     } catch (error) {
         console.error(error);
@@ -553,15 +625,24 @@ app.put('/api/vendors/:id', async (c) => {
 app.delete('/api/vendors/:id', async (c) => {
     const id = c.req.param('id');
     try {
-        // First delete all products associated with this vendor
-        await db.delete(products).where(eq(products.vendorId, parseInt(id)));
+        // Fetch vendor before delete
+        const oldResult = await db.select().from(vendors).where(eq(vendors.id, parseInt(id)));
+        const oldData = oldResult[0];
 
-        // Then delete the vendor
+        // Delete all products associated with this vendor
+        await db.delete(products).where(eq(products.vendorId, parseInt(id)));
         await db.delete(vendors).where(eq(vendors.id, parseInt(id)));
 
-        // Invalidate cache
-        await redis.del('vendors_list');
+        if (oldData) {
+            await writeAuditLog({
+                entity: 'vendor', entityId: parseInt(id), entityName: oldData.name,
+                action: 'DELETE',
+                actorName: c.req.header('X-Actor-Name') || 'Admin',
+                oldData,
+            });
+        }
 
+        await redis.del('vendors_list');
         return c.json({ message: 'Vendor and associated products deleted successfully' });
     } catch (error) {
         console.error('Delete Vendor Error:', error);
@@ -676,15 +757,23 @@ app.get('/api/destinations/:id', async (c) => {
 app.post('/api/destinations', async (c) => {
     try {
         const body = await c.req.json();
-        // Basic validation
         if (!body.name || !body.lat || !body.lng) {
             return c.json({ error: 'Name, Latitude, and Longitude are required' }, 400);
         }
 
         const result = await db.insert(destinations).values(body).returning();
-        return c.json(result[0]);
+        const created = result[0];
+
+        await writeAuditLog({
+            entity: 'destination', entityId: created.id, entityName: created.name,
+            action: 'CREATE',
+            actorName: c.req.header('X-Actor-Name') || 'Admin',
+            newData: created,
+        });
+
+        return c.json(created);
     } catch (error) {
-        console.error("Create Destination Error:", error);
+        console.error('Create Destination Error:', error);
         return c.json({ error: 'Failed to create destination' }, 500);
     }
 });
@@ -694,14 +783,52 @@ app.put('/api/destinations/:id', async (c) => {
     const id = c.req.param('id');
     try {
         const body = await c.req.json();
+
+        // Fetch old data for audit
+        const oldResult = await db.select().from(destinations).where(eq(destinations.id, parseInt(id)));
+        const oldData = oldResult[0];
+
+        // Sanitize: only pick known schema fields
+        const allowed = [
+            'name', 'description', 'lat', 'lng', 'category', 'subcategory',
+            'address', 'image', 'nearestStation', 'stationType',
+            'distanceFromStation', 'walkingTimeMinutes',
+            'openingHours', 'ticketPrice', 'contact', 'website',
+            'transitHints', 'isActive',
+        ] as const;
+
+        const updateData: Record<string, any> = { updatedAt: new Date() };
+        for (const key of allowed) {
+            if (key in body && body[key] !== undefined) {
+                updateData[key] = body[key];
+            }
+        }
+        if ('lat' in updateData) updateData.lat = parseFloat(updateData.lat);
+        if ('lng' in updateData) updateData.lng = parseFloat(updateData.lng);
+        if ('distanceFromStation' in updateData) updateData.distanceFromStation = parseFloat(updateData.distanceFromStation) || null;
+        if ('walkingTimeMinutes' in updateData) updateData.walkingTimeMinutes = parseInt(updateData.walkingTimeMinutes) || null;
+        if ('isActive' in updateData) updateData.isActive = Boolean(updateData.isActive);
+
         const result = await db.update(destinations)
-            .set({ ...body, updatedAt: new Date() })
+            .set(updateData)
             .where(eq(destinations.id, parseInt(id)))
             .returning();
+
+        if (result.length === 0) return c.json({ error: 'Destination not found' }, 404);
+
+        if (oldData && result[0]) {
+            await writeAuditLog({
+                entity: 'destination', entityId: parseInt(id), entityName: result[0].name,
+                action: 'UPDATE',
+                actorName: c.req.header('X-Actor-Name') || 'Admin',
+                oldData, newData: result[0],
+            });
+        }
+
         return c.json(result[0]);
     } catch (error) {
-        console.error("Update Destination Error:", error);
-        return c.json({ error: 'Failed to update destination' }, 500);
+        console.error('Update Destination Error:', error);
+        return c.json({ error: 'Failed to update destination', details: String(error) }, 500);
     }
 });
 
@@ -709,10 +836,23 @@ app.put('/api/destinations/:id', async (c) => {
 app.delete('/api/destinations/:id', async (c) => {
     const id = c.req.param('id');
     try {
+        const oldResult = await db.select().from(destinations).where(eq(destinations.id, parseInt(id)));
+        const oldData = oldResult[0];
+
         await db.delete(destinations).where(eq(destinations.id, parseInt(id)));
+
+        if (oldData) {
+            await writeAuditLog({
+                entity: 'destination', entityId: parseInt(id), entityName: oldData.name,
+                action: 'DELETE',
+                actorName: c.req.header('X-Actor-Name') || 'Admin',
+                oldData,
+            });
+        }
+
         return c.json({ success: true });
     } catch (error) {
-        console.error("Delete Destination Error:", error);
+        console.error('Delete Destination Error:', error);
         return c.json({ error: 'Failed to delete destination' }, 500);
     }
 });
@@ -2299,6 +2439,453 @@ app.get('/api/destinations/meta/stations', async (c) => {
     } catch (error) {
         console.error("Error fetching stations:", error);
         return c.json({ error: 'Failed to fetch stations' }, 500);
+    }
+});
+
+// ==================== SUB-KATEGORI VENDOR ====================
+
+// GET all subcategories (optionally filtered by categoryId)
+app.get('/api/subcategories', async (c) => {
+    try {
+        const categoryId = c.req.query('categoryId');
+        let q = `
+            SELECT vs.*, c.name as category_name, c.slug as category_slug
+            FROM vendor_subcategories vs
+            JOIN categories c ON c.id = vs.category_id
+        `;
+        const params: any[] = [];
+        if (categoryId) {
+            q += ' WHERE vs.category_id = $1';
+            params.push(parseInt(categoryId));
+        }
+        q += ' ORDER BY vs.category_id, vs.sort_order, vs.name';
+        const result = await pool.query(q, params);
+        return c.json(result.rows);
+    } catch (error) {
+        console.error('Subcategories fetch error:', error);
+        return c.json({ error: 'Failed to fetch subcategories' }, 500);
+    }
+});
+
+// GET single subcategory
+app.get('/api/subcategories/:id', async (c) => {
+    const id = c.req.param('id');
+    try {
+        const result = await pool.query(
+            'SELECT vs.*, c.name as category_name FROM vendor_subcategories vs JOIN categories c ON c.id = vs.category_id WHERE vs.id = $1',
+            [parseInt(id)]
+        );
+        if (result.rows.length === 0) return c.json({ error: 'Not found' }, 404);
+        return c.json(result.rows[0]);
+    } catch (error) {
+        return c.json({ error: 'Failed to fetch subcategory' }, 500);
+    }
+});
+
+// POST create subcategory
+app.post('/api/subcategories', async (c) => {
+    try {
+        const body = await c.req.json();
+        const { categoryId, name, slug, icon, description, isActive = true, sortOrder = 0 } = body;
+        if (!categoryId || !name) return c.json({ error: 'categoryId and name required' }, 400);
+        const autoSlug = slug || name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-');
+        const result = await pool.query(
+            `INSERT INTO vendor_subcategories (category_id, name, slug, icon, description, is_active, sort_order)
+             VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+            [categoryId, name, autoSlug, icon || null, description || null, isActive, sortOrder]
+        );
+        return c.json(result.rows[0], 201);
+    } catch (error: any) {
+        if (error.code === '23505') return c.json({ error: 'Slug sudah ada untuk kategori ini' }, 409);
+        return c.json({ error: 'Failed to create subcategory' }, 500);
+    }
+});
+
+// PUT update subcategory
+app.put('/api/subcategories/:id', async (c) => {
+    const id = c.req.param('id');
+    try {
+        const body = await c.req.json();
+        const { name, slug, icon, description, isActive, sortOrder } = body;
+        const result = await pool.query(
+            `UPDATE vendor_subcategories SET
+                name        = COALESCE($1, name),
+                slug        = COALESCE($2, slug),
+                icon        = COALESCE($3, icon),
+                description = COALESCE($4, description),
+                is_active   = COALESCE($5, is_active),
+                sort_order  = COALESCE($6, sort_order)
+             WHERE id = $7 RETURNING *`,
+            [name, slug, icon, description, isActive, sortOrder, parseInt(id)]
+        );
+        if (result.rows.length === 0) return c.json({ error: 'Not found' }, 404);
+        return c.json(result.rows[0]);
+    } catch (error) {
+        return c.json({ error: 'Failed to update subcategory' }, 500);
+    }
+});
+
+// DELETE subcategory
+app.delete('/api/subcategories/:id', async (c) => {
+    const id = c.req.param('id');
+    try {
+        const result = await pool.query('DELETE FROM vendor_subcategories WHERE id = $1 RETURNING *', [parseInt(id)]);
+        if (result.rows.length === 0) return c.json({ error: 'Not found' }, 404);
+        return c.json({ success: true });
+    } catch (error) {
+        return c.json({ error: 'Failed to delete subcategory' }, 500);
+    }
+});
+
+
+// ==================== AREA / LOKASI ====================
+
+// GET all location areas
+app.get('/api/location-areas', async (c) => {
+    try {
+        const result = await pool.query(
+            'SELECT * FROM location_areas ORDER BY sort_order, name'
+        );
+        return c.json(result.rows);
+    } catch (error) {
+        return c.json({ error: 'Failed to fetch location areas' }, 500);
+    }
+});
+
+// GET single location area
+app.get('/api/location-areas/:id', async (c) => {
+    const id = c.req.param('id');
+    try {
+        const result = await pool.query('SELECT * FROM location_areas WHERE id = $1', [parseInt(id)]);
+        if (result.rows.length === 0) return c.json({ error: 'Not found' }, 404);
+        return c.json(result.rows[0]);
+    } catch (error) {
+        return c.json({ error: 'Failed to fetch location area' }, 500);
+    }
+});
+
+// POST create location area
+app.post('/api/location-areas', async (c) => {
+    try {
+        const body = await c.req.json();
+        const { name, slug, station, line, description, isActive = true, sortOrder = 0 } = body;
+        if (!name) return c.json({ error: 'name required' }, 400);
+        const autoSlug = slug || name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-');
+        const result = await pool.query(
+            `INSERT INTO location_areas (name, slug, station, line, description, is_active, sort_order)
+             VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+            [name, autoSlug, station || null, line || 'MRT', description || null, isActive, sortOrder]
+        );
+        return c.json(result.rows[0], 201);
+    } catch (error: any) {
+        if (error.code === '23505') return c.json({ error: 'Slug sudah ada' }, 409);
+        return c.json({ error: 'Failed to create location area' }, 500);
+    }
+});
+
+// PUT update location area
+app.put('/api/location-areas/:id', async (c) => {
+    const id = c.req.param('id');
+    try {
+        const body = await c.req.json();
+        const { name, slug, station, line, description, isActive, sortOrder } = body;
+        const result = await pool.query(
+            `UPDATE location_areas SET
+                name        = COALESCE($1, name),
+                slug        = COALESCE($2, slug),
+                station     = COALESCE($3, station),
+                line        = COALESCE($4, line),
+                description = COALESCE($5, description),
+                is_active   = COALESCE($6, is_active),
+                sort_order  = COALESCE($7, sort_order)
+             WHERE id = $8 RETURNING *`,
+            [name, slug, station, line, description, isActive, sortOrder, parseInt(id)]
+        );
+        if (result.rows.length === 0) return c.json({ error: 'Not found' }, 404);
+        return c.json(result.rows[0]);
+    } catch (error) {
+        return c.json({ error: 'Failed to update location area' }, 500);
+    }
+});
+
+// DELETE location area
+app.delete('/api/location-areas/:id', async (c) => {
+    const id = c.req.param('id');
+    try {
+        const result = await pool.query('DELETE FROM location_areas WHERE id = $1 RETURNING *', [parseInt(id)]);
+        if (result.rows.length === 0) return c.json({ error: 'Not found' }, 404);
+        return c.json({ success: true });
+    } catch (error) {
+        return c.json({ error: 'Failed to delete location area' }, 500);
+    }
+});
+
+// ==================== USER MANAGEMENT ====================
+
+// GET all users (admin only) - with vendor name
+app.get('/api/users', async (c) => {
+    try {
+        const result = await pool.query(`
+            SELECT u.id, u.name, u.email, u.role, u.vendor_id,
+                   u.is_active, u.created_at, u.updated_at, u.last_login_at, u.notes,
+                   v.name as vendor_name
+            FROM users u
+            LEFT JOIN vendors v ON v.id = u.vendor_id
+            ORDER BY u.role, u.name
+        `);
+        // Strip passwords
+        return c.json(result.rows.map(r => ({ ...r, password: undefined })));
+    } catch (error) {
+        return c.json({ error: 'Failed to fetch users' }, 500);
+    }
+});
+
+// GET single user
+app.get('/api/users/:id', async (c) => {
+    const id = c.req.param('id');
+    try {
+        const result = await pool.query(
+            `SELECT u.id, u.name, u.email, u.role, u.vendor_id, u.is_active,
+                    u.created_at, u.updated_at, u.last_login_at, u.notes,
+                    v.name as vendor_name
+             FROM users u LEFT JOIN vendors v ON v.id = u.vendor_id
+             WHERE u.id = $1`,
+            [parseInt(id)]
+        );
+        if (result.rows.length === 0) return c.json({ error: 'User not found' }, 404);
+        return c.json({ ...result.rows[0], password: undefined });
+    } catch (error) {
+        return c.json({ error: 'Failed to fetch user' }, 500);
+    }
+});
+
+// POST create user
+app.post('/api/users', async (c) => {
+    try {
+        const body = await c.req.json();
+        const { name, email, password, role, vendorId, notes } = body;
+        if (!name || !email || !password || !role) {
+            return c.json({ error: 'name, email, password, dan role wajib diisi' }, 400);
+        }
+
+        const result = await pool.query(
+            `INSERT INTO users (name, email, password, role, vendor_id, notes, is_active, created_at, updated_at)
+             VALUES ($1, $2, $3, $4, $5, $6, true, NOW(), NOW()) RETURNING *`,
+            [name, email, password, role, vendorId || null, notes || null]
+        );
+        const created = result.rows[0];
+
+        await writeAuditLog({
+            entity: 'user', entityId: created.id, entityName: created.name,
+            action: 'CREATE',
+            actorName: c.req.header('X-Actor-Name') || 'Admin',
+            newData: { ...created, password: '***' },
+            ip: c.req.header('X-Forwarded-For') || '',
+        });
+
+        return c.json({ ...created, password: undefined }, 201);
+    } catch (error: any) {
+        if (error.code === '23505') return c.json({ error: 'Email sudah dipakai' }, 409);
+        return c.json({ error: 'Failed to create user' }, 500);
+    }
+});
+
+// PUT update user
+app.put('/api/users/:id', async (c) => {
+    const id = c.req.param('id');
+    try {
+        // Get old data for audit
+        const oldResult = await pool.query('SELECT * FROM users WHERE id = $1', [parseInt(id)]);
+        if (oldResult.rows.length === 0) return c.json({ error: 'User not found' }, 404);
+        const oldData = { ...oldResult.rows[0], password: '***' };
+
+        const body = await c.req.json();
+        const updates: string[] = [];
+        const vals: any[] = [];
+        let idx = 1;
+
+        const allowed: Record<string, string> = {
+            name: 'name', email: 'email', role: 'role',
+            vendorId: 'vendor_id', isActive: 'is_active', notes: 'notes',
+        };
+        // Only super admin can change isSuperAdmin flag
+        const actorIsSuperAdmin = c.req.header('X-Is-Super-Admin') === 'true';
+        if (actorIsSuperAdmin && 'isSuperAdmin' in body) {
+            allowed['isSuperAdmin'] = 'is_super_admin';
+        }
+        for (const [jsKey, dbCol] of Object.entries(allowed)) {
+            if (jsKey in body && body[jsKey] !== undefined) {
+                updates.push(`${dbCol} = $${idx++}`);
+                vals.push(body[jsKey]);
+            }
+        }
+        // Password change (plain, not hashed – matches current system)
+        if (body.password) {
+            updates.push(`password = $${idx++}`);
+            vals.push(body.password);
+        }
+        updates.push(`updated_at = NOW()`);
+        vals.push(parseInt(id));
+
+        const result = await pool.query(
+            `UPDATE users SET ${updates.join(', ')} WHERE id = $${idx} RETURNING *`,
+            vals
+        );
+        const updated = { ...result.rows[0], password: '***' };
+
+        await writeAuditLog({
+            entity: 'user', entityId: parseInt(id), entityName: updated.name,
+            action: 'UPDATE',
+            actorName: c.req.header('X-Actor-Name') || 'Admin',
+            oldData, newData: updated,
+            ip: c.req.header('X-Forwarded-For') || '',
+        });
+
+        return c.json({ ...result.rows[0], password: undefined });
+    } catch (error: any) {
+        if (error.code === '23505') return c.json({ error: 'Email sudah dipakai' }, 409);
+        return c.json({ error: 'Failed to update user' }, 500);
+    }
+});
+
+// DELETE user
+app.delete('/api/users/:id', async (c) => {
+    const id = c.req.param('id');
+    try {
+        const oldResult = await pool.query('SELECT * FROM users WHERE id = $1', [parseInt(id)]);
+        if (oldResult.rows.length === 0) return c.json({ error: 'User not found' }, 404);
+        const oldData = { ...oldResult.rows[0], password: '***' };
+
+        await pool.query('DELETE FROM users WHERE id = $1', [parseInt(id)]);
+
+        await writeAuditLog({
+            entity: 'user', entityId: parseInt(id), entityName: oldData.name,
+            action: 'DELETE',
+            actorName: c.req.header('X-Actor-Name') || 'Admin',
+            oldData,
+            ip: c.req.header('X-Forwarded-For') || '',
+        });
+
+        return c.json({ success: true });
+    } catch (error) {
+        return c.json({ error: 'Failed to delete user' }, 500);
+    }
+});
+
+// PATCH toggle active status
+app.patch('/api/users/:id/toggle-active', async (c) => {
+    const id = c.req.param('id');
+    try {
+        const result = await pool.query(
+            `UPDATE users SET is_active = NOT is_active, updated_at = NOW()
+             WHERE id = $1 RETURNING id, name, is_active`,
+            [parseInt(id)]
+        );
+        if (result.rows.length === 0) return c.json({ error: 'User not found' }, 404);
+        const u = result.rows[0];
+
+        await writeAuditLog({
+            entity: 'user', entityId: parseInt(id), entityName: u.name,
+            action: 'UPDATE',
+            actorName: c.req.header('X-Actor-Name') || 'Admin',
+            changes: { is_active: { from: !u.is_active, to: u.is_active } },
+        });
+
+        return c.json(u);
+    } catch (error) {
+        return c.json({ error: 'Failed to toggle user status' }, 500);
+    }
+});
+
+// PATCH reset password (super admin only)
+app.patch('/api/users/:id/reset-password', async (c) => {
+    const id = c.req.param('id');
+    try {
+        // Guard: only super admin can reset passwords
+        const actorIsSuperAdmin = c.req.header('X-Is-Super-Admin') === 'true';
+        if (!actorIsSuperAdmin) {
+            return c.json({ error: 'Akses ditolak. Hanya Super Admin yang dapat mereset password.' }, 403);
+        }
+
+        const { newPassword } = await c.req.json();
+        if (!newPassword) return c.json({ error: 'newPassword required' }, 400);
+
+        const result = await pool.query(
+            `UPDATE users SET password = $1, updated_at = NOW()
+             WHERE id = $2 RETURNING id, name`,
+            [newPassword, parseInt(id)]
+        );
+        if (result.rows.length === 0) return c.json({ error: 'User not found' }, 404);
+
+        await writeAuditLog({
+            entity: 'user', entityId: parseInt(id), entityName: result.rows[0].name,
+            action: 'UPDATE',
+            actorName: c.req.header('X-Actor-Name') || 'Admin',
+            changes: { password: { from: '***', to: '***reset-by-superadmin***' } },
+        });
+
+        return c.json({ success: true, message: 'Password berhasil direset' });
+    } catch (error) {
+        return c.json({ error: 'Failed to reset password' }, 500);
+    }
+});
+
+
+// ==================== AUDIT LOGS API ====================
+
+// GET audit logs with filters
+app.get('/api/audit-logs', async (c) => {
+    try {
+        const entity = c.req.query('entity');
+        const entityId = c.req.query('entityId');
+        const action = c.req.query('action');
+        const limit = parseInt(c.req.query('limit') || '100');
+        const offset = parseInt(c.req.query('offset') || '0');
+
+        const conditions: string[] = [];
+        const params: any[] = [];
+        let idx = 1;
+
+        if (entity) { conditions.push(`entity = $${idx++}`); params.push(entity); }
+        if (entityId) { conditions.push(`entity_id = $${idx++}`); params.push(parseInt(entityId)); }
+        if (action) { conditions.push(`action = $${idx++}`); params.push(action); }
+
+        const where = conditions.length > 0 ? 'WHERE ' + conditions.join(' AND ') : '';
+
+        const countResult = await pool.query(
+            `SELECT COUNT(*) FROM audit_logs ${where}`, params
+        );
+
+        params.push(limit, offset);
+        const result = await pool.query(
+            `SELECT * FROM audit_logs ${where}
+             ORDER BY created_at DESC
+             LIMIT $${idx} OFFSET $${idx + 1}`,
+            params
+        );
+
+        return c.json({
+            total: parseInt(countResult.rows[0].count),
+            logs: result.rows,
+        });
+    } catch (error) {
+        console.error('Audit log fetch error:', error);
+        return c.json({ error: 'Failed to fetch audit logs' }, 500);
+    }
+});
+
+// GET audit logs for a specific entity record
+app.get('/api/audit-logs/:entity/:id', async (c) => {
+    const entity = c.req.param('entity');
+    const id = c.req.param('id');
+    try {
+        const result = await pool.query(
+            `SELECT * FROM audit_logs WHERE entity = $1 AND entity_id = $2 ORDER BY created_at DESC`,
+            [entity, parseInt(id)]
+        );
+        return c.json(result.rows);
+    } catch (error) {
+        return c.json({ error: 'Failed to fetch logs' }, 500);
     }
 });
 
