@@ -54,7 +54,7 @@ export default function PublikBanner() {
     return (
         <div className="min-h-screen bg-bg flex">
             <Sidebar />
-            <main className="flex-1 ml-64 p-8">
+            <main className="flex-1 ml-60 p-8">
                 <header className="mb-8">
                     <h1 className="text-2xl font-bold text-gray-800">Banner Halaman Publik</h1>
                     <p className="text-gray-500">Kelola banner yang ditampilkan di halaman Fasilitas Umum / Ruang Publik</p>

@@ -446,10 +446,12 @@ app.post('/api/login', async (c) => {
     }
 });
 
-// 1. Get All Vendors (Cached)
+// 1. Get All Vendors (Cached, with optional station-based sorting)
 app.get('/api/vendors', async (c) => {
     try {
-        const cacheKey = 'vendors_list';
+        const stationParam = c.req.query('station') || '';
+        // Cache key includes station so each station has its own cache
+        const cacheKey = stationParam ? `vendors_list_${stationParam}` : 'vendors_list';
         let cached = null;
 
         // Try to get from Redis cache
@@ -460,11 +462,20 @@ app.get('/api/vendors', async (c) => {
         }
 
         if (cached) {
-            console.log('Serving vendors from Redis cache');
+            console.log(`Serving vendors from Redis cache [station: ${stationParam || 'all'}]`);
             return c.json(JSON.parse(cached));
         }
 
-        const result = await db.select().from(vendors);
+        let result;
+
+        if (stationParam) {
+            // Sort: vendors matching station locationTags first, then the rest
+            result = await db.select().from(vendors).orderBy(
+                sql`CASE WHEN LOWER(${vendors.locationTags}) LIKE ${`%${stationParam.toLowerCase()}%`} THEN 0 ELSE 1 END`
+            );
+        } else {
+            result = await db.select().from(vendors);
+        }
 
         // Transform data to match client expected format
         const transformedResult = result.map(v => ({
@@ -485,6 +496,7 @@ app.get('/api/vendors', async (c) => {
         return c.json({ error: 'Failed to fetch vendors', details: error }, 500);
     }
 });
+
 
 // 1b. Get Single Vendor
 app.get('/api/vendors/:id', async (c) => {

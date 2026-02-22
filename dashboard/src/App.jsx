@@ -17,6 +17,8 @@ import NgopiBanners from './pages/NgopiBanners';
 import WisataBanner from './pages/WisataBanner';
 import QuickAccessBanners from './pages/QuickAccessBanners';
 import WfaBanners from './pages/WfaBanners';
+import StationCategories from './pages/StationCategories';
+import MainMenu from './pages/MainMenu';
 
 function PrivateRoute({ children }) {
   const auth = JSON.parse(localStorage.getItem('grocries_auth'));
@@ -161,6 +163,22 @@ export default function App() {
           element={
             <PrivateRoute>
               <WfaBanners />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/station-categories"
+          element={
+            <PrivateRoute>
+              <StationCategories />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/main-menu"
+          element={
+            <PrivateRoute>
+              <MainMenu />
             </PrivateRoute>
           }
         />

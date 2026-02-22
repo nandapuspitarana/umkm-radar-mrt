@@ -13,12 +13,23 @@ import { ShoppingBag } from 'lucide-react';
 
 import StaticPage from './pages/StaticPage';
 
+// Default station - bisa diganti nanti via UI
+const DEFAULT_STATION = 'Senayan Mastercard';
+
 export default function App() {
   const [currentVendor, setCurrentVendor] = useState(null);
   const [vendors, setVendors] = useState([]);
   const [products, setProducts] = useState([]);
   const [cart, setCart] = useState([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [stationCategory, setStationCategory] = useState(() => {
+    return localStorage.getItem('umkm_station') || DEFAULT_STATION;
+  });
+
+  const handleStationChange = (station) => {
+    setStationCategory(station);
+    localStorage.setItem('umkm_station', station);
+  };
 
   // Cache helper
   const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
@@ -46,21 +57,21 @@ export default function App() {
     }
   };
 
-  // Fetch Vendors on Load
+  // Fetch Vendors on Load (or when station changes)
   useEffect(() => {
-    // Added version suffix to force invalidate old cache
-    const CACHE_KEY = 'grocries_vendors_v2';
+    // Cache key includes station to separate caches per-station
+    const CACHE_KEY = `grocries_vendors_v2_${stationCategory}`;
     const cachedVendors = getCache(CACHE_KEY);
 
     if (cachedVendors && cachedVendors.length > 0) {
       setVendors(cachedVendors);
     } else {
-      fetch('/api/vendors')
+      const stationEncoded = encodeURIComponent(stationCategory);
+      fetch(`/api/vendors?station=${stationEncoded}`)
         .then(res => res.json())
         .then(data => {
           if (Array.isArray(data)) {
             setVendors(data);
-            // Only cache if we actually got data
             if (data.length > 0) {
               setCache(CACHE_KEY, data);
             }
@@ -78,7 +89,8 @@ export default function App() {
     // Restore cart from localstorage
     const saved = localStorage.getItem('grocries_cart');
     if (saved) setCart(JSON.parse(saved));
-  }, []);
+  }, [stationCategory]);
+
 
   // Fetch Products when a Vendor is selected
   useEffect(() => {
@@ -196,6 +208,8 @@ export default function App() {
         <Home
           vendors={vendors}
           onSelectVendor={setCurrentVendor}
+          stationCategory={stationCategory}
+          onStationChange={handleStationChange}
         />
       )}
 

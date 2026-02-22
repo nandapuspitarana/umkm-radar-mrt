@@ -145,7 +145,7 @@ export default function Dashboard() {
             {/* Main Content */}
 
             {/* Main Content */}
-            <main className="flex-1 ml-64 p-8">
+            <main className="flex-1 ml-60 p-8">
                 <header className="flex justify-between items-center mb-8">
                     <div>
                         <h1 className="text-2xl font-bold text-gray-800">Dashboard {auth.role === 'admin' ? 'Admin' : 'Mitra'}</h1>

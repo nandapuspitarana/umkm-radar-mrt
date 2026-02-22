@@ -108,7 +108,7 @@ function StoryBanner({ story, onClick }) {
     );
 }
 
-export default function Home({ vendors, onSelectVendor }) {
+export default function Home({ vendors, onSelectVendor, stationCategory = 'Senayan Mastercard', onStationChange }) {
     const [sortedVendors, setSortedVendors] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
@@ -150,81 +150,30 @@ export default function Home({ vendors, onSelectVendor }) {
 
     const safeVendors = Array.isArray(vendors) ? vendors : [];
 
+    // Sort vendors by station category — INSTANT, no GPS needed
     useEffect(() => {
-        let isMounted = true;
-        const timer = setTimeout(() => {
-            if (isMounted && loading) {
-                setSortedVendors(safeVendors);
-                setLoading(false);
-            }
-        }, 5000);
+        if (safeVendors.length === 0) return;
 
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    if (!isMounted) return;
-                    const { latitude, longitude } = position.coords;
-                    sortVendors(latitude, longitude);
-                    clearTimeout(timer);
-                },
-                (error) => {
-                    if (!isMounted) return;
-                    setSortedVendors(safeVendors);
-                    setLoading(false);
-                    clearTimeout(timer);
-                },
-                { timeout: 5000, enableHighAccuracy: false }
-            );
-        } else {
-            setSortedVendors(safeVendors);
-            setLoading(false);
-            clearTimeout(timer);
-        }
+        const stationLower = stationCategory.toLowerCase();
 
-        return () => {
-            isMounted = false;
-            clearTimeout(timer);
-        };
-    }, [vendors]);
-
-    const sortVendors = (lat, lng) => {
-        if (!Array.isArray(vendors)) return;
-        const sorted = [...vendors].map(v => {
-            if (!v.location || !v.location.lat || !v.location.lng) {
-                return { ...v, distance: null };
-            }
-            return {
-                ...v,
-                distance: calculateDistance(lat, lng, v.location.lat, v.location.lng)
-            };
-        }).sort((a, b) => {
-            if (a.distance === null) return 1;
-            if (b.distance === null) return -1;
-            return a.distance - b.distance;
+        const sorted = [...safeVendors].sort((a, b) => {
+            const aMatch = (a.locationTags || a.location_tags || '').toLowerCase().includes(stationLower);
+            const bMatch = (b.locationTags || b.location_tags || '').toLowerCase().includes(stationLower);
+            if (aMatch && !bMatch) return -1;
+            if (!aMatch && bMatch) return 1;
+            return 0;
         });
+
         setSortedVendors(sorted);
         setLoading(false);
-    };
+    }, [vendors, stationCategory]);
 
+    // Filter vendor berdasar search
     const filteredVendors = sortedVendors.filter(v => {
-        const matchesSearch = v.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            v.address.toLowerCase().includes(searchQuery.toLowerCase());
-        return matchesSearch;
+        const search = searchQuery.toLowerCase();
+        return v.name.toLowerCase().includes(search) ||
+            (v.address || '').toLowerCase().includes(search);
     });
-
-    const calculateDistance = (lat1, lon1, lat2, lon2) => {
-        const R = 6371;
-        const dLat = deg2rad(lat2 - lat1);
-        const dLon = deg2rad(lon2 - lon1);
-        const a =
-            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-            Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
-            Math.sin(dLon / 2) * Math.sin(dLon / 2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return R * c;
-    };
-
-    const deg2rad = (deg) => deg * (Math.PI / 180);
 
     const handleNextStory = () => {
         if (!selectedStory || storyBanners.length === 0) return;
@@ -247,6 +196,7 @@ export default function Home({ vendors, onSelectVendor }) {
     return (
         <AppLayout
             activeCategory="rekomen"
+            title={stationCategory}
             searchValue={searchQuery}
             onSearch={setSearchQuery}
         >
@@ -282,6 +232,7 @@ export default function Home({ vendors, onSelectVendor }) {
 
             {/* Transport Links Section */}
             <TransportLinks />
+
 
             {/* Quick Access Section — data dari dashboard */}
             <ContentSection title="Butuh Cepat Dan Dekat">
@@ -369,8 +320,8 @@ export default function Home({ vendors, onSelectVendor }) {
                                     <MapPin size={12} />
                                     <span className="truncate">{vendor.address}</span>
                                 </div>
-                                {vendor.distance && (
-                                    <p className="text-xs font-bold text-primary mt-1">{vendor.distance.toFixed(1)} km</p>
+                                {vendor.locationTags && (
+                                    <p className="text-xs text-grey-400 mt-1 truncate">{vendor.locationTags}</p>
                                 )}
                             </div>
                         ))

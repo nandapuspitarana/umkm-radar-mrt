@@ -297,7 +297,7 @@ export default function Settings() {
     return (
         <div className="flex bg-bg min-h-screen">
             <Sidebar />
-            <div className="flex-1 p-8 ml-64">
+            <div className="flex-1 p-8 ml-60">
                 <header className="mb-8">
                     <h1 className="text-2xl font-bold text-gray-800">Pengaturan {isVendor ? 'Toko' : 'Website'}</h1>
                     <p className="text-gray-500">{isVendor ? 'Kelola informasi toko Anda.' : 'Kelola konten dan konfigurasi website.'}</p>

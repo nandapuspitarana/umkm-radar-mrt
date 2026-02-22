@@ -108,7 +108,7 @@ export default function Assets() {
         return (
             <div className="flex min-h-screen bg-gray-50">
                 <Sidebar />
-                <main className="flex-1 ml-64 p-6 text-center text-gray-500">
+                <main className="flex-1 ml-60 p-6 text-center text-gray-500">
                     Hanya admin yang dapat mengakses halaman ini.
                 </main>
             </div>
@@ -118,7 +118,7 @@ export default function Assets() {
     return (
         <div className="flex min-h-screen bg-gray-50">
             <Sidebar />
-            <main className="flex-1 ml-64 p-6 space-y-6">
+            <main className="flex-1 ml-60 p-6 space-y-6">
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div>

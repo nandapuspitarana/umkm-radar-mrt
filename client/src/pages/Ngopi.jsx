@@ -1,13 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown, Menu, X, User, ShoppingBag, HelpCircle } from 'lucide-react';
+import { ChevronDown, MapPin } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import AppLayout from '../components/AppLayout';
 import { getImageUrl } from '../utils/api';
+import { useStationSort } from '../hooks/useStationSort';
 
-// Ngopi banners will be fetched from API
-
-// Ngopi categories for filter
 const ngopiCategories = [
     'Semua Kategori',
     'Coffee Shop',
@@ -16,142 +14,56 @@ const ngopiCategories = [
     'Specialty Coffee',
 ];
 
+const NGOPI_FILTER = (v) =>
+    v.category?.toLowerCase().includes('ngopi') ||
+    v.category?.toLowerCase().includes('coffee') ||
+    v.category?.toLowerCase().includes('kopi') ||
+    v.category?.toLowerCase().includes('cafe');
+
 export default function Ngopi({ vendors, onSelectVendor }) {
     const navigate = useNavigate();
     const [selectedCategory, setSelectedCategory] = useState('Semua Kategori');
     const [isCategoryOpen, setIsCategoryOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
-    const [sortedVendors, setSortedVendors] = useState([]);
-    const [loading, setLoading] = useState(true);
     const [ngopiBanners, setNgopiBanners] = useState([]);
     const [bannersLoading, setBannersLoading] = useState(true);
 
-    // Fetch ngopi banners from API
-    useEffect(() => {
-        const fetchBanners = async () => {
-            setBannersLoading(true);
-            try {
-                const res = await fetch('/api/settings');
-                const data = await res.json();
-                if (data.ngopi_banners && Array.isArray(data.ngopi_banners)) {
+    // ⚡ Instant station-based sort — no GPS delay
+    const { sortedVendors, loading, stationCategory } = useStationSort(vendors, NGOPI_FILTER);
+
+    // Fetch ngopi banners (run once)
+    React.useEffect(() => {
+        let cancelled = false;
+        setBannersLoading(true);
+        fetch('/api/settings')
+            .then(r => r.json())
+            .then(data => {
+                if (!cancelled && data.ngopi_banners && Array.isArray(data.ngopi_banners)) {
                     setNgopiBanners(data.ngopi_banners);
                 }
-            } catch (error) {
-                console.error('Failed to fetch ngopi banners:', error);
-            } finally {
-                setBannersLoading(false);
-            }
-        };
-        fetchBanners();
+            })
+            .catch(console.error)
+            .finally(() => { if (!cancelled) setBannersLoading(false); });
+        return () => { cancelled = true; };
     }, []);
 
-    // Filter vendors by ngopi/coffee category
-    const safeVendors = Array.isArray(vendors) ? vendors : [];
-    const ngopiVendors = safeVendors.filter(v =>
-        v.category?.toLowerCase().includes('ngopi') ||
-        v.category?.toLowerCase().includes('coffee') ||
-        v.category?.toLowerCase().includes('kopi') ||
-        v.category?.toLowerCase().includes('cafe')
-    );
-
-    // Sort by distance
-    useEffect(() => {
-        let isMounted = true;
-
-        const timer = setTimeout(() => {
-            if (isMounted && loading) {
-                setSortedVendors(ngopiVendors);
-                setLoading(false);
-            }
-        }, 5000);
-
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    if (!isMounted) return;
-                    const { latitude, longitude } = position.coords;
-                    sortVendors(latitude, longitude);
-                    clearTimeout(timer);
-                },
-                (error) => {
-                    if (!isMounted) return;
-                    setSortedVendors(ngopiVendors);
-                    setLoading(false);
-                    clearTimeout(timer);
-                },
-                { timeout: 5000, enableHighAccuracy: false }
-            );
-        } else {
-            setSortedVendors(ngopiVendors);
-            setLoading(false);
-            clearTimeout(timer);
-        }
-
-        return () => {
-            isMounted = false;
-            clearTimeout(timer);
-        };
-    }, [vendors]);
-
-    const sortVendors = (lat, lng) => {
-        const sorted = [...ngopiVendors].map(v => {
-            if (!v.location || !v.location.lat || !v.location.lng) {
-                return { ...v, distance: null };
-            }
-            return {
-                ...v,
-                distance: calculateDistance(lat, lng, v.location.lat, v.location.lng)
-            };
-        }).sort((a, b) => {
-            if (a.distance === null) return 1;
-            if (b.distance === null) return -1;
-            return a.distance - b.distance;
-        });
-        setSortedVendors(sorted);
-        setLoading(false);
-    };
-
-    const calculateDistance = (lat1, lon1, lat2, lon2) => {
-        const R = 6371;
-        const dLat = deg2rad(lat2 - lat1);
-        const dLon = deg2rad(lon2 - lon1);
-        const a =
-            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-            Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
-            Math.sin(dLon / 2) * Math.sin(dLon / 2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return R * c;
-    };
-
-    const deg2rad = (deg) => deg * (Math.PI / 180);
-
-    const formatDistance = (distance) => {
-        if (distance === null || distance === undefined) return null;
-        if (distance < 1) return `${Math.round(distance * 1000)} m`;
-        return `${distance.toFixed(1)} km`;
-    };
-
-    // Filter by search and category
+    // Filter by search
     const filteredVendors = sortedVendors.filter(v => {
-        const matchesSearch = v.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            v.address?.toLowerCase().includes(searchQuery.toLowerCase());
-        return matchesSearch;
+        const q = searchQuery.toLowerCase();
+        return v.name.toLowerCase().includes(q) || (v.address || '').toLowerCase().includes(q);
     });
 
     const handleBannerClick = (banner) => {
         if (!banner.link) return;
-        if (banner.link.startsWith('http://') || banner.link.startsWith('https://')) {
-            window.open(banner.link, '_blank');
-        } else {
-            navigate(banner.link);
-        }
+        if (banner.link.startsWith('http')) window.open(banner.link, '_blank');
+        else navigate(banner.link);
     };
 
     return (
         <AppLayout
             activeCategory="ngopi"
             title="Ngopi"
-            subtitle="Senayan Mastercard"
+            subtitle={stationCategory}
             searchValue={searchQuery}
             onSearch={setSearchQuery}
         >
@@ -161,11 +73,10 @@ export default function Ngopi({ vendors, onSelectVendor }) {
                     onClick={() => setIsCategoryOpen(!isCategoryOpen)}
                     className="w-full bg-white border border-grey-300 rounded-full py-2.5 px-4 flex items-center justify-between hover:bg-grey-100 transition-colors"
                 >
-                    <span className="text-grey-600">{selectedCategory}</span>
-                    <ChevronDown size={20} className={`text-grey-600 transition-transform ${isCategoryOpen ? 'rotate-180' : ''}`} />
+                    <span className="text-grey-600 text-sm">{selectedCategory}</span>
+                    <ChevronDown size={18} className={`text-grey-600 transition-transform ${isCategoryOpen ? 'rotate-180' : ''}`} />
                 </button>
 
-                {/* Category Dropdown */}
                 <AnimatePresence>
                     {isCategoryOpen && (
                         <motion.div
@@ -174,15 +85,11 @@ export default function Ngopi({ vendors, onSelectVendor }) {
                             exit={{ opacity: 0, y: -10 }}
                             className="absolute left-2.5 right-2.5 mt-1 bg-white rounded-2xl shadow-lg border border-grey-200 overflow-hidden z-20"
                         >
-                            {ngopiCategories.map((cat) => (
+                            {ngopiCategories.map(cat => (
                                 <button
                                     key={cat}
-                                    onClick={() => {
-                                        setSelectedCategory(cat);
-                                        setIsCategoryOpen(false);
-                                    }}
-                                    className={`w-full text-left px-4 py-3 hover:bg-grey-100 transition-colors ${selectedCategory === cat ? 'bg-grey-100 text-highlight-blue font-semibold' : 'text-grey-600'
-                                        }`}
+                                    onClick={() => { setSelectedCategory(cat); setIsCategoryOpen(false); }}
+                                    className={`w-full text-left px-4 py-3 hover:bg-grey-100 transition-colors text-sm ${selectedCategory === cat ? 'bg-grey-100 text-primary font-semibold' : 'text-grey-600'}`}
                                 >
                                     {cat}
                                 </button>
@@ -192,58 +99,43 @@ export default function Ngopi({ vendors, onSelectVendor }) {
                 </AnimatePresence>
             </div>
 
+
+
             {/* Ngopi Banners */}
-            <div className="overflow-x-auto no-scrollbar px-2.5">
-                <div className="flex gap-1.5 pb-2.5">
-                    {/* Loading Skeleton */}
-                    {bannersLoading && [1, 2, 3].map((i) => (
-                        <div
-                            key={`loading-${i}`}
-                            className="w-48 h-48 rounded-2xl bg-grey-200 flex-shrink-0 animate-pulse"
-                        />
-                    ))}
-
-                    {/* Actual Banners from Database */}
-                    {!bannersLoading && ngopiBanners.map((banner) => (
-                        <div
-                            key={banner.id}
-                            onClick={() => handleBannerClick(banner)}
-                            className={`w-48 h-48 rounded-2xl overflow-hidden flex-shrink-0 relative group ${banner.link ? 'cursor-pointer hover:shadow-lg transition-shadow' : ''
-                                }`}
-                        >
-                            {banner.image && (
-                                <img
-                                    src={banner.image}
-                                    alt={banner.title || 'Ngopi Banner'}
-                                    className="w-full h-full object-cover transition-transform group-hover:scale-105"
-                                    onError={(e) => { e.target.style.display = 'none'; }}
-                                />
-                            )}
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-                            {banner.title && (
-                                <div className="absolute bottom-3 left-3 right-3">
-                                    <div className="bg-white/90 px-3 py-1.5 rounded-lg">
-                                        <span className="text-sm font-semibold text-grey-800">{banner.title}</span>
+            {(bannersLoading || ngopiBanners.length > 0) && (
+                <div className="overflow-x-auto no-scrollbar px-2.5">
+                    <div className="flex gap-1.5 pb-2.5">
+                        {bannersLoading && [1, 2, 3].map(i => (
+                            <div key={i} className="w-48 h-48 rounded-2xl bg-grey-200 flex-shrink-0 animate-pulse" />
+                        ))}
+                        {!bannersLoading && ngopiBanners.map(banner => (
+                            <div
+                                key={banner.id}
+                                onClick={() => handleBannerClick(banner)}
+                                className={`w-48 h-48 rounded-2xl overflow-hidden flex-shrink-0 relative group ${banner.link ? 'cursor-pointer hover:shadow-lg transition-shadow' : ''}`}
+                            >
+                                {banner.image && (
+                                    <img src={banner.image} alt={banner.title || 'Ngopi'} className="w-full h-full object-cover transition-transform group-hover:scale-105" onError={e => e.target.style.display = 'none'} />
+                                )}
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                                {banner.title && (
+                                    <div className="absolute bottom-3 left-3 right-3">
+                                        <div className="bg-white/90 px-3 py-1.5 rounded-lg">
+                                            <span className="text-sm font-semibold text-grey-800">{banner.title}</span>
+                                        </div>
                                     </div>
-                                </div>
-                            )}
-                        </div>
-                    ))}
-
-                    {/* Empty State */}
-                    {!bannersLoading && ngopiBanners.length === 0 && (
-                        <div className="w-full py-8 text-center text-grey-400">
-                            <p className="text-sm">Belum ada banner ngopi</p>
-                        </div>
-                    )}
+                                )}
+                            </div>
+                        ))}
+                    </div>
                 </div>
-            </div>
+            )}
 
             {/* Vendor List */}
             <div className="flex flex-col gap-2.5 px-2.5 pb-24">
                 {loading ? (
-                    <div className="flex items-center justify-center py-12">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                    <div className="flex items-center justify-center py-8">
+                        <div className="animate-spin rounded-full h-7 w-7 border-b-2 border-primary" />
                     </div>
                 ) : filteredVendors.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-12 text-grey-600">
@@ -252,11 +144,10 @@ export default function Ngopi({ vendors, onSelectVendor }) {
                         <p className="text-sm">Coba ubah filter atau cari yang lain</p>
                     </div>
                 ) : (
-                    filteredVendors.map((vendor) => (
+                    filteredVendors.map(vendor => (
                         <VendorCard
                             key={vendor.id}
                             vendor={vendor}
-                            distance={formatDistance(vendor.distance)}
                             onClick={() => onSelectVendor && onSelectVendor(vendor)}
                         />
                     ))
@@ -266,8 +157,7 @@ export default function Ngopi({ vendors, onSelectVendor }) {
     );
 }
 
-// Vendor Card Component matching Figma design
-function VendorCard({ vendor, distance, onClick }) {
+function VendorCard({ vendor, onClick }) {
     return (
         <div
             onClick={onClick}
@@ -284,28 +174,12 @@ function VendorCard({ vendor, distance, onClick }) {
 
             {/* Content */}
             <div className="flex-1 min-w-0 py-1">
-                {/* Name */}
-                <h3 className="font-semibold text-sm text-gray-700 truncate capitalize">
-                    {vendor.name}
-                </h3>
-
-                {/* Address */}
-                <p className="text-xs text-highlight-blue truncate mt-1">
-                    {vendor.address || 'Alamat tidak tersedia'}
-                </p>
-
-                {/* Operating Hours */}
+                <h3 className="font-semibold text-sm text-gray-700 truncate capitalize">{vendor.name}</h3>
+                <p className="text-xs text-highlight-blue truncate mt-1">{vendor.address || 'Alamat tidak tersedia'}</p>
                 <p className="text-sm font-semibold text-grey-500 mt-1">
                     {vendor.schedule?.open || '08:00'} - {vendor.schedule?.close || '21:00'}
                 </p>
             </div>
-
-            {/* Distance Badge */}
-            {distance && (
-                <div className="absolute bottom-2 right-2.5 bg-grey-100 px-2 py-1 rounded-lg">
-                    <span className="text-sm font-semibold text-grey-400 lowercase">{distance}</span>
-                </div>
-            )}
         </div>
     );
 }
