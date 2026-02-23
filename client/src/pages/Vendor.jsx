@@ -133,6 +133,7 @@ export default function Vendor({ vendor, products, onBack, onAddToCart, cart }) 
                         src={getImageUrl(vendor.image, { w: 800, h: 400, resize: 'cover' })}
                         alt={vendor.name}
                         className="w-full h-full object-cover"
+                        onError={e => { e.target.style.display = 'none'; }}
                     />
                 ) : (
                     <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-amber-100 to-orange-200">

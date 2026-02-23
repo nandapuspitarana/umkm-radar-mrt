@@ -136,6 +136,24 @@ export default function App() {
     });
   };
 
+  const handleUpdateQty = (productId, delta) => {
+    setCart(prev => {
+      const updated = prev.map(p =>
+        p.id === productId ? { ...p, qty: Math.max(0, p.qty + delta) } : p
+      );
+      return updated.filter(p => p.qty > 0);
+    });
+  };
+
+  const handleRemoveItem = (productId) => {
+    setCart(prev => prev.filter(p => p.id !== productId));
+  };
+
+  const handleClearCart = () => {
+    setCart([]);
+    setIsCartOpen(false);
+  };
+
   const handleCheckout = async (name, note, voucher, discountValue) => {
     if (!currentVendor) return;
 
@@ -235,6 +253,9 @@ export default function App() {
         cart={cart}
         vendor={currentVendor}
         onCheckout={handleCheckout}
+        onUpdateQty={handleUpdateQty}
+        onRemoveItem={handleRemoveItem}
+        onClearCart={handleClearCart}
       />
 
 
@@ -280,6 +301,9 @@ export default function App() {
             cart={cart}
             vendor={currentVendor}
             onCheckout={handleCheckout}
+            onUpdateQty={handleUpdateQty}
+            onRemoveItem={handleRemoveItem}
+            onClearCart={handleClearCart}
           />
 
         </div>
@@ -320,6 +344,9 @@ export default function App() {
             cart={cart}
             vendor={currentVendor}
             onCheckout={handleCheckout}
+            onUpdateQty={handleUpdateQty}
+            onRemoveItem={handleRemoveItem}
+            onClearCart={handleClearCart}
           />
 
         </div>
@@ -360,6 +387,9 @@ export default function App() {
             cart={cart}
             vendor={currentVendor}
             onCheckout={handleCheckout}
+            onUpdateQty={handleUpdateQty}
+            onRemoveItem={handleRemoveItem}
+            onClearCart={handleClearCart}
           />
 
         </div>
@@ -411,6 +441,9 @@ export default function App() {
             cart={cart}
             vendor={currentVendor}
             onCheckout={handleCheckout}
+            onUpdateQty={handleUpdateQty}
+            onRemoveItem={handleRemoveItem}
+            onClearCart={handleClearCart}
           />
 
         </div>

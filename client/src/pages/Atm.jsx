@@ -138,10 +138,17 @@ function VendorCard({ vendor, onClick }) {
 
             <div className="w-14 h-16 rounded-xl overflow-hidden flex-shrink-0 bg-grey-100">
                 {vendor.image ? (
-                    <img src={getImageUrl(vendor.image, { w: 100, h: 100, resize: 'crop' })} alt={vendor.name} className="w-full h-full object-cover" />
-                ) : (
-                    <div className="w-full h-full flex items-center justify-center text-2xl">🏪</div>
-                )}
+                    <img
+                        src={getImageUrl(vendor.image, { w: 100, h: 100, resize: 'crop' })}
+                        alt={vendor.name}
+                        className="w-full h-full object-cover"
+                        onError={e => { e.target.style.display = 'none'; e.target.nextSibling?.style.setProperty('display', 'flex'); }}
+                    />
+                ) : null}
+                <div
+                    className="w-full h-full items-center justify-center text-2xl"
+                    style={{ display: vendor.image ? 'none' : 'flex' }}
+                >🏪</div>
             </div>
 
             <div className="flex-1 min-w-0 py-1 pr-6">

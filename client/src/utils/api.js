@@ -18,6 +18,12 @@ export function getImageUrl(path, options = {}) {
     // Clean leading slash
     cleanPath = cleanPath.startsWith('/') ? cleanPath.substring(1) : cleanPath;
 
+    // Strip "uploads/" prefix — files stored as /uploads/logo/x.jpg in DB
+    // are fetched from MinIO as logo/x.jpg (without the uploads/ prefix)
+    if (cleanPath.startsWith('uploads/')) {
+        cleanPath = cleanPath.replace(/^uploads\//, '');
+    }
+
     // Default options
     const {
         resize = 'fit',
@@ -56,6 +62,11 @@ export function getAssetUrl(path) {
 
     // Clean leading slash
     cleanPath = cleanPath.startsWith('/') ? cleanPath.substring(1) : cleanPath;
+
+    // Strip "uploads/" prefix — same logic as getImageUrl
+    if (cleanPath.startsWith('uploads/')) {
+        cleanPath = cleanPath.replace(/^uploads\//, '');
+    }
 
     return `${API_BASE}/api/raw/${cleanPath}`;
 }

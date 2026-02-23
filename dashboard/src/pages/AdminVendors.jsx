@@ -13,6 +13,12 @@ const formatRupiah = (val) => {
     return 'Rp ' + Number(val).toLocaleString('id-ID');
 };
 
+// ─── Field Error Component ───────────────────────────────────────────────────
+function FieldError({ msg }) {
+    if (!msg) return null;
+    return <p className="text-red-500 text-xs mt-1 flex items-center gap-1"><span>⚠</span>{msg}</p>;
+}
+
 // ─── Product Modal ───────────────────────────────────────────────────────────
 function ProductModal({ vendorId, product, onClose, onSaved }) {
     const isEdit = !!product;
@@ -21,15 +27,43 @@ function ProductModal({ vendorId, product, onClose, onSaved }) {
         price: product?.price || '',
         originalPrice: product?.originalPrice || '',
         discountPrice: product?.discountPrice || '',
-        category: product?.category || 'Umum',
+        category: product?.category || '',
         description: product?.description || '',
         image: product?.image || '',
         isAvailable: product?.isAvailable !== undefined ? product.isAvailable : true,
     });
     const [saving, setSaving] = useState(false);
+    const [touched, setTouched] = useState({});
+
+    // ── Validation rules ──────────────────────────────────────────────────────
+    const validate = (f) => {
+        const errs = {};
+        if (!f.name?.trim()) errs.name = 'Nama produk wajib diisi';
+        if (!f.category?.trim()) errs.category = 'Kategori wajib diisi';
+        if (!f.price || isNaN(Number(f.price)) || Number(f.price) <= 0)
+            errs.price = 'Harga jual harus lebih dari 0';
+        if (f.originalPrice && Number(f.originalPrice) <= 0)
+            errs.originalPrice = 'Harga asli harus lebih dari 0';
+        if (f.discountPrice && Number(f.discountPrice) <= 0)
+            errs.discountPrice = 'Harga diskon harus lebih dari 0';
+        if (f.discountPrice && f.price && Number(f.discountPrice) >= Number(f.price))
+            errs.discountPrice = 'Harga diskon harus lebih kecil dari harga jual';
+        if (!f.image) errs.image = 'Foto produk wajib diupload';
+        return errs;
+    };
+
+    const errors = validate(form);
+    const hasErrors = Object.keys(errors).length > 0;
+
+    const touch = (...fields) =>
+        setTouched(prev => fields.reduce((acc, f) => ({ ...acc, [f]: true }), prev));
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        // Touch all fields to show all errors
+        setTouched({ name: true, category: true, price: true, image: true, originalPrice: true, discountPrice: true });
+        if (hasErrors) return;
+
         setSaving(true);
         try {
             const payload = { ...form, vendorId, price: parseInt(form.price) || 0 };
@@ -49,7 +83,8 @@ function ProductModal({ vendorId, product, onClose, onSaved }) {
                 onSaved();
                 onClose();
             } else {
-                alert('Gagal menyimpan produk');
+                const err = await res.json().catch(() => ({}));
+                alert(err.error || 'Gagal menyimpan produk');
             }
         } catch (err) {
             console.error(err);
@@ -57,6 +92,11 @@ function ProductModal({ vendorId, product, onClose, onSaved }) {
         } finally {
             setSaving(false);
         }
+    };
+
+    const field = (key, val) => {
+        setForm(prev => ({ ...prev, [key]: val }));
+        setTouched(prev => ({ ...prev, [key]: true }));
     };
 
     return (
@@ -72,65 +112,81 @@ function ProductModal({ vendorId, product, onClose, onSaved }) {
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                <form onSubmit={handleSubmit} className="p-6 space-y-4" noValidate>
                     {/* Nama */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Nama Produk *</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Nama Produk <span className="text-red-500">*</span>
+                        </label>
                         <input
-                            required
-                            className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
+                            className={`w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none transition ${touched.name && errors.name ? 'border-red-400 bg-red-50' : 'border-gray-300'
+                                }`}
                             value={form.name}
-                            onChange={e => setForm({ ...form, name: e.target.value })}
+                            onChange={e => field('name', e.target.value)}
+                            onBlur={() => touch('name')}
                             placeholder="Contoh: Nasi Uduk Spesial"
                         />
+                        {touched.name && <FieldError msg={errors.name} />}
                     </div>
 
                     {/* Kategori */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Kategori</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Kategori <span className="text-red-500">*</span>
+                        </label>
                         <input
-                            className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
+                            className={`w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none transition ${touched.category && errors.category ? 'border-red-400 bg-red-50' : 'border-gray-300'
+                                }`}
                             value={form.category}
-                            onChange={e => setForm({ ...form, category: e.target.value })}
+                            onChange={e => field('category', e.target.value)}
+                            onBlur={() => touch('category')}
                             placeholder="Contoh: Makanan, Minuman, Snack"
                         />
+                        {touched.category && <FieldError msg={errors.category} />}
                     </div>
 
                     {/* Harga */}
                     <div className="grid grid-cols-3 gap-3">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Harga Jual *</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Harga Jual <span className="text-red-500">*</span>
+                            </label>
                             <input
-                                required
-                                type="number"
-                                min="0"
-                                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                                type="number" min="1"
+                                className={`w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none text-sm transition ${touched.price && errors.price ? 'border-red-400 bg-red-50' : 'border-gray-300'
+                                    }`}
                                 value={form.price}
-                                onChange={e => setForm({ ...form, price: e.target.value })}
+                                onChange={e => field('price', e.target.value)}
+                                onBlur={() => touch('price')}
                                 placeholder="15000"
                             />
+                            {touched.price && <FieldError msg={errors.price} />}
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Harga Asli</label>
                             <input
-                                type="number"
-                                min="0"
-                                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                                type="number" min="0"
+                                className={`w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none text-sm transition ${touched.originalPrice && errors.originalPrice ? 'border-red-400 bg-red-50' : 'border-gray-300'
+                                    }`}
                                 value={form.originalPrice}
-                                onChange={e => setForm({ ...form, originalPrice: e.target.value })}
+                                onChange={e => field('originalPrice', e.target.value)}
+                                onBlur={() => touch('originalPrice')}
                                 placeholder="20000"
                             />
+                            {touched.originalPrice && <FieldError msg={errors.originalPrice} />}
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Harga Diskon</label>
                             <input
-                                type="number"
-                                min="0"
-                                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                                type="number" min="0"
+                                className={`w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none text-sm transition ${touched.discountPrice && errors.discountPrice ? 'border-red-400 bg-red-50' : 'border-gray-300'
+                                    }`}
                                 value={form.discountPrice}
-                                onChange={e => setForm({ ...form, discountPrice: e.target.value })}
+                                onChange={e => field('discountPrice', e.target.value)}
+                                onBlur={() => touch('discountPrice')}
                                 placeholder="12000"
                             />
+                            {touched.discountPrice && <FieldError msg={errors.discountPrice} />}
                         </div>
                     </div>
                     <p className="text-xs text-gray-400 -mt-2">
@@ -144,20 +200,26 @@ function ProductModal({ vendorId, product, onClose, onSaved }) {
                             rows={2}
                             className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none resize-none"
                             value={form.description}
-                            onChange={e => setForm({ ...form, description: e.target.value })}
+                            onChange={e => field('description', e.target.value)}
                             placeholder="Deskripsi singkat produk..."
                         />
                     </div>
 
                     {/* Foto */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Foto Produk</label>
-                        <ImageUploader
-                            value={form.image}
-                            onChange={(url) => setForm({ ...form, image: url })}
-                            category="product"
-                            placeholder="Upload foto produk"
-                        />
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Foto Produk <span className="text-red-500">*</span>
+                        </label>
+                        <div className={`rounded-xl transition ${touched.image && errors.image ? 'ring-2 ring-red-400' : ''
+                            }`}>
+                            <ImageUploader
+                                value={form.image}
+                                onChange={(url) => { field('image', url); }}
+                                category="product"
+                                placeholder="Upload foto produk"
+                            />
+                        </div>
+                        {touched.image && <FieldError msg={errors.image} />}
                     </div>
 
                     {/* Ketersediaan */}
@@ -195,12 +257,23 @@ function ProductModal({ vendorId, product, onClose, onSaved }) {
                         <button
                             type="submit"
                             disabled={saving}
+                            onClick={() => setTouched({ name: true, category: true, price: true, image: true, originalPrice: true, discountPrice: true })}
                             className="flex-1 py-2 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 shadow-lg shadow-blue-600/20 transition disabled:opacity-50 flex items-center justify-center gap-2"
                         >
                             <Save size={16} />
                             {saving ? 'Menyimpan...' : isEdit ? 'Simpan Perubahan' : 'Tambah Produk'}
                         </button>
                     </div>
+
+                    {/* Summary error jika ada error & sudah di-touch */}
+                    {hasErrors && Object.keys(touched).length > 0 && (
+                        <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700 mt-2">
+                            <p className="font-semibold mb-1">⚠ Lengkapi field berikut:</p>
+                            <ul className="list-disc list-inside space-y-0.5">
+                                {Object.values(errors).map((e, i) => <li key={i}>{e}</li>)}
+                            </ul>
+                        </div>
+                    )}
                 </form>
             </div>
         </div>
@@ -429,6 +502,50 @@ export default function AdminVendors() {
         address: '', lat: '', lng: '', locationTags: '', image: ''
     };
     const [formData, setFormData] = useState(initialForm);
+    const [formErrors, setFormErrors] = useState({});
+    const [formTouched, setFormTouched] = useState({});
+    const [formSaving, setFormSaving] = useState(false);
+
+    // ── Vendor validation ─────────────────────────────────────────────────────
+    const validateVendor = (f) => {
+        const errs = {};
+        if (!f.name?.trim()) errs.name = 'Nama toko wajib diisi';
+        else if (f.name.trim().length < 3) errs.name = 'Nama toko minimal 3 karakter';
+
+        if (!f.category || f.category === '') errs.category = 'Pilih kategori toko';
+
+        const waClean = (f.whatsapp || '').replace(/\D/g, '');
+        if (!waClean) errs.whatsapp = 'Nomor WhatsApp wajib diisi';
+        else if (waClean.length < 9 || waClean.length > 15) errs.whatsapp = 'Nomor WhatsApp harus 9-15 digit angka';
+
+        if (!f.address?.trim()) errs.address = 'Alamat lengkap wajib diisi';
+
+        if (!f.image) errs.image = 'Foto toko wajib diupload agar terlihat menarik di aplikasi';
+
+        const lat = parseFloat(f.lat);
+        if (f.lat === '' || isNaN(lat)) errs.lat = 'Latitude wajib diisi';
+        else if (lat < -11 || lat > 6) errs.lat = 'Latitude harus dalam range wilayah Indonesia (-11 hingga 6)';
+
+        const lng = parseFloat(f.lng);
+        if (f.lng === '' || isNaN(lng)) errs.lng = 'Longitude wajib diisi';
+        else if (lng < 94 || lng > 142) errs.lng = 'Longitude harus dalam range wilayah Indonesia (94 hingga 142)';
+
+        return errs;
+    };
+
+    const touchVendorField = (field) =>
+        setFormTouched(prev => ({ ...prev, [field]: true }));
+
+    const setVendorField = (field, val) => {
+        const updated = { ...formData, [field]: val };
+        setFormData(updated);
+        setFormErrors(validateVendor(updated));
+        setFormTouched(prev => ({ ...prev, [field]: true }));
+    };
+
+    useEffect(() => {
+        setFormErrors(validateVendor(formData));
+    }, []);
 
     useEffect(() => {
         fetchVendors();
@@ -449,17 +566,22 @@ export default function AdminVendors() {
     const handleAdd = () => {
         setEditingId(null);
         setFormData(initialForm);
+        setFormErrors(validateVendor(initialForm));
+        setFormTouched({});
         setIsModalOpen(true);
     };
 
     const handleEdit = (vendor) => {
         setEditingId(vendor.id);
-        setFormData({
+        const fd = {
             name: vendor.name, whatsapp: vendor.whatsapp,
             category: vendor.category || 'Umum', address: vendor.address,
             lat: vendor.lat, lng: vendor.lng,
             locationTags: vendor.locationTags || '', image: vendor.image || ''
-        });
+        };
+        setFormData(fd);
+        setFormErrors(validateVendor(fd));
+        setFormTouched({});
         setIsModalOpen(true);
     };
 
@@ -480,6 +602,14 @@ export default function AdminVendors() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        // Touch all fields
+        const allTouched = { name: true, category: true, whatsapp: true, address: true, image: true, lat: true, lng: true };
+        setFormTouched(allTouched);
+        const errs = validateVendor(formData);
+        setFormErrors(errs);
+        if (Object.keys(errs).length > 0) return;
+
+        setFormSaving(true);
         try {
             const payload = {
                 ...formData,
@@ -500,16 +630,19 @@ export default function AdminVendors() {
                 });
             }
             if (res.ok) {
-                alert(editingId ? 'Data Mitra diperbarui!' : 'Mitra baru ditambahkan!');
                 setIsModalOpen(false);
                 setEditingId(null);
                 setFormData(initialForm);
+                setFormTouched({});
                 fetchVendors();
             } else {
-                alert('Gagal menyimpan data mitra.');
+                const err = await res.json().catch(() => ({}));
+                alert(err.error || 'Gagal menyimpan data mitra.');
             }
         } catch (error) {
             alert('Error server.');
+        } finally {
+            setFormSaving(false);
         }
     };
 
@@ -711,26 +844,37 @@ export default function AdminVendors() {
                             </div>
                         )}
 
-                        <form onSubmit={handleSubmit} className="space-y-4">
+                        <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+                            {/* Nama Toko */}
                             <div>
-                                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">Nama Toko</label>
+                                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                                    Nama Toko <span className="text-red-500">*</span>
+                                </label>
                                 <input
-                                    id="name" data-testid="input-name" required
-                                    className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
+                                    id="name" data-testid="input-name"
+                                    className={`w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none transition ${formTouched.name && formErrors.name ? 'border-red-400 bg-red-50' : 'border-gray-300'
+                                        }`}
                                     value={formData.name}
-                                    onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                    onChange={e => setVendorField('name', e.target.value)}
+                                    onBlur={() => touchVendorField('name')}
                                     placeholder="Contoh: UMKM Radar Dukuh Atas"
                                 />
+                                {formTouched.name && <FieldError msg={formErrors.name} />}
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
+                                {/* Kategori */}
                                 <div>
-                                    <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">Kategori</label>
+                                    <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">
+                                        Kategori <span className="text-red-500">*</span>
+                                    </label>
                                     <select
                                         id="category" data-testid="input-category"
-                                        className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
+                                        className={`w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none transition ${formTouched.category && formErrors.category ? 'border-red-400 bg-red-50' : 'border-gray-300'
+                                            }`}
                                         value={formData.category}
-                                        onChange={e => setFormData({ ...formData, category: e.target.value })}
+                                        onChange={e => setVendorField('category', e.target.value)}
+                                        onBlur={() => touchVendorField('category')}
                                     >
                                         <option value="Umum">Umum</option>
                                         <option value="Kuliner">🍽️ Kuliner</option>
@@ -740,30 +884,46 @@ export default function AdminVendors() {
                                         <option value="Ritel">🛍️ Ritel</option>
                                         <option value="Rekomen">⭐ Rekomen</option>
                                     </select>
+                                    {formTouched.category && <FieldError msg={formErrors.category} />}
                                 </div>
+
+                                {/* WhatsApp */}
                                 <div>
-                                    <label htmlFor="whatsapp" className="block text-sm font-medium text-gray-700 mb-1">WhatsApp</label>
+                                    <label htmlFor="whatsapp" className="block text-sm font-medium text-gray-700 mb-1">
+                                        WhatsApp <span className="text-red-500">*</span>
+                                    </label>
                                     <input
-                                        id="whatsapp" data-testid="input-whatsapp" required
-                                        className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
+                                        id="whatsapp" data-testid="input-whatsapp" type="tel"
+                                        className={`w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none transition ${formTouched.whatsapp && formErrors.whatsapp ? 'border-red-400 bg-red-50' : 'border-gray-300'
+                                            }`}
                                         value={formData.whatsapp}
-                                        onChange={e => setFormData({ ...formData, whatsapp: e.target.value })}
-                                        placeholder="0812..."
+                                        onChange={e => setVendorField('whatsapp', e.target.value)}
+                                        onBlur={() => touchVendorField('whatsapp')}
+                                        placeholder="08123456789"
                                     />
+                                    {formTouched.whatsapp && <FieldError msg={formErrors.whatsapp} />}
                                 </div>
                             </div>
 
+                            {/* Alamat */}
                             <div>
-                                <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">Alamat Lengkap</label>
+                                <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">
+                                    Alamat Lengkap <span className="text-red-500">*</span>
+                                </label>
                                 <textarea
-                                    id="address" data-testid="input-address" required
-                                    className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
+                                    id="address" data-testid="input-address"
+                                    className={`w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none transition ${formTouched.address && formErrors.address ? 'border-red-400 bg-red-50' : 'border-gray-300'
+                                        }`}
                                     rows={2}
                                     value={formData.address}
-                                    onChange={e => setFormData({ ...formData, address: e.target.value })}
+                                    onChange={e => setVendorField('address', e.target.value)}
+                                    onBlur={() => touchVendorField('address')}
+                                    placeholder="Jl. Contoh No.1, Jakarta Pusat"
                                 />
+                                {formTouched.address && <FieldError msg={formErrors.address} />}
                             </div>
 
+                            {/* Tag Lokasi */}
                             <div>
                                 <label htmlFor="locationTags" className="block text-sm font-medium text-gray-700 mb-1">
                                     Tag Lokasi (Landmark/Titik Poin)
@@ -773,43 +933,77 @@ export default function AdminVendors() {
                                     id="locationTags" data-testid="input-locationTags"
                                     className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
                                     value={formData.locationTags}
-                                    onChange={e => setFormData({ ...formData, locationTags: e.target.value })}
+                                    onChange={e => setVendorField('locationTags', e.target.value)}
                                     placeholder="Masukkan landmark terdekat..."
                                 />
                             </div>
 
+                            {/* Foto Toko */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Foto Toko</label>
-                                <ImageUploader
-                                    value={formData.image}
-                                    onChange={(url) => setFormData({ ...formData, image: url })}
-                                    category="logo"
-                                    placeholder="Upload foto toko"
-                                />
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Foto Toko <span className="text-red-500">*</span>
+                                    <span className="ml-1 text-xs text-gray-400 font-normal">(wajib — ditampilkan di aplikasi pelanggan)</span>
+                                </label>
+                                <div className={`rounded-xl transition ${formTouched.image && formErrors.image ? 'ring-2 ring-red-400' : ''
+                                    }`}>
+                                    <ImageUploader
+                                        value={formData.image}
+                                        onChange={(url) => setVendorField('image', url)}
+                                        category="logo"
+                                        placeholder="Upload foto toko"
+                                    />
+                                </div>
+                                {formTouched.image && <FieldError msg={formErrors.image} />}
                             </div>
 
+                            {/* Koordinat */}
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label htmlFor="lat" className="block text-sm font-medium text-gray-700 mb-1">Latitude</label>
+                                    <label htmlFor="lat" className="block text-sm font-medium text-gray-700 mb-1">
+                                        Latitude <span className="text-red-500">*</span>
+                                    </label>
                                     <input
-                                        id="lat" data-testid="input-lat" type="number" step="any" required
-                                        className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
+                                        id="lat" data-testid="input-lat" type="number" step="any"
+                                        className={`w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none transition ${formTouched.lat && formErrors.lat ? 'border-red-400 bg-red-50' : 'border-gray-300'
+                                            }`}
                                         value={formData.lat}
-                                        onChange={e => setFormData({ ...formData, lat: e.target.value })}
+                                        onChange={e => setVendorField('lat', e.target.value)}
+                                        onBlur={() => touchVendorField('lat')}
                                         placeholder="-6.2000"
                                     />
+                                    {formTouched.lat && <FieldError msg={formErrors.lat} />}
                                 </div>
                                 <div>
-                                    <label htmlFor="lng" className="block text-sm font-medium text-gray-700 mb-1">Longitude</label>
+                                    <label htmlFor="lng" className="block text-sm font-medium text-gray-700 mb-1">
+                                        Longitude <span className="text-red-500">*</span>
+                                    </label>
                                     <input
-                                        id="lng" data-testid="input-lng" type="number" step="any" required
-                                        className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
+                                        id="lng" data-testid="input-lng" type="number" step="any"
+                                        className={`w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none transition ${formTouched.lng && formErrors.lng ? 'border-red-400 bg-red-50' : 'border-gray-300'
+                                            }`}
                                         value={formData.lng}
-                                        onChange={e => setFormData({ ...formData, lng: e.target.value })}
+                                        onChange={e => setVendorField('lng', e.target.value)}
+                                        onBlur={() => touchVendorField('lng')}
                                         placeholder="106.8..."
                                     />
+                                    {formTouched.lng && <FieldError msg={formErrors.lng} />}
                                 </div>
                             </div>
+                            <p className="text-xs text-gray-400 -mt-2">
+                                💡 Koordinat bisa didapat dari{' '}
+                                <a href="https://maps.google.com" target="_blank" rel="noreferrer" className="text-blue-600 underline hover:text-blue-800">Google Maps</a>{' '}
+                                → klik kanan lokasi → copy coordinates
+                            </p>
+
+                            {/* Ringkasan Error */}
+                            {Object.keys(formErrors).length > 0 && Object.keys(formTouched).length > 0 && (
+                                <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700">
+                                    <p className="font-semibold mb-1">⚠ Lengkapi field berikut sebelum menyimpan:</p>
+                                    <ul className="list-disc list-inside space-y-0.5">
+                                        {Object.values(formErrors).map((e, i) => <li key={i}>{e}</li>)}
+                                    </ul>
+                                </div>
+                            )}
 
                             <div className="flex gap-4 mt-8">
                                 <button
@@ -821,9 +1015,14 @@ export default function AdminVendors() {
                                 </button>
                                 <button
                                     type="submit"
-                                    className="flex-1 px-4 py-2 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-600/20"
+                                    disabled={formSaving}
+                                    className="flex-1 px-4 py-2 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-600/20 disabled:opacity-60 flex items-center justify-center gap-2 transition"
                                 >
-                                    {editingId ? 'Simpan Perubahan' : 'Simpan Mitra'}
+                                    {formSaving ? (
+                                        <><div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Menyimpan...</>
+                                    ) : (
+                                        <><Save size={16} /> {editingId ? 'Simpan Perubahan' : 'Simpan Mitra'}</>
+                                    )}
                                 </button>
                             </div>
                         </form>
