@@ -18,31 +18,123 @@ export default function ImageUploader({
     const [uploading, setUploading] = useState(false);
     const [dragActive, setDragActive] = useState(false);
     const [error, setError] = useState(null);
+    const [compressInfo, setCompressInfo] = useState(null); // e.g. "3.2 MB → 1.8 MB"
     const fileInputRef = useRef(null);
+
+    const IMAGE_MAX_MB = 2;
+    const VIDEO_MAX_MB = 50;
+    const IMAGE_MAX = IMAGE_MAX_MB * 1024 * 1024;
+    const VIDEO_MAX = VIDEO_MAX_MB * 1024 * 1024;
+
+    const fmtMB = (bytes) => (bytes / 1024 / 1024).toFixed(1) + ' MB';
+
+    // Kompres gambar via Canvas API — iteratif turunkan quality sampai <IMAGE_MAX
+    const compressImage = (file) => new Promise((resolve, reject) => {
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+        img.onload = () => {
+            URL.revokeObjectURL(url);
+            const canvas = document.createElement('canvas');
+            // Batasi dimensi maks 2400px (cukup untuk web)
+            const MAX_DIM = 2400;
+            let { width, height } = img;
+            if (width > MAX_DIM || height > MAX_DIM) {
+                if (width > height) { height = Math.round(height * MAX_DIM / width); width = MAX_DIM; }
+                else { width = Math.round(width * MAX_DIM / height); height = MAX_DIM; }
+            }
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+
+            // Turunkan quality secara iteratif sampai < IMAGE_MAX
+            let quality = 0.85;
+            const tryCompress = () => {
+                canvas.toBlob(blob => {
+                    if (!blob) { reject(new Error('Compression failed')); return; }
+                    if (blob.size <= IMAGE_MAX || quality <= 0.3) {
+                        // Buat File dari blob
+                        const compressed = new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' });
+                        resolve(compressed);
+                    } else {
+                        quality -= 0.1;
+                        tryCompress();
+                    }
+                }, 'image/jpeg', quality);
+            };
+            tryCompress();
+        };
+        img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Failed to load image')); };
+        img.src = url;
+    });
 
     const isVideo = (url) => {
         if (!url) return false;
         return url.match(/\.(mp4|webm|mov)$/i) || url.includes('data:video');
     };
 
+    // Whitelist MIME types yang diizinkan
+    const ALLOWED_MIME = [
+        'image/jpeg', 'image/jpg', 'image/png', 'image/gif',
+        'image/webp', 'image/svg+xml', 'image/avif',
+        'video/mp4', 'video/webm', 'video/quicktime',
+    ];
+
+    // Ekstensi URL yang diblokir (dokumen/file non-media)
+    const BLOCKED_EXTENSIONS = /\.(pdf|doc|docx|xls|xlsx|ppt|pptx|txt|csv|zip|rar|7z|exe|apk|dmg|iso|xml|json)$/i;
+
+    const handleUrlChange = (rawUrl) => {
+        if (rawUrl && BLOCKED_EXTENSIONS.test(rawUrl.split('?')[0])) {
+            setError('URL tidak valid: hanya gambar atau video yang diizinkan (bukan PDF/dokumen).');
+            // Tetap update value agar user bisa edit, tapi kasih sinyal error
+            onChange(rawUrl);
+            return;
+        }
+        setError(null);
+        onChange(rawUrl);
+    };
+
     const handleUpload = async (file) => {
         if (!file) return;
 
-        // Validate file type (image or video)
-        if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
-            setError('File harus berupa gambar atau video');
+        // Validate file type — whitelist MIME types eksplisit
+        if (!ALLOWED_MIME.includes(file.type)) {
+            const ext = file.name.split('.').pop()?.toUpperCase() || 'file';
+            setError(`File .${ext} tidak didukung. Hanya gambar (JPG, PNG, GIF, WebP) atau video (MP4, WebM) yang diizinkan.`);
+            if (fileInputRef.current) fileInputRef.current.value = '';
             return;
         }
 
-        // Validate file size (max 50MB for video, 5MB for image)
-        const maxSize = file.type.startsWith('video/') ? 50 * 1024 * 1024 : 5 * 1024 * 1024;
-        if (file.size > maxSize) {
-            setError(`Ukuran file maksimal ${file.type.startsWith('video/') ? '50MB' : '5MB'}`);
-            return;
+        // Validate file size
+        if (file.type.startsWith('video/')) {
+            if (file.size > VIDEO_MAX) {
+                setError(`Video terlalu besar. Maksimal ${VIDEO_MAX_MB}MB.`);
+                if (fileInputRef.current) fileInputRef.current.value = '';
+                return;
+            }
+        } else if (file.type.startsWith('image/')) {
+            // Kompres otomatis jika >2MB
+            if (file.size > IMAGE_MAX) {
+                const originalSize = file.size;
+                setUploading(true);
+                setError(null);
+                setCompressInfo(null);
+                try {
+                    file = await compressImage(file);
+                    setCompressInfo(`Dikompres: ${fmtMB(originalSize)} → ${fmtMB(file.size)}`);
+                } catch (err) {
+                    setError(`Gambar terlalu besar (maks ${IMAGE_MAX_MB}MB) dan gagal dikompres. Coba resize manual.`);
+                    setUploading(false);
+                    if (fileInputRef.current) fileInputRef.current.value = '';
+                    return;
+                }
+                setUploading(false);
+            }
         }
 
         setUploading(true);
         setError(null);
+        // Tidak reset compressInfo di sini agar info kompresi tetap tampil
 
         const formData = new FormData();
         formData.append('file', file);
@@ -154,7 +246,7 @@ export default function ImageUploader({
                     <input
                         ref={fileInputRef}
                         type="file"
-                        accept="image/*,video/mp4,video/webm"
+                        accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml,image/avif,video/mp4,video/webm,video/quicktime"
                         className="hidden"
                         onChange={handleFileSelect}
                     />
@@ -179,15 +271,20 @@ export default function ImageUploader({
                 <input
                     type="text"
                     value={value}
-                    onChange={(e) => onChange(e.target.value)}
+                    onChange={(e) => handleUrlChange(e.target.value)}
                     placeholder={placeholder}
-                    className="flex-1 p-2 border rounded-lg text-sm"
+                    className={`flex-1 p-2 border rounded-lg text-sm transition ${error && value ? 'border-red-400 bg-red-50' : 'border-gray-200'
+                        }`}
                 />
             </div>
 
             {/* Error Message */}
             {error && (
-                <p className="text-sm text-red-500">{error}</p>
+                <p className="text-sm text-red-500 flex items-center gap-1"><span>⚠</span>{error}</p>
+            )}
+            {/* Compress Info */}
+            {compressInfo && !error && (
+                <p className="text-xs text-green-600 flex items-center gap-1"><span>✓</span>{compressInfo}</p>
             )}
         </div>
     );

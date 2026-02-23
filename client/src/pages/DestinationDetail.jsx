@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 // Default fallback paths (static SVG di public/)
 const DEFAULT_TRANSPORT_ICONS = {
@@ -113,10 +113,10 @@ export default function DestinationDetail() {
                     <div className="flex items-center gap-[10px] flex-1 pl-[17px] pr-[15px]">
                         <button
                             onClick={() => navigate(-1)}
-                            className="w-[24px] h-[24px] flex items-center justify-center transform rotate-90 flex-shrink-0"
+                            className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-grey-100 transition-colors flex-shrink-0"
                             aria-label="Kembali"
                         >
-                            <ChevronRight size={24} className="text-black" />
+                            <ChevronLeft size={22} className="text-grey-700" />
                         </button>
 
                         <div className="flex-1 min-w-0 capitalize overflow-hidden">

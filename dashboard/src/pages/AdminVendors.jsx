@@ -250,7 +250,8 @@ function ProductModal({ vendorId, product, onClose, onSaved }) {
                         <button
                             type="button"
                             onClick={onClose}
-                            className="flex-1 py-2 rounded-xl font-bold text-gray-600 hover:bg-gray-100 transition"
+                            disabled={saving}
+                            className="flex-1 py-2 rounded-xl font-bold text-gray-600 hover:bg-gray-100 transition disabled:opacity-50"
                         >
                             Batal
                         </button>
@@ -609,6 +610,8 @@ export default function AdminVendors() {
         setFormErrors(errs);
         if (Object.keys(errs).length > 0) return;
 
+        // Cegah double-submit
+        if (formSaving) return;
         setFormSaving(true);
         try {
             const payload = {
@@ -1009,7 +1012,8 @@ export default function AdminVendors() {
                                 <button
                                     type="button"
                                     onClick={() => setIsModalOpen(false)}
-                                    className="flex-1 px-4 py-2 text-gray-600 font-bold hover:bg-gray-100 rounded-xl"
+                                    disabled={formSaving}
+                                    className="flex-1 px-4 py-2 text-gray-600 font-bold hover:bg-gray-100 rounded-xl disabled:opacity-50 transition"
                                 >
                                     Batal
                                 </button>

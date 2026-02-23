@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Edit2, Trash2, MapPin, X, Save, Image as ImageIcon } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, MapPin, X, Save, Image as ImageIcon, Loader2 } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
 import ImageUploader from '../components/ImageUploader';
 
@@ -9,6 +9,7 @@ export default function Destinations() {
     const [searchTerm, setSearchTerm] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [currentDest, setCurrentDest] = useState(null);
+    const [saving, setSaving] = useState(false);
 
     // Initial Form State
     const initialForm = {
@@ -32,6 +33,62 @@ export default function Destinations() {
     };
 
     const [formData, setFormData] = useState(initialForm);
+    const [websiteError, setWebsiteError] = useState('');
+    const [coordErrors, setCoordErrors] = useState({ lat: '', lng: '' });
+
+    // Karakter yang diizinkan di kolom koordinat: digit, titik desimal, minus (hanya di depan)
+    const blockInvalidCoordKey = (e) => {
+        const allowed = ['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'Home', 'End'];
+        if (allowed.includes(e.key)) return;
+        // Izinkan minus hanya di posisi 0
+        if (e.key === '-' && e.target.selectionStart === 0 && !e.target.value.includes('-')) return;
+        // Izinkan titik hanya sekali
+        if (e.key === '.' && !e.target.value.includes('.')) return;
+        // Izinkan digit 0-9
+        if (/^[0-9]$/.test(e.key)) return;
+        // Blokir semua yang lain (huruf, koma, spasi, dll)
+        e.preventDefault();
+    };
+
+    const validateCoord = (field, val) => {
+        const num = parseFloat(val);
+        if (val === '' || val === '-') return ''; // masih mengetik
+        if (!/^-?\d+(\.\d+)?$/.test(val.trim())) return 'Hanya angka & titik desimal (misal: -6.22)';
+        if (field === 'lat' && (num < -90 || num > 90)) return 'Latitude harus antara -90 dan 90';
+        if (field === 'lng' && (num < -180 || num > 180)) return 'Longitude harus antara -180 dan 180';
+        return '';
+    };
+
+    const handleCoordChange = (field, val) => {
+        setFormData(prev => ({ ...prev, [field]: val }));
+        setCoordErrors(prev => ({ ...prev, [field]: validateCoord(field, val) }));
+    };
+
+    // Validasi: kosong OK, atau harus domain Google Maps
+    const isValidGmapsUrl = (url) => {
+        if (!url || !url.trim()) return true;
+        try {
+            const u = new URL(url.trim());
+            const host = u.hostname.toLowerCase();
+            return (
+                host === 'maps.google.com' ||
+                host === 'www.google.com' ||
+                host === 'maps.app.goo.gl' ||
+                host === 'goo.gl'
+            );
+        } catch {
+            return false;
+        }
+    };
+
+    const handleWebsiteChange = (val) => {
+        setFormData(prev => ({ ...prev, website: val }));
+        if (!isValidGmapsUrl(val)) {
+            setWebsiteError('Format link tidak valid. Gunakan link dari Google Maps (maps.google.com atau maps.app.goo.gl)');
+        } else {
+            setWebsiteError('');
+        }
+    };
 
     useEffect(() => {
         fetchDestinations();
@@ -99,6 +156,25 @@ export default function Destinations() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        // Blokir submit jika koordinat tidak valid
+        const latErr = validateCoord('lat', String(formData.lat));
+        const lngErr = validateCoord('lng', String(formData.lng));
+        if (latErr || lngErr) {
+            setCoordErrors({ lat: latErr, lng: lngErr });
+            return;
+        }
+
+        // Blokir submit jika URL maps tidak valid
+        if (!isValidGmapsUrl(formData.website)) {
+            setWebsiteError('Format link tidak valid. Pastikan menggunakan link dari Google Maps.');
+            return;
+        }
+
+        // Cegah double-submit
+        if (saving) return;
+        setSaving(true);
+
         const url = currentDest ? `/api/destinations/${currentDest.id}` : '/api/destinations';
         const method = currentDest ? 'PUT' : 'POST';
 
@@ -124,6 +200,8 @@ export default function Destinations() {
         } catch (error) {
             console.error(error);
             alert("Terjadi kesalahan koneksi");
+        } finally {
+            setSaving(false);
         }
     };
 
@@ -272,12 +350,44 @@ export default function Destinations() {
 
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Latitude</label>
-                                            <input type="number" step="any" className="w-full border p-2 rounded-lg" value={formData.lat} onChange={e => setFormData({ ...formData, lat: parseFloat(e.target.value) })} />
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                Latitude <span className="text-red-500">*</span>
+                                            </label>
+                                            <input
+                                                type="text"
+                                                inputMode="decimal"
+                                                className={`w-full border p-2 rounded-lg transition focus:outline-none focus:ring-2 ${coordErrors.lat
+                                                    ? 'border-red-400 bg-red-50 focus:ring-red-300'
+                                                    : 'border-gray-200 focus:ring-blue-500'
+                                                    }`}
+                                                value={formData.lat}
+                                                onKeyDown={blockInvalidCoordKey}
+                                                onChange={e => handleCoordChange('lat', e.target.value)}
+                                                placeholder="-6.2088"
+                                            />
+                                            {coordErrors.lat && (
+                                                <p className="text-red-500 text-xs mt-1">⚠ {coordErrors.lat}</p>
+                                            )}
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Longitude</label>
-                                            <input type="number" step="any" className="w-full border p-2 rounded-lg" value={formData.lng} onChange={e => setFormData({ ...formData, lng: parseFloat(e.target.value) })} />
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                Longitude <span className="text-red-500">*</span>
+                                            </label>
+                                            <input
+                                                type="text"
+                                                inputMode="decimal"
+                                                className={`w-full border p-2 rounded-lg transition focus:outline-none focus:ring-2 ${coordErrors.lng
+                                                    ? 'border-red-400 bg-red-50 focus:ring-red-300'
+                                                    : 'border-gray-200 focus:ring-blue-500'
+                                                    }`}
+                                                value={formData.lng}
+                                                onKeyDown={blockInvalidCoordKey}
+                                                onChange={e => handleCoordChange('lng', e.target.value)}
+                                                placeholder="106.8456"
+                                            />
+                                            {coordErrors.lng && (
+                                                <p className="text-red-500 text-xs mt-1">⚠ {coordErrors.lng}</p>
+                                            )}
                                         </div>
                                     </div>
 
@@ -339,6 +449,30 @@ export default function Destinations() {
                                     </div>
 
                                     <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Link Google Maps
+                                            <span className="ml-1 text-xs text-gray-400 font-normal">(untuk tombol Peta di aplikasi)</span>
+                                        </label>
+                                        <input
+                                            className={`w-full border p-2 rounded-lg transition focus:outline-none focus:ring-2 ${websiteError
+                                                ? 'border-red-400 bg-red-50 focus:ring-red-300'
+                                                : 'border-gray-200 focus:ring-blue-500'
+                                                }`}
+                                            value={formData.website}
+                                            onChange={e => handleWebsiteChange(e.target.value)}
+                                            placeholder="https://maps.app.goo.gl/..."
+                                        />
+                                        {websiteError ? (
+                                            <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                                                <span>⚠</span> {websiteError}
+                                            </p>
+                                        ) : (
+                                            <p className="text-gray-400 text-xs mt-1">
+                                                💡 Copy link dari Google Maps → Share → Copy Link
+                                            </p>
+                                        )}
+                                    </div>
+                                    <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Harga Tiket</label>
                                         <input className="w-full border p-2 rounded-lg" value={formData.ticketPrice} onChange={e => setFormData({ ...formData, ticketPrice: e.target.value })} placeholder="e.g. Rp 50.000 / Gratis" />
                                     </div>
@@ -357,10 +491,23 @@ export default function Destinations() {
                             </div>
 
                             <div className="mt-8 flex justify-end gap-3 sticky bottom-0 bg-white pt-4 border-t">
-                                <button type="button" onClick={() => setIsModalOpen(false)} className="px-6 py-2 rounded-xl text-gray-600 hover:bg-gray-100 font-bold transition">Batal</button>
-                                <button type="submit" className="px-6 py-2 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 shadow-lg shadow-blue-600/20 transition flex items-center gap-2">
-                                    <Save size={18} />
-                                    Simpan Destinasi
+                                <button
+                                    type="button"
+                                    onClick={() => setIsModalOpen(false)}
+                                    disabled={saving}
+                                    className="px-6 py-2 rounded-xl text-gray-600 hover:bg-gray-100 font-bold transition disabled:opacity-50"
+                                >
+                                    Batal
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={saving}
+                                    className="px-6 py-2 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 shadow-lg shadow-blue-600/20 transition flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                                >
+                                    {saving
+                                        ? <><Loader2 size={18} className="animate-spin" /> Menyimpan...</>
+                                        : <><Save size={18} /> Simpan Destinasi</>
+                                    }
                                 </button>
                             </div>
                         </form>

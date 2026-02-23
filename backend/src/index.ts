@@ -317,6 +317,25 @@ app.post('/api/assets/upload', async (c) => {
             return c.json({ error: 'No file uploaded' }, 400);
         }
 
+        // ── Server-side file type validation ──────────────────────────────
+        const ALLOWED_MIME_TYPES = [
+            'image/jpeg', 'image/jpg', 'image/png', 'image/gif',
+            'image/webp', 'image/svg+xml', 'image/avif',
+            'video/mp4', 'video/webm', 'video/quicktime',
+        ];
+        const BLOCKED_EXTENSIONS = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
+            'txt', 'csv', 'zip', 'rar', '7z', 'exe', 'apk', 'dmg', 'iso', 'xml', 'json'];
+
+        const fileExt = file.name.split('.').pop()?.toLowerCase() || '';
+        const fileMime = file.type?.toLowerCase() || '';
+
+        if (BLOCKED_EXTENSIONS.includes(fileExt) || (!ALLOWED_MIME_TYPES.includes(fileMime) && fileMime !== '')) {
+            return c.json({
+                error: `Tipe file tidak diizinkan (.${fileExt}). Hanya gambar (JPG, PNG, GIF, WebP, SVG) atau video (MP4, WebM, MOV) yang diterima.`
+            }, 400);
+        }
+        // ──────────────────────────────────────────────────────────────────
+
         // Generate unique filename
         const timestamp = Date.now();
         const randomId = randomBytes(8).toString('hex');
