@@ -230,7 +230,7 @@ export default function WfaBanners() {
             const res = await fetch('/api/settings', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ key: 'wfa_banners', value: items }),
+                body: JSON.stringify({ wfa_banners: items }),
             });
             if (res.ok) {
                 setSaved(true);
@@ -275,8 +275,8 @@ export default function WfaBanners() {
                             onClick={handleSave}
                             disabled={saving}
                             className={`flex items-center gap-2 px-5 py-2 rounded-xl font-bold text-sm transition shadow-lg ${saved
-                                    ? 'bg-green-600 text-white shadow-green-600/20'
-                                    : 'bg-violet-600 text-white shadow-violet-600/20 hover:bg-violet-700'
+                                ? 'bg-green-600 text-white shadow-green-600/20'
+                                : 'bg-violet-600 text-white shadow-violet-600/20 hover:bg-violet-700'
                                 } disabled:opacity-50`}
                         >
                             <Save size={16} />

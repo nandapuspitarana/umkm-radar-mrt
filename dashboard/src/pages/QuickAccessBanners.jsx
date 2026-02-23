@@ -108,8 +108,8 @@ function BannerItem({ item, index, total, onChange, onDelete, onMove }) {
                     <div className="flex items-center gap-2">
                         {item.subtitle && <p className="text-xs text-gray-400 truncate">{item.subtitle}</p>}
                         <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${item.type === 'stacked'
-                                ? 'bg-amber-100 text-amber-700'
-                                : 'bg-blue-100 text-blue-700'
+                            ? 'bg-amber-100 text-amber-700'
+                            : 'bg-blue-100 text-blue-700'
                             }`}>
                             {item.type === 'stacked' ? `Stacked G${item.group ?? 1}` : 'Medium'}
                         </span>
@@ -308,7 +308,7 @@ export default function QuickAccessBanners() {
             const res = await fetch('/api/settings', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ key: 'quick_access_banners', value: items }),
+                body: JSON.stringify({ quick_access_banners: items }),
             });
             if (res.ok) {
                 setSaved(true);
@@ -357,8 +357,8 @@ export default function QuickAccessBanners() {
                             onClick={handleSave}
                             disabled={saving}
                             className={`flex items-center gap-2 px-5 py-2 rounded-xl font-bold text-sm transition shadow-lg ${saved
-                                    ? 'bg-green-600 text-white shadow-green-600/20'
-                                    : 'bg-blue-600 text-white shadow-blue-600/20 hover:bg-blue-700'
+                                ? 'bg-green-600 text-white shadow-green-600/20'
+                                : 'bg-blue-600 text-white shadow-blue-600/20 hover:bg-blue-700'
                                 } disabled:opacity-50`}
                         >
                             <Save size={16} />
