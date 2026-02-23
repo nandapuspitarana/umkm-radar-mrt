@@ -158,13 +158,17 @@ export default function AppLayout({
                     <CategorySidebar activeCategory={currentActive} />
                 </div>
 
-                {/* Main Content Area - Figma: content/homepage/rekomendasi */}
-                <main
-                    className="flex-1 bg-grey-100 rounded-tl-[30px] overflow-y-auto overflow-x-hidden pb-24 pt-0"
-                    onScroll={(e) => setIsScrolled(e.currentTarget.scrollTop > 10)}
-                >
-                    {children}
-                </main>
+                {/* Main Content Area */}
+                {/* Outer wrapper hanya handle rounded corner + clip */}
+                <div className="flex-1 rounded-tl-[30px] overflow-hidden bg-grey-100">
+                    {/* Inner main hanya handle scroll — dipisah agar tidak konflik paint layer */}
+                    <main
+                        className="h-full overflow-y-auto overflow-x-hidden pb-24 pt-0"
+                        onScroll={(e) => setIsScrolled(e.currentTarget.scrollTop > 10)}
+                    >
+                        {children}
+                    </main>
+                </div>
             </div>
 
             {/* Sidebar Drawer */}
