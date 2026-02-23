@@ -117,6 +117,7 @@ export default function Home({ vendors, onSelectVendor, stationCategory = 'Senay
     const [bannersLoading, setBannersLoading] = useState(true);
     const [quickAccessItems, setQuickAccessItems] = useState(FALLBACK_QUICK_ACCESS);
     const [wfaItems, setWfaItems] = useState(FALLBACK_WFA);
+    const [favoritePlacesItems, setFavoritePlacesItems] = useState(favoritePlaces);
 
     // Fetch banners from settings API
     useEffect(() => {
@@ -142,6 +143,10 @@ export default function Home({ vendors, onSelectVendor, stationCategory = 'Senay
                 // WFA banners
                 if (data.wfa_banners && Array.isArray(data.wfa_banners) && data.wfa_banners.length > 0) {
                     setWfaItems(data.wfa_banners);
+                }
+                // Favorite places
+                if (data.favorite_places && Array.isArray(data.favorite_places) && data.favorite_places.length > 0) {
+                    setFavoritePlacesItems(data.favorite_places);
                 }
             })
             .catch(err => console.error("Failed to load settings", err))
@@ -288,12 +293,13 @@ export default function Home({ vendors, onSelectVendor, stationCategory = 'Senay
 
             {/* Favorite Places Section */}
             <ContentSection title="Tempat Favorit">
-                {favoritePlaces.map((item) => (
+                {favoritePlacesItems.map((item) => (
                     <FavoriteCard
                         key={item.id}
                         image={item.image}
                         title={item.title}
                         distance={item.distance}
+                        onClick={() => item.link && (window.location.href = item.link)}
                     />
                 ))}
             </ContentSection>

@@ -24,7 +24,8 @@ import {
     Users,
     ClipboardList,
     ChevronDown,
-    ChevronRight
+    ChevronRight,
+    Heart
 } from 'lucide-react';
 
 // ─── Grouped menu config ───────────────────────────────────────────────────────
@@ -61,6 +62,7 @@ const ADMIN_MENU = [
             { icon: Landmark, label: 'Banner Wisata', path: '/wisata-banner' },
             { icon: LayoutGrid, label: 'Banner Quick Access', path: '/quick-access-banners' },
             { icon: Laptop, label: 'Banner WFA', path: '/wfa-banners' },
+            { icon: Heart, label: 'Banner Tempat Favorit', path: '/favorite-banners' },
         ]
     },
     {
