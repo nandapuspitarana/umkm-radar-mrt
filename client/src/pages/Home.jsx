@@ -25,6 +25,13 @@ const FALLBACK_WFA = [
     { id: 4, image: 'https://images.unsplash.com/photo-1529543544277-750ee00a0b68?w=400&h=300&fit=crop', title: 'Kulineran', subtitle: 'Aja Yuk!', link: '' },
 ];
 
+const FALLBACK_REKOMEN = [
+    { id: 1, image: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&h=300&fit=crop', title: 'Kuliner Hits', subtitle: 'Sekitar Stasiun', link: '/kuliner' },
+    { id: 2, image: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400&h=300&fit=crop', title: 'Ngopi Santai', subtitle: 'Sambil Nunggu', link: '/ngopi' },
+    { id: 3, image: 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=400&h=300&fit=crop', title: 'Wisata Dekat', subtitle: 'MRT Terdekat', link: '/wisata' },
+    { id: 4, image: 'https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=400&h=300&fit=crop', title: 'Tempat Publik', subtitle: 'Fasilitas Umum', link: '/publik' },
+];
+
 // Favorite places - Figma matching
 const favoritePlaces = [
     { id: 1, image: 'https://images.unsplash.com/photo-1571068316344-75bc76f77890?w=400&h=300&fit=crop', title: 'GBK (Gelora\nBung Karno)', distance: '300 m' },
@@ -118,6 +125,7 @@ export default function Home({ vendors, onSelectVendor, stationCategory = 'Senay
     const [quickAccessItems, setQuickAccessItems] = useState(FALLBACK_QUICK_ACCESS);
     const [wfaItems, setWfaItems] = useState(FALLBACK_WFA);
     const [favoritePlacesItems, setFavoritePlacesItems] = useState(favoritePlaces);
+    const [rekomenItems, setRekomenItems] = useState(FALLBACK_REKOMEN);
 
     // Fetch banners from settings API
     useEffect(() => {
@@ -147,6 +155,10 @@ export default function Home({ vendors, onSelectVendor, stationCategory = 'Senay
                 // Favorite places
                 if (data.favorite_places && Array.isArray(data.favorite_places) && data.favorite_places.length > 0) {
                     setFavoritePlacesItems(data.favorite_places);
+                }
+                // Rekomendasi lainnya
+                if (data.rekomen_banners && Array.isArray(data.rekomen_banners) && data.rekomen_banners.length > 0) {
+                    setRekomenItems(data.rekomen_banners);
                 }
             })
             .catch(err => console.error("Failed to load settings", err))
@@ -304,6 +316,20 @@ export default function Home({ vendors, onSelectVendor, stationCategory = 'Senay
                 ))}
             </ContentSection>
 
+            {/* Rekomendasi Lainnya Section */}
+            <ContentSection title="Rekomendasi Lainnya">
+                {rekomenItems.map((item) => (
+                    <ContentCard
+                        key={item.id}
+                        image={item.image}
+                        title={item.title}
+                        subtitle={item.subtitle}
+                        size="small"
+                        onClick={() => item.link && (window.location.href = item.link)}
+                    />
+                ))}
+            </ContentSection>
+
             {/* Vendor List or Search Results */}
             {searchQuery && (
                 <ContentSection title={`Hasil Pencarian "${searchQuery}"`}>
@@ -345,7 +371,7 @@ export default function Home({ vendors, onSelectVendor, stationCategory = 'Senay
             )}
 
             {/* Bottom Padding */}
-            <div className="h-24" />
+            <div className="h-4" />
 
             {/* Story Modal */}
             <StoryModal
