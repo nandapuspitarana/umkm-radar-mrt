@@ -405,6 +405,11 @@ export default function App() {
           <DestinationDetail />
         </div>
       } />
+      <Route path="/publik/:id" element={
+        <div className="antialiased text-gray-800">
+          <DestinationDetail />
+        </div>
+      } />
       <Route path="/atm" element={
         <div className="antialiased text-gray-800">
           {currentVendor ? (

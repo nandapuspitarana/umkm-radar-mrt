@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getImageUrl } from '../utils/api';
+import { useNavigate } from 'react-router-dom';
 import { MapPin, ChevronRight } from 'lucide-react';
 import AppLayout from '../components/AppLayout';
 
@@ -189,15 +189,21 @@ function DestinationCard({ destination }) {
 
     const distance = formatDistance(destination.distance_from_station);
 
+    const navigate = useNavigate();
+    const imageUrl = destination.image || 'https://images.unsplash.com/photo-1519331379826-f10be5486c6f?w=400&h=300&fit=crop';
+
     return (
-        <div className="w-[200px] h-[133px] rounded-[15px] overflow-hidden flex-shrink-0 cursor-pointer relative group">
+        <div
+            onClick={() => navigate(`/publik/${destination.id}`)}
+            className="w-[200px] h-[133px] rounded-[15px] overflow-hidden flex-shrink-0 cursor-pointer relative group"
+        >
             {/* Background Image */}
             <img
-                src={getImageUrl(destination.image, { w: 400, h: 300, resize: 'crop' }) || 'https://images.unsplash.com/photo-1519331379826-f10be5486c6f?w=600&h=400&fit=crop'}
+                src={imageUrl}
                 alt={destination.name}
                 className="absolute inset-0 w-full h-full object-cover transition-transform group-hover:scale-105"
                 onError={(e) => {
-                    e.target.src = 'https://images.unsplash.com/photo-1519331379826-f10be5486c6f?w=600&h=400&fit=crop';
+                    e.target.src = 'https://images.unsplash.com/photo-1519331379826-f10be5486c6f?w=400&h=300&fit=crop';
                 }}
             />
 
@@ -206,15 +212,15 @@ function DestinationCard({ destination }) {
 
             {/* Distance Badge (Top Left) */}
             <div className="absolute top-5 left-5 flex items-center gap-1.5">
-                <MapPin size={12} className="text-white" fill="white" />
+                <MapPin size={12} className="text-white" />
                 <span className="text-white text-sm font-semibold lowercase">
                     {distance}
                 </span>
             </div>
 
             {/* Title (Bottom) */}
-            <div className="absolute bottom-0 left-0 right-0 px-5 pb-[15px]">
-                <p className="text-sm font-semibold text-grey-200 capitalize leading-normal whitespace-pre-wrap">
+            <div className="absolute bottom-0 left-0 right-0 pb-[15px] px-5">
+                <p className="text-grey-200 text-sm font-semibold capitalize leading-normal">
                     {destination.name}
                 </p>
             </div>

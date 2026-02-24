@@ -26,7 +26,19 @@ function useTransportIcons() {
                 const custom = data.transport_icons || {};
                 const merged = { ...DEFAULT_TRANSPORT_ICONS };
                 Object.entries(custom).forEach(([k, v]) => {
-                    if (v) merged[k] = `/api/raw/${v.replace(/^\//, '')}`;
+                    if (!v) return;
+                    if (v.startsWith('http://') || v.startsWith('https://')) {
+                        try {
+                            const u = new URL(v);
+                            // pathname = /assets/general/xxx.svg
+                            // Strip bucket name 'assets/' agar tidak double di /api/raw/
+                            let pathPart = u.pathname.replace(/^\//, '');    // 'assets/general/xxx.svg'
+                            pathPart = pathPart.replace(/^assets\//, '');    // 'general/xxx.svg'
+                            merged[k] = `/api/raw/${pathPart}`;
+                        } catch { /* skip */ }
+                    } else {
+                        merged[k] = `/api/raw/${v.replace(/^\//, '')}`;
+                    }
                 });
                 _iconCache = merged;
                 setIcons(merged);
@@ -233,7 +245,22 @@ export default function DestinationDetail() {
 // ========== Route Step Component ==========
 function RouteStep({ icons, icon, title, subtitle }) {
     const isDestination = icon === 'Destination';
-    const imgSrc = icons?.[icon] || DEFAULT_TRANSPORT_ICONS[icon];
+    // Custom src dari settings (bisa jadi /api/raw/...), fallback ke static default
+    const customSrc = icons?.[icon];
+    const defaultSrc = DEFAULT_TRANSPORT_ICONS[icon];
+    const [src, setSrc] = React.useState(customSrc || defaultSrc);
+
+    // Ketika icons berubah (setelah fetch selesai), reset src
+    React.useEffect(() => {
+        setSrc(customSrc || defaultSrc);
+    }, [customSrc, defaultSrc]);
+
+    const handleImgError = () => {
+        // Jika custom src gagal, coba default static SVG
+        if (src !== defaultSrc && defaultSrc) {
+            setSrc(defaultSrc);
+        }
+    };
 
     return (
         <div className="flex items-center gap-[15px] relative" style={{ zIndex: 1 }}>
@@ -246,12 +273,13 @@ function RouteStep({ icons, icon, title, subtitle }) {
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z" fill="#0969DA" />
                     </svg>
-                ) : imgSrc ? (
+                ) : src ? (
                     <img
-                        src={imgSrc}
+                        key={src}
+                        src={src}
                         alt={icon}
                         className="w-[30px] h-[30px] object-contain"
-                        onError={e => { e.target.style.display = 'none'; }}
+                        onError={handleImgError}
                     />
                 ) : null}
             </div>
