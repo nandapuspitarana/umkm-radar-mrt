@@ -5,11 +5,19 @@ const DEFAULT_STATION = 'Senayan Mastercard';
 
 /**
  * useStationSort — sorts vendors by active MRT station category (instant, no GPS)
- * @param {Array} vendors - Full vendor list
- * @param {Function} filterFn - Optional function to pre-filter by page (e.g. only kuliner)
+ *
+ * Supports two modes:
+ *   1. Pre-sorted mode: `vendors` is already a sorted array (from /api/vendors/grouped).
+ *      When `preSorted=true`, data is passed through immediately with zero computation.
+ *   2. Raw mode (fallback): `vendors` is the full unsorted vendor list.
+ *      Hook will filter + sort client-side, same behaviour as before.
+ *
+ * @param {Array}    vendors    - Vendor list (pre-sorted or full list)
+ * @param {Function} filterFn  - Filter fn for raw mode (null when preSorted=true)
+ * @param {boolean}  preSorted - Set true when data already sorted by backend
  * @returns {{ sortedVendors, loading, stationCategory }}
  */
-export function useStationSort(vendors, filterFn = null) {
+export function useStationSort(vendors, filterFn = null, preSorted = false) {
     const [stationCategory] = useState(
         () => localStorage.getItem(STATION_KEY) || DEFAULT_STATION
     );
@@ -18,6 +26,15 @@ export function useStationSort(vendors, filterFn = null) {
 
     useEffect(() => {
         const safeVendors = Array.isArray(vendors) ? vendors : [];
+
+        // ── Pre-sorted mode: data came from /api/vendors/grouped, use as-is ──
+        if (preSorted) {
+            setSortedVendors(safeVendors);
+            setLoading(safeVendors.length === 0 && !vendors ? true : false);
+            return;
+        }
+
+        // ── Raw mode (fallback): filter + sort client-side ──
         const source = filterFn ? safeVendors.filter(filterFn) : safeVendors;
 
         if (source.length === 0) {
@@ -43,7 +60,7 @@ export function useStationSort(vendors, filterFn = null) {
 
         setSortedVendors(sorted);
         setLoading(false);
-    }, [vendors, stationCategory]);
+    }, [vendors, stationCategory, preSorted]);
 
     return { sortedVendors, loading, stationCategory };
 }

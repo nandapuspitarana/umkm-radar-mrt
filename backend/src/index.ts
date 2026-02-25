@@ -523,6 +523,52 @@ app.post('/api/login', async (c) => {
 });
 
 // 1. Get All Vendors (Cached, with optional station-based sorting)
+// ==================== VENDOR CACHE HELPER ====================
+// Flush ALL vendor-related cache keys (list + grouped, all stations)
+async function flushVendorCache() {
+    try {
+        // Use SCAN to find all vendor cache keys (pattern-based)
+        let cursor = '0';
+        const keysToDelete: string[] = [];
+        do {
+            const [nextCursor, keys] = await redis.scan(
+                cursor, 'MATCH', 'vendors_*', 'COUNT', 100
+            );
+            cursor = nextCursor;
+            keysToDelete.push(...keys);
+        } while (cursor !== '0');
+
+        if (keysToDelete.length > 0) {
+            await redis.del(...keysToDelete);
+            console.log(`[Cache] Flushed ${keysToDelete.length} vendor cache keys:`, keysToDelete);
+        }
+    } catch (redisError) {
+        console.warn('[Cache] Redis flush error:', redisError);
+    }
+}
+
+// ==================== CATEGORY SLUG MAPPING ====================
+// Maps category text values → page slug (for grouping)
+function getCategorySlug(v: { category?: string | null; categoryId?: number | null }): string {
+    const cat = (v.category || '').toLowerCase();
+    if (
+        cat.includes('ngopi') || cat.includes('coffee') ||
+        cat.includes('kopi') || cat.includes('cafe')
+    ) return 'ngopi';
+    if (
+        cat.includes('atm') || cat.includes('minimarket') ||
+        cat.includes('supermarket') || cat.includes('belanja') ||
+        cat.includes('store')
+    ) return 'atm';
+    if (
+        cat.includes('kuliner') || cat.includes('makanan') ||
+        cat.includes('food') || cat.includes('restaurant') ||
+        cat.includes('warung') || cat.includes('convenience')
+    ) return 'kuliner';
+    return 'lainnya';
+}
+
+// 1. Get All Vendors (Cached, with optional station-based sorting)
 app.get('/api/vendors', async (c) => {
     try {
         const stationParam = c.req.query('station') || '';
@@ -559,9 +605,9 @@ app.get('/api/vendors', async (c) => {
             location: { lat: v.lat, lng: v.lng }
         }));
 
-        // Try to cache for 60 seconds
+        // Cache for 10 minutes
         try {
-            await redis.set(cacheKey, JSON.stringify(transformedResult), 'EX', 60);
+            await redis.set(cacheKey, JSON.stringify(transformedResult), 'EX', 600);
         } catch (redisError) {
             console.warn('Redis set error:', redisError);
         }
@@ -570,6 +616,156 @@ app.get('/api/vendors', async (c) => {
     } catch (error) {
         console.error('Vendors endpoint error:', error);
         return c.json({ error: 'Failed to fetch vendors', details: error }, 500);
+    }
+});
+
+/**
+ * GET /api/vendors/grouped?station=Senayan+Mastercard
+ * 
+ * Returns vendors pre-grouped by category (kuliner/ngopi/atm/lainnya),
+ * sorted: station-matching vendors first, others second.
+ * Result is cached in Redis for 10 minutes per station.
+ * Cache is busted whenever any vendor is created/updated/deleted from dashboard.
+ *
+ * Response shape:
+ * {
+ *   station: string,
+ *   kuliner: Vendor[],
+ *   ngopi:   Vendor[],
+ *   atm:     Vendor[],
+ *   lainnya: Vendor[],
+ *   _cachedAt: ISO string,
+ * }
+ */
+app.get('/api/vendors/grouped', async (c) => {
+    try {
+        const stationParam = c.req.query('station') || 'all';
+        const cacheKey = `vendors_grouped_${stationParam}`;
+
+        // 1. Try Redis cache first
+        let cached = null;
+        try {
+            cached = await redis.get(cacheKey);
+        } catch (redisError) {
+            console.warn('[vendors/grouped] Redis get error:', redisError);
+        }
+
+        if (cached) {
+            console.log(`[vendors/grouped] Cache HIT [station: ${stationParam}]`);
+            return c.json(JSON.parse(cached));
+        }
+
+        console.log(`[vendors/grouped] Cache MISS — computing [station: ${stationParam}]`);
+
+        // 2. Get station coordinates from location_areas
+        let stationLat: number | null = null;
+        let stationLng: number | null = null;
+        const stationLower = stationParam.toLowerCase();
+
+        if (stationParam !== 'all') {
+            const stationResult = await pool.query(
+                `SELECT lat, lng FROM location_areas
+                 WHERE LOWER(station) LIKE $1 OR LOWER(name) LIKE $1
+                 LIMIT 1`,
+                [`%${stationLower}%`]
+            );
+            if (stationResult.rows.length > 0 && stationResult.rows[0].lat) {
+                stationLat = stationResult.rows[0].lat;
+                stationLng = stationResult.rows[0].lng;
+            }
+        }
+
+        // Haversine distance calculator (meters)
+        function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
+            const R = 6371000; // Earth radius in meters
+            const toRad = (d: number) => d * Math.PI / 180;
+            const dLat = toRad(lat2 - lat1);
+            const dLng = toRad(lng2 - lng1);
+            const a = Math.sin(dLat / 2) ** 2 +
+                Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+                Math.sin(dLng / 2) ** 2;
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        }
+
+        // Format distance for display
+        function formatDistance(meters: number): string {
+            if (meters < 1000) return `${Math.round(meters)} m`;
+            return `${(meters / 1000).toFixed(1)} km`;
+        }
+
+        // 3. Fetch all vendors
+        const allVendors = await db.select().from(vendors).orderBy(
+            sql`CASE WHEN LOWER(${vendors.locationTags}) LIKE ${`%${stationLower}%`} THEN 0 ELSE 1 END`,
+            sql`${vendors.name} ASC`
+        );
+
+        // 4. Group by category slug + calculate distance
+        const grouped: Record<string, any[]> = {
+            kuliner: [],
+            ngopi: [],
+            atm: [],
+            lainnya: [],
+        };
+
+        for (const v of allVendors) {
+            const slug = getCategorySlug(v);
+
+            // Calculate distance from station
+            let distanceMeters: number | null = null;
+            let distanceLabel: string | null = null;
+
+            // Priority: use stored distance_meters if available (manual override from dashboard)
+            const storedDistance = (v as any).distance_meters || (v as any).distanceMeters;
+            if (storedDistance && storedDistance > 0) {
+                distanceMeters = storedDistance;
+                distanceLabel = formatDistance(storedDistance);
+            } else if (stationLat && stationLng && v.lat && v.lng) {
+                distanceMeters = Math.round(haversineMeters(stationLat, stationLng, v.lat, v.lng));
+                distanceLabel = formatDistance(distanceMeters);
+            }
+
+            const transformed = {
+                ...v,
+                location: { lat: v.lat, lng: v.lng },
+                distanceMeters,
+                distanceLabel,
+            };
+
+            grouped[slug] = grouped[slug] || [];
+            grouped[slug].push(transformed);
+        }
+
+        // 5. Sort each category by distance (nearest first)
+        for (const key of Object.keys(grouped)) {
+            grouped[key].sort((a: any, b: any) => {
+                const da = a.distanceMeters ?? Infinity;
+                const db = b.distanceMeters ?? Infinity;
+                return da - db;
+            });
+        }
+
+        const response = {
+            station: stationParam,
+            stationCoords: stationLat ? { lat: stationLat, lng: stationLng } : null,
+            kuliner: grouped.kuliner,
+            ngopi: grouped.ngopi,
+            atm: grouped.atm,
+            lainnya: grouped.lainnya,
+            _cachedAt: new Date().toISOString(),
+        };
+
+        // 6. Cache for 10 minutes
+        try {
+            await redis.set(cacheKey, JSON.stringify(response), 'EX', 600);
+            console.log(`[vendors/grouped] Cached [station: ${stationParam}] — kuliner:${grouped.kuliner.length} ngopi:${grouped.ngopi.length} atm:${grouped.atm.length}`);
+        } catch (redisError) {
+            console.warn('[vendors/grouped] Redis set error:', redisError);
+        }
+
+        return c.json(response);
+    } catch (error) {
+        console.error('[vendors/grouped] Error:', error);
+        return c.json({ error: 'Failed to fetch grouped vendors', details: String(error) }, 500);
     }
 });
 
@@ -600,7 +796,8 @@ app.post('/api/vendors', async (c) => {
             newData: created,
         });
 
-        await redis.del('vendors_list');
+        // Flush ALL vendor cache (per-station list + grouped)
+        await flushVendorCache();
         return c.json(created);
     } catch (error) {
         console.error('Create Vendor Error:', error);
@@ -632,7 +829,8 @@ app.put('/api/vendors/:id', async (c) => {
             });
         }
 
-        await redis.del('vendors_list');
+        // Flush ALL vendor cache (per-station list + grouped)
+        await flushVendorCache();
         return c.json(result[0]);
     } catch (error) {
         console.error(error);
@@ -661,7 +859,8 @@ app.delete('/api/vendors/:id', async (c) => {
             });
         }
 
-        await redis.del('vendors_list');
+        // Flush ALL vendor cache (per-station list + grouped)
+        await flushVendorCache();
         return c.json({ message: 'Vendor and associated products deleted successfully' });
     } catch (error) {
         console.error('Delete Vendor Error:', error);
@@ -2905,6 +3104,93 @@ app.get('/api/audit-logs/:entity/:id', async (c) => {
         return c.json(result.rows);
     } catch (error) {
         return c.json({ error: 'Failed to fetch logs' }, 500);
+    }
+});
+
+// ==================== LOCATION AREAS API ====================
+// Daftar stasiun MRT yang tersedia (dari tabel location_areas)
+// Dipakai dashboard untuk menampilkan opsi stasiun & sync data
+
+// GET /api/location-areas — semua area/stasiun MRT aktif
+app.get('/api/location-areas', async (c) => {
+    try {
+        const result = await pool.query(
+            `SELECT id, name, slug, station, line, description, sort_order
+             FROM location_areas
+             WHERE is_active = true
+             ORDER BY sort_order ASC, name ASC`
+        );
+        return c.json(result.rows);
+    } catch (error) {
+        console.error('location-areas fetch error:', error);
+        return c.json({ error: 'Failed to fetch location areas' }, 500);
+    }
+});
+
+// GET /api/location-areas/:slug — detail satu area
+app.get('/api/location-areas/:slug', async (c) => {
+    const slug = c.req.param('slug');
+    try {
+        const result = await pool.query(
+            `SELECT * FROM location_areas WHERE slug = $1 LIMIT 1`, [slug]
+        );
+        if (result.rows.length === 0) return c.json({ error: 'Area not found' }, 404);
+        return c.json(result.rows[0]);
+    } catch (error) {
+        return c.json({ error: 'Failed to fetch location area' }, 500);
+    }
+});
+
+// ==================== CACHE MANAGEMENT API ====================
+
+/**
+ * POST /api/cache/flush-vendors
+ * Flush semua cache vendor (list + grouped, semua stasiun).
+ * Dipanggil dari dashboard saat perlu sync manual.
+ * Biasanya tidak perlu manual — backend auto-flush saat CRUD vendor.
+ */
+app.post('/api/cache/flush-vendors', async (c) => {
+    try {
+        await flushVendorCache();
+        return c.json({
+            success: true,
+            message: 'Vendor cache flushed. Data segar akan di-fetch pada request berikutnya.',
+            timestamp: new Date().toISOString(),
+        });
+    } catch (error) {
+        console.error('Cache flush error:', error);
+        return c.json({ error: 'Failed to flush cache' }, 500);
+    }
+});
+
+/**
+ * GET /api/vendors/cache-status
+ * Cek status cache vendor per stasiun (TTL tersisa di Redis).
+ * Berguna untuk debugging atau dashboard monitoring.
+ */
+app.get('/api/vendors/cache-status', async (c) => {
+    try {
+        let cursor = '0';
+        const cacheInfo: Array<{ key: string; ttl: number }> = [];
+
+        do {
+            const [nextCursor, keys] = await redis.scan(cursor, 'MATCH', 'vendors_*', 'COUNT', 100);
+            cursor = nextCursor;
+            for (const key of keys) {
+                const ttl = await redis.ttl(key);
+                cacheInfo.push({ key, ttl });
+            }
+        } while (cursor !== '0');
+
+        cacheInfo.sort((a, b) => a.key.localeCompare(b.key));
+
+        return c.json({
+            totalKeys: cacheInfo.length,
+            keys: cacheInfo,
+            timestamp: new Date().toISOString(),
+        });
+    } catch (error) {
+        return c.json({ error: 'Failed to check cache status', details: String(error) }, 500);
     }
 });
 

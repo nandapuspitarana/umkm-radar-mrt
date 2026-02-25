@@ -18,7 +18,14 @@ const DEFAULT_STATION = 'Senayan Mastercard';
 
 export default function App() {
   const [currentVendor, setCurrentVendor] = useState(null);
-  const [vendors, setVendors] = useState([]);
+  const [vendors, setVendors] = useState([]);               // flat list — Home & legacy
+  const [vendorsByCategory, setVendorsByCategory] = useState({ // ✅ pre-grouped per stasiun
+    kuliner: [],
+    ngopi: [],
+    atm: [],
+    lainnya: [],
+    _loaded: false,
+  });
   const [products, setProducts] = useState([]);
   const [cart, setCart] = useState([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -31,8 +38,8 @@ export default function App() {
     localStorage.setItem('umkm_station', station);
   };
 
-  // Cache helper
-  const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+  // ── localStorage cache helper (TTL 10 menit — mirror Redis TTL backend) ──
+  const CACHE_DURATION = 10 * 60 * 1000;
 
   const getCache = (key) => {
     try {
@@ -44,7 +51,7 @@ export default function App() {
         return null;
       }
       return data;
-    } catch (e) {
+    } catch {
       return null;
     }
   };
@@ -53,40 +60,94 @@ export default function App() {
     try {
       localStorage.setItem(key, JSON.stringify({ data, timestamp: Date.now() }));
     } catch (e) {
-      console.warn("LocalStorage full or disabled", e);
+      console.warn('LocalStorage full or disabled', e);
     }
   };
 
-  // Fetch Vendors on Load (or when station changes)
+  // ── Fetch GROUPED vendors setiap kali stasiun berubah ─────────────────────
+  // Endpoint /api/vendors/grouped?station=X mengembalikan data yang sudah:
+  //   1. Dikelompokkan per kategori (kuliner / ngopi / atm / lainnya)
+  //   2. Disort: vendor yg dekat stasiun muncul duluan
+  //   3. Di-cache di Redis 10 menit oleh backend
+  // Frontend meng-mirror cache ini di localStorage (TTL sama = 10 menit).
+  // Saat dashboard simpan/edit vendor → backend flush Redis → request berikutnya compute ulang.
   useEffect(() => {
-    // Cache key includes station to separate caches per-station
-    const CACHE_KEY = `grocries_vendors_v2_${stationCategory}`;
-    const cachedVendors = getCache(CACHE_KEY);
+    const GROUPED_KEY = `umkm_vendors_grouped_v1_${stationCategory}`;
+    const FLAT_KEY = `grocries_vendors_v2_${stationCategory}`;
 
-    if (cachedVendors && cachedVendors.length > 0) {
-      setVendors(cachedVendors);
-    } else {
-      const stationEncoded = encodeURIComponent(stationCategory);
-      fetch(`/api/vendors?station=${stationEncoded}`)
-        .then(res => res.json())
-        .then(data => {
-          if (Array.isArray(data)) {
-            setVendors(data);
-            if (data.length > 0) {
-              setCache(CACHE_KEY, data);
-            }
-          } else {
-            console.error("API returned non-array vendors:", data);
-            setVendors([]);
-          }
-        })
-        .catch(err => {
-          console.error("Failed to fetch vendors:", err);
-          setVendors([]);
-        });
+    // ⚡ Coba localStorage mirror dulu (instant — 0 network round-trip)
+    const cachedGrouped = getCache(GROUPED_KEY);
+    if (cachedGrouped && cachedGrouped._loaded) {
+      setVendorsByCategory(cachedGrouped);
+      const flat = [
+        ...(cachedGrouped.kuliner || []),
+        ...(cachedGrouped.ngopi || []),
+        ...(cachedGrouped.atm || []),
+        ...(cachedGrouped.lainnya || []),
+      ];
+      setVendors(flat);
+      return;
     }
 
-    // Restore cart from localstorage
+    // Fetch dari backend (backend sudah cache di Redis)
+    const stationEncoded = encodeURIComponent(stationCategory);
+    fetch(`/api/vendors/grouped?station=${stationEncoded}`)
+      .then(res => {
+        if (!res.ok) throw new Error(`grouped API ${res.status}`);
+        return res.json();
+      })
+      .then(data => {
+        if (data && Array.isArray(data.kuliner)) {
+          const grouped = {
+            kuliner: data.kuliner || [],
+            ngopi: data.ngopi || [],
+            atm: data.atm || [],
+            lainnya: data.lainnya || [],
+            _loaded: true,
+            _cachedAt: data._cachedAt,
+          };
+          setVendorsByCategory(grouped);
+          setCache(GROUPED_KEY, grouped);
+
+          // Flat list untuk Home + backward compat
+          const flat = [
+            ...grouped.kuliner,
+            ...grouped.ngopi,
+            ...grouped.atm,
+            ...grouped.lainnya,
+          ];
+          setVendors(flat);
+          if (flat.length > 0) setCache(FLAT_KEY, flat);
+        } else {
+          throw new Error('Grouped API returned unexpected shape');
+        }
+      })
+      .catch(err => {
+        console.warn('[App] Grouped vendors API gagal, fallback ke flat list:', err);
+        // Fallback 1: localStorage flat cache
+        const cachedFlat = getCache(FLAT_KEY);
+        if (cachedFlat && cachedFlat.length > 0) {
+          setVendors(cachedFlat);
+          return;
+        }
+        // Fallback 2: legacy flat API
+        fetch(`/api/vendors?station=${stationEncoded}`)
+          .then(res => res.json())
+          .then(data => {
+            if (Array.isArray(data)) {
+              setVendors(data);
+              if (data.length > 0) setCache(FLAT_KEY, data);
+            } else {
+              setVendors([]);
+            }
+          })
+          .catch(err2 => {
+            console.error('[App] Failed to fetch vendors:', err2);
+            setVendors([]);
+          });
+      });
+
+    // Restore cart dari localstorage
     const saved = localStorage.getItem('grocries_cart');
     if (saved) setCart(JSON.parse(saved));
   }, [stationCategory]);
@@ -107,7 +168,7 @@ export default function App() {
             setProducts(data);
             setCache(cacheKey, data);
           })
-          .catch(err => console.error("Failed to fetch products:", err));
+          .catch(err => console.error('Failed to fetch products:', err));
       }
     }
   }, [currentVendor]);
@@ -120,7 +181,7 @@ export default function App() {
     setCart(prev => {
       // Multi-Vendor Check
       if (prev.length > 0 && prev[0].vendorId !== product.vendorId) {
-        const confirm = window.confirm("Keranjang hanya bisa memuat produk dari satu toko. Ganti toko dan hapus keranjang saat ini?");
+        const confirm = window.confirm('Keranjang hanya bisa memuat produk dari satu toko. Ganti toko dan hapus keranjang saat ini?');
         if (confirm) {
           return [{ ...product, qty: 1 }];
         } else {
@@ -187,41 +248,71 @@ export default function App() {
           vendorId: currentVendor.id,
           customer: name,
           total: finalTotal,
-          items: cart.map(i => ({ ...i, finalPrice: i.discountPrice || i.price })), // Store snapshot of price
+          items: cart.map(i => ({ ...i, finalPrice: i.discountPrice || i.price })),
           status: 'pending',
           voucherCode: voucher ? voucher.code : null,
           discount: discountValue || 0
         })
       });
     } catch (err) {
-      console.error("Failed to create order:", err);
-      alert("Gagal membuat pesanan di sistem, tapi akan lanjut ke WA.");
+      console.error('Failed to create order:', err);
+      alert('Gagal membuat pesanan di sistem, tapi akan lanjut ke WA.');
     }
 
     // Clear & Close
     setCart([]);
     setIsCartOpen(false);
 
-    // Redirect
-    let phone = currentVendor.whatsapp || "6281234567890"; // Fallback demo phone
-    // Strip non-numeric chars first
+    // Redirect ke WA
+    let phone = currentVendor.whatsapp || '6281234567890';
     phone = phone.replace(/\D/g, '');
     if (phone.startsWith('0')) phone = '62' + phone.slice(1);
-
-    // Use window.open for better mobile support or fallback
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
   };
+
+  // ── Floating Cart Button (reusable) ─────────────────────────────────────
+  const FloatingCart = () => cart.length > 0 && !isCartOpen ? (
+    <div className="fixed bottom-6 left-0 right-0 px-4 flex justify-center z-40 pointer-events-none">
+      <button
+        onClick={() => setIsCartOpen(true)}
+        className="bg-primary hover:bg-primary-dark text-white pl-4 pr-6 py-3 rounded-full shadow-xl shadow-blue-900/30 flex items-center gap-3 transition-transform hover:scale-105 pointer-events-auto"
+      >
+        <div className="bg-white/20 px-2 py-0.5 rounded text-sm font-bold">
+          {cart.reduce((a, b) => a + b.qty, 0)}
+        </div>
+        <span className="font-bold text-sm">Lihat Keranjang</span>
+        <ShoppingBag size={18} />
+      </button>
+    </div>
+  ) : null;
+
+  const CartLayer = () => (
+    <CartSheet
+      isOpen={isCartOpen}
+      onClose={() => setIsCartOpen(false)}
+      cart={cart}
+      vendor={currentVendor}
+      onCheckout={handleCheckout}
+      onUpdateQty={handleUpdateQty}
+      onRemoveItem={handleRemoveItem}
+      onClearCart={handleClearCart}
+    />
+  );
+
+  const VendorView = ({ onBack }) => (
+    <Vendor
+      vendor={currentVendor}
+      products={products}
+      onBack={onBack}
+      onAddToCart={handleAddToCart}
+      cart={cart}
+    />
+  );
 
   const MainView = () => (
     <div className="antialiased text-gray-800">
       {currentVendor ? (
-        <Vendor
-          vendor={currentVendor}
-          products={products}
-          onBack={() => setCurrentVendor(null)}
-          onAddToCart={handleAddToCart}
-          cart={cart}
-        />
+        <VendorView onBack={() => setCurrentVendor(null)} />
       ) : (
         <Home
           vendors={vendors}
@@ -230,229 +321,85 @@ export default function App() {
           onStationChange={handleStationChange}
         />
       )}
-
-      {/* Floating Cart Button */}
-      {cart.length > 0 && !isCartOpen && (
-        <div className="fixed bottom-6 left-0 right-0 px-4 flex justify-center z-40 pointer-events-none">
-          <button
-            onClick={() => setIsCartOpen(true)}
-            className="bg-primary hover:bg-primary-dark text-white pl-4 pr-6 py-3 rounded-full shadow-xl shadow-blue-900/30 flex items-center gap-3 transition-transform hover:scale-105 pointer-events-auto"
-          >
-            <div className="bg-white/20 px-2 py-0.5 rounded text-sm font-bold">
-              {cart.reduce((a, b) => a + b.qty, 0)}
-            </div>
-            <span className="font-bold text-sm">Lihat Keranjang</span>
-            <ShoppingBag size={18} />
-          </button>
-        </div>
-      )}
-
-      <CartSheet
-        isOpen={isCartOpen}
-        onClose={() => setIsCartOpen(false)}
-        cart={cart}
-        vendor={currentVendor}
-        onCheckout={handleCheckout}
-        onUpdateQty={handleUpdateQty}
-        onRemoveItem={handleRemoveItem}
-        onClearCart={handleClearCart}
-      />
-
-
+      <FloatingCart />
+      <CartLayer />
     </div>
   );
 
   return (
     <Routes>
       <Route path="/" element={<MainView />} />
+
+      {/* ── /kuliner — menerima vendors yang sudah pre-sorted ── */}
       <Route path="/kuliner" element={
         <div className="antialiased text-gray-800">
           {currentVendor ? (
-            <Vendor
-              vendor={currentVendor}
-              products={products}
-              onBack={() => { setCurrentVendor(null); }}
-              onAddToCart={handleAddToCart}
-              cart={cart}
-            />
+            <VendorView onBack={() => setCurrentVendor(null)} />
           ) : (
             <Kuliner
-              vendors={vendors}
+              vendors={vendorsByCategory.kuliner}
+              allVendors={vendors}
+              preSorted={vendorsByCategory._loaded}
               onSelectVendor={setCurrentVendor}
             />
           )}
-          {cart.length > 0 && !isCartOpen && (
-            <div className="fixed bottom-6 left-0 right-0 px-4 flex justify-center z-40 pointer-events-none">
-              <button
-                onClick={() => setIsCartOpen(true)}
-                className="bg-primary hover:bg-primary-dark text-white pl-4 pr-6 py-3 rounded-full shadow-xl shadow-blue-900/30 flex items-center gap-3 transition-transform hover:scale-105 pointer-events-auto"
-              >
-                <div className="bg-white/20 px-2 py-0.5 rounded text-sm font-bold">
-                  {cart.reduce((a, b) => a + b.qty, 0)}
-                </div>
-                <span className="font-bold text-sm">Lihat Keranjang</span>
-                <ShoppingBag size={18} />
-              </button>
-            </div>
-          )}
-          <CartSheet
-            isOpen={isCartOpen}
-            onClose={() => setIsCartOpen(false)}
-            cart={cart}
-            vendor={currentVendor}
-            onCheckout={handleCheckout}
-            onUpdateQty={handleUpdateQty}
-            onRemoveItem={handleRemoveItem}
-            onClearCart={handleClearCart}
-          />
-
+          <FloatingCart />
+          <CartLayer />
         </div>
       } />
+
+      {/* ── /ngopi — menerima vendors yang sudah pre-sorted ── */}
       <Route path="/ngopi" element={
         <div className="antialiased text-gray-800">
           {currentVendor ? (
-            <Vendor
-              vendor={currentVendor}
-              products={products}
-              onBack={() => { setCurrentVendor(null); }}
-              onAddToCart={handleAddToCart}
-              cart={cart}
-            />
+            <VendorView onBack={() => setCurrentVendor(null)} />
           ) : (
             <Ngopi
-              vendors={vendors}
+              vendors={vendorsByCategory.ngopi}
+              allVendors={vendors}
+              preSorted={vendorsByCategory._loaded}
               onSelectVendor={setCurrentVendor}
             />
           )}
-          {cart.length > 0 && !isCartOpen && (
-            <div className="fixed bottom-6 left-0 right-0 px-4 flex justify-center z-40 pointer-events-none">
-              <button
-                onClick={() => setIsCartOpen(true)}
-                className="bg-primary hover:bg-primary-dark text-white pl-4 pr-6 py-3 rounded-full shadow-xl shadow-blue-900/30 flex items-center gap-3 transition-transform hover:scale-105 pointer-events-auto"
-              >
-                <div className="bg-white/20 px-2 py-0.5 rounded text-sm font-bold">
-                  {cart.reduce((a, b) => a + b.qty, 0)}
-                </div>
-                <span className="font-bold text-sm">Lihat Keranjang</span>
-                <ShoppingBag size={18} />
-              </button>
-            </div>
-          )}
-          <CartSheet
-            isOpen={isCartOpen}
-            onClose={() => setIsCartOpen(false)}
-            cart={cart}
-            vendor={currentVendor}
-            onCheckout={handleCheckout}
-            onUpdateQty={handleUpdateQty}
-            onRemoveItem={handleRemoveItem}
-            onClearCart={handleClearCart}
-          />
+          <FloatingCart />
+          <CartLayer />
+        </div>
+      } />
 
-        </div>
-      } />
-      <Route path="/publik" element={
-        <div className="antialiased text-gray-800">
-          {currentVendor ? (
-            <Vendor
-              vendor={currentVendor}
-              products={products}
-              onBack={() => { setCurrentVendor(null); }}
-              onAddToCart={handleAddToCart}
-              cart={cart}
-            />
-          ) : (
-            <Publik
-              vendors={vendors}
-              onSelectVendor={setCurrentVendor}
-            />
-          )}
-          {cart.length > 0 && !isCartOpen && (
-            <div className="fixed bottom-6 left-0 right-0 px-4 flex justify-center z-40 pointer-events-none">
-              <button
-                onClick={() => setIsCartOpen(true)}
-                className="bg-primary hover:bg-primary-dark text-white pl-4 pr-6 py-3 rounded-full shadow-xl shadow-blue-900/30 flex items-center gap-3 transition-transform hover:scale-105 pointer-events-auto"
-              >
-                <div className="bg-white/20 px-2 py-0.5 rounded text-sm font-bold">
-                  {cart.reduce((a, b) => a + b.qty, 0)}
-                </div>
-                <span className="font-bold text-sm">Lihat Keranjang</span>
-                <ShoppingBag size={18} />
-              </button>
-            </div>
-          )}
-          <CartSheet
-            isOpen={isCartOpen}
-            onClose={() => setIsCartOpen(false)}
-            cart={cart}
-            vendor={currentVendor}
-            onCheckout={handleCheckout}
-            onUpdateQty={handleUpdateQty}
-            onRemoveItem={handleRemoveItem}
-            onClearCart={handleClearCart}
-          />
-
-        </div>
-      } />
-      <Route path="/wisata" element={
-        <div className="antialiased text-gray-800">
-          <Wisata />
-
-        </div>
-      } />
-      <Route path="/wisata/:id" element={
-        <div className="antialiased text-gray-800">
-          <DestinationDetail />
-        </div>
-      } />
-      <Route path="/publik/:id" element={
-        <div className="antialiased text-gray-800">
-          <DestinationDetail />
-        </div>
-      } />
+      {/* ── /atm — menerima vendors yang sudah pre-sorted ── */}
       <Route path="/atm" element={
         <div className="antialiased text-gray-800">
           {currentVendor ? (
-            <Vendor
-              vendor={currentVendor}
-              products={products}
-              onBack={() => { setCurrentVendor(null); }}
-              onAddToCart={handleAddToCart}
-              cart={cart}
-            />
+            <VendorView onBack={() => setCurrentVendor(null)} />
           ) : (
             <Atm
-              vendors={vendors}
+              vendors={vendorsByCategory.atm}
+              allVendors={vendors}
+              preSorted={vendorsByCategory._loaded}
               onSelectVendor={setCurrentVendor}
             />
           )}
-          {cart.length > 0 && !isCartOpen && (
-            <div className="fixed bottom-6 left-0 right-0 px-4 flex justify-center z-40 pointer-events-none">
-              <button
-                onClick={() => setIsCartOpen(true)}
-                className="bg-primary hover:bg-primary-dark text-white pl-4 pr-6 py-3 rounded-full shadow-xl shadow-blue-900/30 flex items-center gap-3 transition-transform hover:scale-105 pointer-events-auto"
-              >
-                <div className="bg-white/20 px-2 py-0.5 rounded text-sm font-bold">
-                  {cart.reduce((a, b) => a + b.qty, 0)}
-                </div>
-                <span className="font-bold text-sm">Lihat Keranjang</span>
-                <ShoppingBag size={18} />
-              </button>
-            </div>
-          )}
-          <CartSheet
-            isOpen={isCartOpen}
-            onClose={() => setIsCartOpen(false)}
-            cart={cart}
-            vendor={currentVendor}
-            onCheckout={handleCheckout}
-            onUpdateQty={handleUpdateQty}
-            onRemoveItem={handleRemoveItem}
-            onClearCart={handleClearCart}
-          />
-
+          <FloatingCart />
+          <CartLayer />
         </div>
       } />
+
+      <Route path="/publik" element={
+        <div className="antialiased text-gray-800">
+          {currentVendor ? (
+            <VendorView onBack={() => setCurrentVendor(null)} />
+          ) : (
+            <Publik vendors={vendors} onSelectVendor={setCurrentVendor} />
+          )}
+          <FloatingCart />
+          <CartLayer />
+        </div>
+      } />
+
+      <Route path="/wisata" element={<div className="antialiased text-gray-800"><Wisata /></div>} />
+      <Route path="/wisata/:id" element={<div className="antialiased text-gray-800"><DestinationDetail /></div>} />
+      <Route path="/publik/:id" element={<div className="antialiased text-gray-800"><DestinationDetail /></div>} />
+
       <Route path="/terms" element={<StaticPage title="Syarat & Ketentuan" pageKey="page_terms" />} />
       <Route path="/about" element={<StaticPage title="Tentang Kami" pageKey="page_about" />} />
       <Route path="/privacy" element={<StaticPage title="Kebijakan Privasi" pageKey="page_privacy" />} />

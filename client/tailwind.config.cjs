@@ -18,7 +18,10 @@ module.exports = {
                 'grey-100': '#eaeef2',
                 'grey-200': '#d0d7de',
                 'grey-300': '#afb8c1',
+                'grey-400': '#8c959f',
+                'grey-500': '#6e7781',
                 'grey-600': '#57606a',
+                'grey-700': '#424a53',
                 'highlight-blue': '#0969da',
             },
             fontFamily: {
