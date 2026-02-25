@@ -38,18 +38,40 @@ export default function Atm({ vendors, preSorted = false, onSelectVendor }) {
 
     React.useEffect(() => {
         let cancelled = false;
-        setBannersLoading(true);
+
+        // Try local cache first
+        const cachedSettings = localStorage.getItem('umkm_settings_cache');
+        if (cachedSettings) {
+            try {
+                const parsed = JSON.parse(cachedSettings);
+                if (parsed.atm_banners) {
+                    const raw = Array.isArray(parsed.atm_banners) ? parsed.atm_banners
+                        : (parsed.atm_banners.banners || []);
+                    setAtmBanners(raw.filter(b => b.image?.trim()));
+                    setBannersLoading(false);
+                }
+            } catch (e) { }
+        } else {
+            setBannersLoading(true);
+        }
+
         fetch('/api/settings')
             .then(r => r.json())
             .then(data => {
-                if (!cancelled && data.atm_banners) {
-                    const raw = Array.isArray(data.atm_banners) ? data.atm_banners
-                        : (data.atm_banners.banners || []);
-                    setAtmBanners(raw.filter(b => b.image?.trim()));
+                if (!cancelled) {
+                    if (data.atm_banners) {
+                        const raw = Array.isArray(data.atm_banners) ? data.atm_banners
+                            : (data.atm_banners.banners || []);
+                        setAtmBanners(raw.filter(b => b.image?.trim()));
+                    }
+                    setBannersLoading(false);
+                    try { localStorage.setItem('umkm_settings_cache', JSON.stringify(data)); } catch (e) { }
                 }
             })
-            .catch(console.error)
-            .finally(() => { if (!cancelled) setBannersLoading(false); });
+            .catch(err => {
+                console.error(err);
+                if (!cancelled) setBannersLoading(false);
+            });
         return () => { cancelled = true; };
     }, []);
 
@@ -141,7 +163,7 @@ export default function Atm({ vendors, preSorted = false, onSelectVendor }) {
             </div>
 
             {/* Vendor List */}
-            <div className="flex flex-col gap-[10px] px-[10px] pb-[20px]">
+            <div className="flex flex-col gap-[10px] px-[10px] pb-[20px] mt-[15px]">
                 {loading ? (
                     <div className="flex items-center justify-center py-8">
                         <div className="animate-spin rounded-full h-7 w-7 border-b-2 border-primary" />

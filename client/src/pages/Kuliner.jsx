@@ -46,16 +46,37 @@ export default function Kuliner({ vendors, preSorted = false, onSelectVendor }) 
     // Fetch banners (run once)
     React.useEffect(() => {
         let cancelled = false;
-        setBannersLoading(true);
+
+        // Try local cache first for instant load
+        const cachedSettings = localStorage.getItem('umkm_settings_cache');
+        if (cachedSettings) {
+            try {
+                const parsed = JSON.parse(cachedSettings);
+                if (parsed.kuliner_banners && Array.isArray(parsed.kuliner_banners)) {
+                    setKulinerBanners(parsed.kuliner_banners);
+                    setBannersLoading(false); // Instant load
+                }
+            } catch (e) { }
+        } else {
+            setBannersLoading(true);
+        }
+
         fetch('/api/settings')
             .then(r => r.json())
             .then(data => {
-                if (!cancelled && data.kuliner_banners && Array.isArray(data.kuliner_banners)) {
-                    setKulinerBanners(data.kuliner_banners);
+                if (!cancelled) {
+                    if (data.kuliner_banners && Array.isArray(data.kuliner_banners)) {
+                        setKulinerBanners(data.kuliner_banners);
+                    }
+                    setBannersLoading(false);
+                    // Update cache silently
+                    try { localStorage.setItem('umkm_settings_cache', JSON.stringify(data)); } catch (e) { }
                 }
             })
-            .catch(console.error)
-            .finally(() => { if (!cancelled) setBannersLoading(false); });
+            .catch(err => {
+                console.error('Settings load error:', err);
+                if (!cancelled) setBannersLoading(false);
+            });
         return () => { cancelled = true; };
     }, []);
 
@@ -147,7 +168,7 @@ export default function Kuliner({ vendors, preSorted = false, onSelectVendor }) 
             )}
 
             {/* Vendor List */}
-            <div className="flex flex-col gap-[10px] px-[10px] pb-[20px]">
+            <div className="flex flex-col gap-[10px] px-[10px] pb-[20px] mt-[15px]">
                 {loading ? (
                     <div className="flex items-center justify-center py-8">
                         <div className="animate-spin rounded-full h-7 w-7 border-b-2 border-primary" />

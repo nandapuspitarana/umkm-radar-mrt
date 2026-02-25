@@ -36,16 +36,36 @@ export default function Ngopi({ vendors, preSorted = false, onSelectVendor }) {
 
     React.useEffect(() => {
         let cancelled = false;
-        setBannersLoading(true);
+
+        // Try local cache first
+        const cachedSettings = localStorage.getItem('umkm_settings_cache');
+        if (cachedSettings) {
+            try {
+                const parsed = JSON.parse(cachedSettings);
+                if (parsed.ngopi_banners && Array.isArray(parsed.ngopi_banners)) {
+                    setNgopiBanners(parsed.ngopi_banners);
+                    setBannersLoading(false);
+                }
+            } catch (e) { }
+        } else {
+            setBannersLoading(true);
+        }
+
         fetch('/api/settings')
             .then(r => r.json())
             .then(data => {
-                if (!cancelled && data.ngopi_banners && Array.isArray(data.ngopi_banners)) {
-                    setNgopiBanners(data.ngopi_banners);
+                if (!cancelled) {
+                    if (data.ngopi_banners && Array.isArray(data.ngopi_banners)) {
+                        setNgopiBanners(data.ngopi_banners);
+                    }
+                    setBannersLoading(false);
+                    try { localStorage.setItem('umkm_settings_cache', JSON.stringify(data)); } catch (e) { }
                 }
             })
-            .catch(console.error)
-            .finally(() => { if (!cancelled) setBannersLoading(false); });
+            .catch(err => {
+                console.error(err);
+                if (!cancelled) setBannersLoading(false);
+            });
         return () => { cancelled = true; };
     }, []);
 
@@ -134,7 +154,7 @@ export default function Ngopi({ vendors, preSorted = false, onSelectVendor }) {
             )}
 
             {/* Vendor List */}
-            <div className="flex flex-col gap-[10px] px-[10px] pb-[20px]">
+            <div className="flex flex-col gap-[10px] px-[10px] pb-[20px] mt-[15px]">
                 {loading ? (
                     <div className="flex items-center justify-center py-8">
                         <div className="animate-spin rounded-full h-7 w-7 border-b-2 border-primary" />

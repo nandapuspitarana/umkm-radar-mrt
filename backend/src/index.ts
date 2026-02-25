@@ -2000,49 +2000,6 @@ app.post('/api/seed-homepage-settings', async (c) => {
 });
 
 
-// 6. Settings API
-app.get('/api/settings', async (c) => {
-    try {
-        const result = await db.select().from(settings);
-        // Transform to object for easier consumption
-        const settingsObj = result.reduce((acc: any, curr) => {
-            acc[curr.key] = curr.value;
-            return acc;
-        }, {});
-        return c.json(settingsObj);
-    } catch (error) {
-        return c.json({ error: 'Failed to fetch settings' }, 500);
-    }
-});
-
-app.post('/api/settings', async (c) => {
-    try {
-        const body = await c.req.json();
-        const results = [];
-
-        // Upsert each key
-        for (const [key, value] of Object.entries(body)) {
-            // Check if exists
-            const existing = await db.select().from(settings).where(eq(settings.key, key));
-
-            if (existing.length > 0) {
-                const updated = await db.update(settings)
-                    .set({ value: value as any })
-                    .where(eq(settings.key, key))
-                    .returning();
-                results.push(updated[0]);
-            } else {
-                const inserted = await db.insert(settings).values({ key, value: value as any }).returning();
-                results.push(inserted[0]);
-            }
-        }
-
-        return c.json(results);
-    } catch (error) {
-        console.error(error);
-        return c.json({ error: 'Failed to update settings' }, 500);
-    }
-});
 // 7. Pickup Order by Code
 app.post('/api/orders/pickup', async (c) => {
     try {
@@ -2428,6 +2385,16 @@ app.post('/api/navigation/reorder', async (c) => {
 // Get all settings
 app.get('/api/settings', async (c) => {
     try {
+        const cacheKey = 'settings_all';
+        try {
+            const cached = await redis.get(cacheKey);
+            if (cached) {
+                return c.json(JSON.parse(cached));
+            }
+        } catch (redisError) {
+            console.warn('Redis settings get error:', redisError);
+        }
+
         const result = await db.select().from(settings);
 
         // Transform to a more usable format
@@ -2442,6 +2409,12 @@ app.get('/api/settings', async (c) => {
                 settingsObj[setting.key] = setting.value;
             }
         });
+
+        try {
+            await redis.set(cacheKey, JSON.stringify(settingsObj), 'EX', 3600);
+        } catch (redisError) {
+            console.warn('Redis settings set error:', redisError);
+        }
 
         return c.json(settingsObj);
     } catch (error) {
@@ -2488,10 +2461,12 @@ app.put('/api/settings/:key', async (c) => {
                 .set({ value })
                 .where(eq(settings.key, key))
                 .returning();
+            await redis.del('settings_all');
             return c.json(result[0]);
         } else {
             // Create new
             const result = await db.insert(settings).values({ key, value }).returning();
+            await redis.del('settings_all');
             return c.json(result[0]);
         }
     } catch (error) {
