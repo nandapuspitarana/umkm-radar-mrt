@@ -264,7 +264,12 @@ app.get('/api/image/*', async (c) => {
 app.get('/api/raw/*', async (c) => {
     try {
         const path = c.req.path.replace('/api/raw/', '');
-        const cleanPath = path.startsWith('/') ? path.substring(1) : path;
+        let cleanPath = path.startsWith('/') ? path.substring(1) : path;
+
+        // Strip "uploads/" prefix if present
+        if (cleanPath.startsWith('uploads/')) {
+            cleanPath = cleanPath.replace(/^uploads\//, '');
+        }
 
         // Internal configuration (localhost for development)
         const minioHost = (process.env.MINIO_URL || 'http://localhost:9000').replace(/\/$/, '');
@@ -2420,6 +2425,46 @@ app.get('/api/settings', async (c) => {
     } catch (error) {
         console.error('Settings fetch error:', error);
         return c.json({ error: 'Failed to fetch settings' }, 500);
+    }
+});
+
+// Update multiple settings (Bulk Update)
+app.post('/api/settings', async (c) => {
+    try {
+        const body = await c.req.json();
+        const results = [];
+
+        // Iterate over keys in body
+        for (const key of Object.keys(body)) {
+            const value = body[key];
+
+            // Check if setting exists
+            const existing = await db.select().from(settings).where(eq(settings.key, key)).limit(1);
+
+            let result;
+            if (existing.length > 0) {
+                // Update existing
+                const updated = await db.update(settings)
+                    .set({ value: JSON.stringify(value) }) // Ensure value is stringified if object
+                    .where(eq(settings.key, key))
+                    .returning();
+                result = updated[0];
+            } else {
+                // Create new
+                const inserted = await db.insert(settings).values({
+                    key,
+                    value: JSON.stringify(value) // Ensure value is stringified if object
+                }).returning();
+                result = inserted[0];
+            }
+            results.push(result);
+        }
+
+        await redis.del('settings_all');
+        return c.json({ success: true, results });
+    } catch (error) {
+        console.error('Settings bulk update error:', error);
+        return c.json({ error: 'Failed to update settings' }, 500);
     }
 });
 

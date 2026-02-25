@@ -81,7 +81,7 @@ export async function initializeStorage() {
  * @param {string} contentType - MIME type
  * @returns {Promise<string>} - Public URL of uploaded file
  */
-export async function uploadToMinIO(fileBuffer, fileName, folder = 'general', contentType = 'application/octet-stream') {
+export async function uploadToMinIO(fileBuffer: Buffer, fileName: string, folder: string = 'general', contentType: string = 'application/octet-stream') {
     try {
         const objectName = folder ? `${folder}/${fileName}` : fileName;
 
@@ -111,7 +111,7 @@ export async function uploadToMinIO(fileBuffer, fileName, folder = 'general', co
  * Delete file from MinIO
  * @param {string} objectName - Object name (path) in bucket
  */
-export async function deleteFromMinIO(objectName) {
+export async function deleteFromMinIO(objectName: string) {
     try {
         await minioClient.removeObject(BUCKET_NAME, objectName);
         console.log(`Deleted: ${objectName}`);
@@ -126,7 +126,7 @@ export async function deleteFromMinIO(objectName) {
  * @param {string} objectName - Object name in bucket
  * @param {number} expirySeconds - URL expiry time in seconds (default: 1 hour)
  */
-export async function getPresignedUrl(objectName, expirySeconds = 3600) {
+export async function getPresignedUrl(objectName: string, expirySeconds: number = 3600) {
     try {
         const url = await minioClient.presignedGetObject(BUCKET_NAME, objectName, expirySeconds);
         return url;

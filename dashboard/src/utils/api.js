@@ -85,6 +85,11 @@ export function getImageUrl(path, options = {}) {
     // Clean leading slash
     cleanPath = cleanPath.startsWith('/') ? cleanPath.substring(1) : cleanPath;
 
+    // Strip "uploads/" prefix
+    if (cleanPath.startsWith('uploads/')) {
+        cleanPath = cleanPath.replace(/^uploads\//, '');
+    }
+
     // Default options
     const {
         resize = 'fit',
@@ -127,6 +132,11 @@ export function getAssetUrl(path) {
 
     // Clean leading slash
     cleanPath = cleanPath.startsWith('/') ? cleanPath.substring(1) : cleanPath;
+
+    // Strip "uploads/" prefix
+    if (cleanPath.startsWith('uploads/')) {
+        cleanPath = cleanPath.replace(/^uploads\//, '');
+    }
 
     // Use relative path for Vite proxy
     return `/api/raw/${cleanPath}`;

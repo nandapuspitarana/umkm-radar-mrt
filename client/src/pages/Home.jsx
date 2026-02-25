@@ -218,8 +218,8 @@ export default function Home({ vendors, onSelectVendor, stationCategory = 'Senay
             onSearch={setSearchQuery}
         >
             {/* Story Banners */}
-            <div className="overflow-x-auto no-scrollbar pt-[10px] px-[10px]">
-                <div className="flex gap-[5px] pr-[10px]">
+            <div className="overflow-x-auto no-scrollbar pt-2.5 px-2.5 pb-1.5">
+                <div className="flex gap-1.5 pr-2.5">
                     {/* Loading Skeleton */}
                     {bannersLoading && [1, 2, 3].map((i) => (
                         <div

@@ -3,17 +3,17 @@ import { MapPin } from 'lucide-react';
 
 export default function ContentSection({ title, children }) {
     return (
-        <div className="flex flex-col gap-[10px] w-full">
-            {/* Section Header - Figma matching */}
-            <div className="flex gap-[5px] items-center pl-[20px] pr-[10px] pt-[10px]">
-                <h3 className="font-bold text-[15px] capitalize text-black leading-normal">
+        <div className="py-1.5 pr-2.5 w-full">
+            {/* Section Header - Figma matching (like Publik) */}
+            <div className="flex items-center gap-1.5 px-5 pt-2.5 pb-2">
+                <h3 className="font-bold text-[15px] capitalize text-black leading-normal flex-1">
                     {title}
                 </h3>
             </div>
 
-            {/* Horizontal Scroll Container - Figma matching */}
+            {/* Horizontal Scroll Container - Figma matching (like Publik) */}
             <div className="overflow-x-auto no-scrollbar">
-                <div className="flex gap-[5px] px-[10px]">
+                <div className="flex gap-1.5 px-2.5">
                     {children}
                     {/* Right margin element */}
                     <div className="w-[5px] h-[67px] flex-shrink-0" />

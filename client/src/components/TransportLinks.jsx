@@ -30,11 +30,12 @@ export default function TransportLinks() {
     // Loading skeleton
     if (loading) {
         return (
-            <div className="flex flex-col gap-[10px] w-full px-2.5">
-                <div className="px-2.5 pt-2.5">
+            <div className="py-1.5 pr-2.5 w-full">
+                {/* Section Header */}
+                <div className="flex items-center gap-1.5 px-5 pt-2.5 pb-2">
                     <div className="h-4 w-32 bg-grey-200 rounded animate-pulse" />
                 </div>
-                <div className="flex flex-col gap-[5px] max-w-[500px]">
+                <div className="flex flex-col gap-[5px] max-w-[500px] px-2.5">
                     <div className="flex gap-[5px]">
                         {[1, 2, 3].map((i) => (
                             <div key={i} className="flex-1 h-[80px] bg-grey-200 rounded-[15px] animate-pulse" />
@@ -53,13 +54,14 @@ export default function TransportLinks() {
     // Empty state - no transport links in database
     if (transportModa.length === 0) {
         return (
-            <div className="flex flex-col gap-[10px] w-full px-2.5">
-                <div className="px-2.5 pt-2.5">
-                    <h3 className="font-bold text-[15px] capitalize text-black">
+            <div className="py-1.5 pr-2.5 w-full">
+                {/* Section Header */}
+                <div className="flex items-center gap-1.5 px-5 pt-2.5 pb-2">
+                    <h3 className="font-bold text-[15px] capitalize text-black leading-normal flex-1">
                         lanjutkan perjalanan
                     </h3>
                 </div>
-                <div className="bg-grey-200 rounded-[15px] p-6 text-center text-grey-400">
+                <div className="bg-grey-200 rounded-[15px] p-6 text-center text-grey-400 mx-2.5">
                     <p className="text-sm">Belum ada transport links.</p>
                     <p className="text-xs">Kelola di Admin Dashboard → Settings</p>
                 </div>
@@ -68,16 +70,16 @@ export default function TransportLinks() {
     }
 
     return (
-        <div className="flex flex-col gap-[10px] w-full px-2.5">
+        <div className="py-1.5 pr-2.5 w-full">
             {/* Section Header */}
-            <div className="px-2.5 pt-2.5">
-                <h3 className="font-bold text-[15px] capitalize text-black">
+            <div className="flex items-center gap-1.5 px-5 pt-2.5 pb-2">
+                <h3 className="font-bold text-[15px] capitalize text-black leading-normal flex-1">
                     lanjutkan perjalanan
                 </h3>
             </div>
 
             {/* Transport Links Container */}
-            <div className="flex flex-col gap-[5px] max-w-[500px]">
+            <div className="flex flex-col gap-[5px] max-w-[500px] px-2.5">
                 {/* Top row - 3 items, h-[80px] */}
                 {topRow.length > 0 && (
                     <div className="flex gap-[5px]">
