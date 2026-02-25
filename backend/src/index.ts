@@ -846,9 +846,24 @@ app.delete('/api/vendors/:id', async (c) => {
         const oldResult = await db.select().from(vendors).where(eq(vendors.id, parseInt(id)));
         const oldData = oldResult[0];
 
-        // Delete all products associated with this vendor
-        await db.delete(products).where(eq(products.vendorId, parseInt(id)));
-        await db.delete(vendors).where(eq(vendors.id, parseInt(id)));
+        if (!oldData) {
+            return c.json({ error: 'Vendor not found' }, 404);
+        }
+
+        const vendorId = parseInt(id);
+
+        // Safely cascade/nullify related records to prevent foreign key errors
+        // 1. Delete associated products
+        await db.delete(products).where(eq(products.vendorId, vendorId));
+        // 2. Unlink vouchers (vouchers.vendorId is nullable)
+        await db.update(vouchers).set({ vendorId: null }).where(eq(vouchers.vendorId, vendorId));
+        // 3. Unlink users (users.vendorId is nullable)
+        await db.update(users).set({ vendorId: null }).where(eq(users.vendorId, vendorId));
+        // 4. Delete associated orders (orders.vendorId is not null, so we must delete to remove vendor)
+        await db.delete(orders).where(eq(orders.vendorId, vendorId));
+
+        // Finally, delete the vendor
+        await db.delete(vendors).where(eq(vendors.id, vendorId));
 
         if (oldData) {
             await writeAuditLog({
