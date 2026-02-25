@@ -1,5 +1,10 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+    safelist: [
+        {
+            pattern: /from-(red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-(300|400|500|600)/,
+        }
+    ],
     content: [
         "./index.html",
         "./src/**/*.{js,ts,jsx,tsx}",
