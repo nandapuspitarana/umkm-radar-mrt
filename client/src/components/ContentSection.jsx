@@ -72,11 +72,11 @@ export function ContentCard({
 
             {/* Title Container - Figma: bottom-[15px] left/right-[20px] */}
             <div className="absolute bottom-0 left-0 right-0 pb-[15px] px-[20px]">
-                <p className="text-grey-200 font-bold text-[18px] leading-normal capitalize overflow-hidden text-ellipsis">
+                <p className={`text-grey-200 leading-normal capitalize overflow-hidden text-ellipsis ${size === 'small' ? 'font-semibold text-[14px] whitespace-pre-wrap' : 'font-bold text-[18px]'}`}>
                     {title}
                 </p>
                 {subtitle && (
-                    <p className="text-grey-200 font-bold text-[18px] leading-normal capitalize">
+                    <p className={`text-grey-200 leading-normal capitalize ${size === 'small' ? 'font-semibold text-[14px]' : 'font-bold text-[18px]'}`}>
                         {subtitle}
                     </p>
                 )}

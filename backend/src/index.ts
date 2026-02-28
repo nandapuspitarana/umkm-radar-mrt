@@ -8,6 +8,7 @@ import { vendors, products, orders, settings, users, vouchers, assets, categorie
 import { eq, desc, and, sql } from 'drizzle-orm';
 import { randomBytes } from 'crypto';
 import Redis from 'ioredis';
+import { Client as ESClient } from '@elastic/elasticsearch';
 import { initializeStorage, uploadToMinIO, deleteFromMinIO, PUBLIC_ASSET_URL, BUCKET_NAME } from './storage';
 
 dotenv.config();
@@ -89,6 +90,18 @@ redis.on('error', (err) => {
 
 redis.on('connect', () => {
     console.log('✅ Redis connected successfully');
+});
+
+// Elasticsearch Connection
+const esClient = new ESClient({
+    node: process.env.ELASTICSEARCH_URL || 'http://localhost:9200',
+});
+
+esClient.ping().then(() => {
+    console.log('✅ Elasticsearch connected successfully');
+}).catch((err) => {
+    console.warn('Elasticsearch connection warning:', err.message);
+    console.warn('Continuing without Elasticsearch...');
 });
 
 // Routes
@@ -552,6 +565,77 @@ async function flushVendorCache() {
     }
 }
 
+// ==================== ELASTICSEARCH INDEX HELPER ====================
+const ES_VENDORS_INDEX = 'vendors';
+
+async function indexVendors(): Promise<void> {
+    try {
+        // Ensure index exists with proper mapping
+        const indexExists = await esClient.indices.exists({ index: ES_VENDORS_INDEX });
+        if (!indexExists.body) {
+            await esClient.indices.create({
+                index: ES_VENDORS_INDEX,
+                body: {
+                    mappings: {
+                        properties: {
+                            id:           { type: 'integer' },
+                            name:         { type: 'text', analyzer: 'standard' },
+                            description:  { type: 'text', analyzer: 'standard' },
+                            address:      { type: 'text', analyzer: 'standard' },
+                            category:     { type: 'keyword' },
+                            locationTags: { type: 'text', analyzer: 'standard' },
+                            status:       { type: 'keyword' },
+                            rating:       { type: 'float' },
+                            lat:          { type: 'float' },
+                            lng:          { type: 'float' },
+                        },
+                    },
+                },
+            });
+            console.log(`[ES] Created index: ${ES_VENDORS_INDEX}`);
+        }
+
+        // Fetch all vendors from DB
+        const allVendors = await db.select().from(vendors);
+
+        if (allVendors.length === 0) {
+            console.log('[ES] No vendors to index.');
+            return;
+        }
+
+        // Bulk index
+        const body = allVendors.flatMap((v) => [
+            { index: { _index: ES_VENDORS_INDEX, _id: String(v.id) } },
+            {
+                id:           v.id,
+                name:         v.name,
+                description:  v.description || '',
+                address:      v.address || '',
+                category:     v.category || '',
+                locationTags: v.locationTags || '',
+                status:       v.status || '',
+                rating:       v.rating || 0,
+                lat:          v.lat,
+                lng:          v.lng,
+                whatsapp:     v.whatsapp || '',
+                image:        v.image || '',
+                schedule:     v.schedule,
+            },
+        ]);
+
+        const { body: bulkResponse } = await esClient.bulk({ refresh: true, body });
+
+        if (bulkResponse.errors) {
+            const errorItems = bulkResponse.items.filter((item: any) => item.index?.error);
+            console.error(`[ES] Bulk indexing had ${errorItems.length} errors:`, JSON.stringify(errorItems.slice(0, 3)));
+        } else {
+            console.log(`[ES] Successfully indexed ${allVendors.length} vendors.`);
+        }
+    } catch (err) {
+        console.warn('[ES] indexVendors() failed (continuing):', (err as Error).message);
+    }
+}
+
 // ==================== CATEGORY SLUG MAPPING ====================
 // Maps category text values → page slug (for grouping)
 function getCategorySlug(v: { category?: string | null; categoryId?: number | null }): string {
@@ -572,6 +656,100 @@ function getCategorySlug(v: { category?: string | null; categoryId?: number | nu
     ) return 'kuliner';
     return 'lainnya';
 }
+
+// ==================== ELASTICSEARCH SEARCH ENDPOINT ====================
+/**
+ * GET /api/vendors/search?q=<term>&category=<cat>&station=<station>
+ *
+ * Uses Elasticsearch full-text search when a query term (q) is provided.
+ * Falls back to Postgres when ES is unavailable or q is empty.
+ */
+app.get('/api/vendors/search', async (c) => {
+    const q        = (c.req.query('q') || '').trim();
+    const category = (c.req.query('category') || '').trim();
+    const station  = (c.req.query('station') || '').trim();
+
+    // If no search term, fall back to a simple DB query
+    if (!q) {
+        try {
+            const result = await db.select().from(vendors);
+            return c.json(result);
+        } catch (err) {
+            return c.json({ error: 'Failed to fetch vendors' }, 500);
+        }
+    }
+
+    try {
+        // Build ES query
+        const mustClauses: any[] = [
+            {
+                multi_match: {
+                    query:  q,
+                    fields: ['name^3', 'description^2', 'address', 'locationTags^2', 'category'],
+                    type:   'best_fields',
+                    fuzziness: 'AUTO',
+                },
+            },
+        ];
+
+        const filterClauses: any[] = [];
+        if (category) {
+            filterClauses.push({ term: { category } });
+        }
+        if (station) {
+            filterClauses.push({ match: { locationTags: station } });
+        }
+
+        const esQuery: any = {
+            query: {
+                bool: {
+                    must:   mustClauses,
+                    ...(filterClauses.length > 0 ? { filter: filterClauses } : {}),
+                },
+            },
+            size: 50,
+        };
+
+        const { body: esResult } = await esClient.search({
+            index: ES_VENDORS_INDEX,
+            body:  esQuery,
+        });
+
+        const hits = esResult.hits?.hits ?? [];
+        const vendorIds: number[] = hits.map((h: any) => Number(h._id)).filter((id: number) => !isNaN(id));
+
+        if (vendorIds.length === 0) {
+            return c.json([]);
+        }
+
+        // Fetch full vendor rows from DB to keep data fresh
+        const dbVendors = await db.select().from(vendors);
+        // Preserve ES relevance order
+        const idOrder = new Map(vendorIds.map((id, i) => [id, i]));
+        const matched = dbVendors
+            .filter((v) => idOrder.has(v.id))
+            .sort((a, b) => (idOrder.get(a.id) ?? 999) - (idOrder.get(b.id) ?? 999));
+
+        return c.json(matched.map((v) => ({ ...v, location: { lat: v.lat, lng: v.lng } })));
+    } catch (esErr) {
+        console.warn('[ES] Search failed, falling back to Postgres:', (esErr as Error).message);
+        // Graceful fallback: Postgres ILIKE search
+        try {
+            const allVendors = await db.select().from(vendors);
+            const lower = q.toLowerCase();
+            const filtered = allVendors.filter((v) =>
+                (v.name || '').toLowerCase().includes(lower) ||
+                (v.description || '').toLowerCase().includes(lower) ||
+                (v.address || '').toLowerCase().includes(lower) ||
+                (v.locationTags || '').toLowerCase().includes(lower) ||
+                (v.category || '').toLowerCase().includes(lower)
+            );
+            return c.json(filtered.map((v) => ({ ...v, location: { lat: v.lat, lng: v.lng } })));
+        } catch (pgErr) {
+            return c.json({ error: 'Search failed' }, 500);
+        }
+    }
+});
 
 // 1. Get All Vendors (Cached, with optional station-based sorting)
 app.get('/api/vendors', async (c) => {
@@ -625,7 +803,7 @@ app.get('/api/vendors', async (c) => {
 });
 
 /**
- * GET /api/vendors/grouped?station=Senayan+Mastercard
+ * GET /api/vendors/grouped?station=Blok+M
  * 
  * Returns vendors pre-grouped by category (kuliner/ngopi/atm/lainnya),
  * sorted: station-matching vendors first, others second.
@@ -1186,20 +1364,20 @@ app.post('/api/seed', async (c) => {
         return c.json({ message: 'Users seeded for existing vendors' });
     }
 
-    // Seed Vendors based on Figma design - Kuliner near MRT Senayan
+    // Seed Vendors based on Figma design - Kuliner near MRT Blok M
     const vendorData = [
         {
-            name: "Warung Betawi Babeh Patal Senayan",
+            name: "Warung Betawi Babeh Patal Blok M",
             lat: -6.2273,
             lng: 106.8021,
             whatsapp: "6281234567890",
-            address: "Jalan Patal Senayan No. 7",
+            address: "Jalan Patal Blok M No. 7",
             image: "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=400&h=400&fit=crop",
             schedule: { days: ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"], open: "07:00", close: "12:00" },
             status: "approved",
             category: "Kuliner",
             rating: 4.8,
-            locationTags: "Dekat MRT Senayan, Patal Senayan",
+            locationTags: "Dekat MRT Blok M, Patal Blok M",
             description: "Nasi uduk, Ketupat sayur, Lontong, Ketan, Gorengan"
         },
         {
@@ -1213,7 +1391,7 @@ app.post('/api/seed', async (c) => {
             status: "approved",
             category: "Kuliner",
             rating: 4.7,
-            locationTags: "Dekat MRT Senayan",
+            locationTags: "Dekat MRT Blok M",
             description: "Nasi uduk, Ketupat sayur, Lontong, Ketan, Gorengan"
         },
         {
@@ -1227,21 +1405,21 @@ app.post('/api/seed', async (c) => {
             status: "approved",
             category: "Kuliner",
             rating: 4.9,
-            locationTags: "Dekat MRT Senayan",
+            locationTags: "Dekat MRT Blok M",
             description: "Ketupat padang, gorengan, kripik, bubur kampiun"
         },
         {
-            name: "Mie Ayam Gaul Senayan",
+            name: "Mie Ayam Gaul Blok M",
             lat: -6.2280,
             lng: 106.8028,
             whatsapp: "6281234567893",
-            address: "Area Sudirman, arah pintu FX Sudirman dari MRT Senayan",
+            address: "Area Sudirman, arah pintu FX Sudirman dari MRT Blok M",
             image: "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=400&h=400&fit=crop",
             schedule: { days: ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"], open: "06:00", close: "16:00" },
             status: "approved",
             category: "Kuliner",
             rating: 4.6,
-            locationTags: "FX Sudirman, MRT Senayan",
+            locationTags: "FX Sudirman, MRT Blok M",
             description: "Mie Ayam toping lengkap"
         },
         {
@@ -1255,7 +1433,7 @@ app.post('/api/seed', async (c) => {
             status: "approved",
             category: "Kuliner",
             rating: 4.5,
-            locationTags: "FX Sudirman, MRT Senayan",
+            locationTags: "FX Sudirman, MRT Blok M",
             description: "Bubur biasa & spesial. Topping sate, telur, ampela, usus, ati"
         },
         {
@@ -1263,13 +1441,13 @@ app.post('/api/seed', async (c) => {
             lat: -6.2282,
             lng: 106.8022,
             whatsapp: "6281234567895",
-            address: "Koridor Sudirman–Senayan, dekat akses pejalan kaki MRT",
+            address: "Koridor Sudirman–Blok M, dekat akses pejalan kaki MRT",
             image: "https://images.unsplash.com/photo-1555126634-323283e090fa?w=400&h=400&fit=crop",
             schedule: { days: ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"], open: "06:00", close: "21:00" },
             status: "approved",
             category: "Kuliner",
             rating: 4.7,
-            locationTags: "Koridor Sudirman, MRT Senayan",
+            locationTags: "Koridor Sudirman, MRT Blok M",
             description: "Bakmi & Kopi"
         },
         {
@@ -1283,7 +1461,7 @@ app.post('/api/seed', async (c) => {
             status: "approved",
             category: "Convenience Store",
             rating: 4.3,
-            locationTags: "Dekat MRT Senayan",
+            locationTags: "Dekat MRT Blok M",
             description: "Roti tawar & Isi, onigiri, Sosis, Salad buah"
         },
         {
@@ -1297,7 +1475,7 @@ app.post('/api/seed', async (c) => {
             status: "approved",
             category: "Convenience Store",
             rating: 4.4,
-            locationTags: "Dekat MRT Senayan",
+            locationTags: "Dekat MRT Blok M",
             description: "Roti tawar & Isi, onigiri, Sosis, Salad buah"
         },
         {
@@ -1311,7 +1489,7 @@ app.post('/api/seed', async (c) => {
             status: "approved",
             category: "Convenience Store",
             rating: 4.2,
-            locationTags: "Dekat MRT Senayan",
+            locationTags: "Dekat MRT Blok M",
             description: "Roti tawar & Isi, onigiri, Sosis, Salad buah"
         },
         // Ngopi/Coffee Shops based on Figma design
@@ -1326,7 +1504,7 @@ app.post('/api/seed', async (c) => {
             status: "approved",
             category: "Ngopi",
             rating: 4.7,
-            locationTags: "FX Sudirman, MRT Senayan",
+            locationTags: "FX Sudirman, MRT Blok M",
             description: "Es Kopi Kenangan, Kopi Susu, Snacks"
         },
         {
@@ -1340,7 +1518,7 @@ app.post('/api/seed', async (c) => {
             status: "approved",
             category: "Ngopi",
             rating: 4.6,
-            locationTags: "FX Sudirman, MRT Senayan",
+            locationTags: "FX Sudirman, MRT Blok M",
             description: "Specialty Coffee, Latte Art, Pastries"
         },
         {
@@ -1354,7 +1532,7 @@ app.post('/api/seed', async (c) => {
             status: "approved",
             category: "Ngopi",
             rating: 4.5,
-            locationTags: "FX Sudirman, MRT Senayan",
+            locationTags: "FX Sudirman, MRT Blok M",
             description: "Espresso, Frappuccino, Tea, Pastries"
         },
         {
@@ -1368,7 +1546,7 @@ app.post('/api/seed', async (c) => {
             status: "approved",
             category: "Ngopi",
             rating: 4.6,
-            locationTags: "FX Sudirman, MRT Senayan",
+            locationTags: "FX Sudirman, MRT Blok M",
             description: "Kopi Lokal, Es Kopi Susu, Single Origin"
         },
         {
@@ -1382,7 +1560,7 @@ app.post('/api/seed', async (c) => {
             status: "approved",
             category: "Ngopi",
             rating: 4.8,
-            locationTags: "Senopati, MRT Senayan",
+            locationTags: "Senopati, MRT Blok M",
             description: "Single Origin Indonesia, Manual Brew, Pour Over"
         },
         {
@@ -1396,7 +1574,7 @@ app.post('/api/seed', async (c) => {
             status: "approved",
             category: "Ngopi",
             rating: 4.5,
-            locationTags: "Senopati, MRT Senayan",
+            locationTags: "Senopati, MRT Blok M",
             description: "Specialty Coffee, Cold Brew, V60"
         },
         {
@@ -1410,7 +1588,7 @@ app.post('/api/seed', async (c) => {
             status: "approved",
             category: "Ngopi",
             rating: 4.9,
-            locationTags: "Menteng, Area Jakarta Pusat",
+            locationTags: "Menteng, Area Jakarta Selatan",
             description: "Artisan Coffee, Fresh Roasted Beans, Coffee Lab"
         },
         {
@@ -1418,13 +1596,13 @@ app.post('/api/seed', async (c) => {
             lat: -6.2265,
             lng: 106.7990,
             whatsapp: "6281234567906",
-            address: "Plaza Senayan Lt. 2",
+            address: "Plaza Blok M Lt. 2",
             image: "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=400&h=400&fit=crop",
             schedule: { days: ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"], open: "10:00", close: "21:00" },
             status: "approved",
             category: "Ngopi",
             rating: 4.7,
-            locationTags: "Plaza Senayan, MRT Senayan",
+            locationTags: "Plaza Blok M, MRT Blok M",
             description: "Specialty Coffee, Australian Style, Brunch"
         },
         {
@@ -1432,13 +1610,13 @@ app.post('/api/seed', async (c) => {
             lat: -6.2268,
             lng: 106.7992,
             whatsapp: "6281234567907",
-            address: "Plaza Senayan Lt. 1",
+            address: "Plaza Blok M Lt. 1",
             image: "https://images.unsplash.com/photo-1498804103079-a6351b050096?w=400&h=400&fit=crop",
             schedule: { days: ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"], open: "10:00", close: "21:00" },
             status: "approved",
             category: "Ngopi",
             rating: 4.6,
-            locationTags: "Plaza Senayan, MRT Senayan",
+            locationTags: "Plaza Blok M, MRT Blok M",
             description: "Espresso Based, Cold Brew, Light Snacks"
         }
     ];
@@ -1467,7 +1645,7 @@ app.post('/api/seed', async (c) => {
         { vendorId: insertedVendors[2].id, name: "Bubur Kampiun", price: 12000, category: "Bubur", image: "https://images.unsplash.com/photo-1584269600519-112d071b35e6?w=400&h=400&fit=crop", description: "Bubur manis khas Padang" },
         { vendorId: insertedVendors[2].id, name: "Gorengan Mix", price: 12000, category: "Gorengan", image: "https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?w=400&h=400&fit=crop", description: "Aneka gorengan bakwan, tahu, tempe" },
 
-        // Mie Ayam Gaul Senayan
+        // Mie Ayam Gaul Blok M
         { vendorId: insertedVendors[3].id, name: "Mie Ayam Biasa", price: 15000, category: "Mie", image: "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=400&h=400&fit=crop", description: "Mie ayam dengan bakso" },
         { vendorId: insertedVendors[3].id, name: "Mie Ayam Komplit", price: 22000, category: "Mie", image: "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=400&h=400&fit=crop", description: "Mie ayam dengan topping lengkap" },
         { vendorId: insertedVendors[3].id, name: "Mie Ayam Jumbo", price: 25000, category: "Mie", image: "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=400&h=400&fit=crop", description: "Porsi jumbo untuk yang lapar" },
@@ -1609,6 +1787,7 @@ app.post('/api/seed', async (c) => {
     ]);
 
     await redis.del('vendors_list');
+    await indexVendors();
 
     return c.json({
         message: 'Seeding completed successfully!',
@@ -1640,7 +1819,7 @@ app.post('/api/seed-ngopi', async (c) => {
             status: "approved",
             category: "Ngopi",
             rating: 4.7,
-            locationTags: "FX Sudirman, MRT Senayan",
+            locationTags: "FX Sudirman, MRT Blok M",
             description: "Es Kopi Kenangan, Kopi Susu, Snacks"
         },
         {
@@ -1654,7 +1833,7 @@ app.post('/api/seed-ngopi', async (c) => {
             status: "approved",
             category: "Ngopi",
             rating: 4.6,
-            locationTags: "FX Sudirman, MRT Senayan",
+            locationTags: "FX Sudirman, MRT Blok M",
             description: "Specialty Coffee, Latte Art, Pastries"
         },
         {
@@ -1668,7 +1847,7 @@ app.post('/api/seed-ngopi', async (c) => {
             status: "approved",
             category: "Ngopi",
             rating: 4.5,
-            locationTags: "FX Sudirman, MRT Senayan",
+            locationTags: "FX Sudirman, MRT Blok M",
             description: "Espresso, Frappuccino, Tea, Pastries"
         },
         {
@@ -1682,7 +1861,7 @@ app.post('/api/seed-ngopi', async (c) => {
             status: "approved",
             category: "Ngopi",
             rating: 4.6,
-            locationTags: "FX Sudirman, MRT Senayan",
+            locationTags: "FX Sudirman, MRT Blok M",
             description: "Kopi Lokal, Es Kopi Susu, Single Origin"
         },
         {
@@ -1696,7 +1875,7 @@ app.post('/api/seed-ngopi', async (c) => {
             status: "approved",
             category: "Ngopi",
             rating: 4.8,
-            locationTags: "Senopati, MRT Senayan",
+            locationTags: "Senopati, MRT Blok M",
             description: "Single Origin Indonesia, Manual Brew, Pour Over"
         },
         {
@@ -1710,7 +1889,7 @@ app.post('/api/seed-ngopi', async (c) => {
             status: "approved",
             category: "Ngopi",
             rating: 4.5,
-            locationTags: "Senopati, MRT Senayan",
+            locationTags: "Senopati, MRT Blok M",
             description: "Specialty Coffee, Cold Brew, V60"
         },
         {
@@ -1724,7 +1903,7 @@ app.post('/api/seed-ngopi', async (c) => {
             status: "approved",
             category: "Ngopi",
             rating: 4.9,
-            locationTags: "Menteng, Area Jakarta Pusat",
+            locationTags: "Menteng, Area Jakarta Selatan",
             description: "Artisan Coffee, Fresh Roasted Beans, Coffee Lab"
         },
         {
@@ -1732,13 +1911,13 @@ app.post('/api/seed-ngopi', async (c) => {
             lat: -6.2265,
             lng: 106.7990,
             whatsapp: "6281234567906",
-            address: "Plaza Senayan Lt. 2",
+            address: "Plaza Blok M Lt. 2",
             image: "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=400&h=400&fit=crop",
             schedule: { days: ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"], open: "10:00", close: "21:00" },
             status: "approved",
             category: "Ngopi",
             rating: 4.7,
-            locationTags: "Plaza Senayan, MRT Senayan",
+            locationTags: "Plaza Blok M, MRT Blok M",
             description: "Specialty Coffee, Australian Style, Brunch"
         },
         {
@@ -1746,13 +1925,13 @@ app.post('/api/seed-ngopi', async (c) => {
             lat: -6.2268,
             lng: 106.7992,
             whatsapp: "6281234567907",
-            address: "Plaza Senayan Lt. 1",
+            address: "Plaza Blok M Lt. 1",
             image: "https://images.unsplash.com/photo-1498804103079-a6351b050096?w=400&h=400&fit=crop",
             schedule: { days: ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"], open: "10:00", close: "21:00" },
             status: "approved",
             category: "Ngopi",
             rating: 4.6,
-            locationTags: "Plaza Senayan, MRT Senayan",
+            locationTags: "Plaza Blok M, MRT Blok M",
             description: "Espresso Based, Cold Brew, Light Snacks"
         }
     ];
@@ -1817,6 +1996,7 @@ app.post('/api/seed-ngopi', async (c) => {
     }
 
     await redis.del('vendors_list');
+    await indexVendors();
 
     return c.json({
         message: 'Ngopi vendors seeded successfully!',
@@ -1847,7 +2027,7 @@ app.post('/api/seed-atm', async (c) => {
             status: "approved",
             category: "Minimarket",
             rating: 4.4,
-            locationTags: "Area GBK, MRT Senayan",
+            locationTags: "Area GBK, MRT Blok M",
             description: "Minimarket, Snacks, Minuman"
         },
         {
@@ -1861,7 +2041,7 @@ app.post('/api/seed-atm', async (c) => {
             status: "approved",
             category: "Supermarket",
             rating: 4.5,
-            locationTags: "FX Sudirman, MRT Senayan",
+            locationTags: "FX Sudirman, MRT Blok M",
             description: "Supermarket, Groceries, Fresh Produce"
         },
         {
@@ -1875,7 +2055,7 @@ app.post('/api/seed-atm', async (c) => {
             status: "approved",
             category: "Supermarket",
             rating: 4.3,
-            locationTags: "Ratu Plaza, MRT Senayan",
+            locationTags: "Ratu Plaza, MRT Blok M",
             description: "Hypermarket, Electronics, Home Needs"
         },
         {
@@ -1883,13 +2063,13 @@ app.post('/api/seed-atm', async (c) => {
             lat: -6.2260,
             lng: 106.7995,
             whatsapp: "6281234567911",
-            address: "Plaza Senayan Lt. B1",
+            address: "Plaza Blok M Lt. B1",
             image: "https://images.unsplash.com/photo-1604719312566-8912e9227c6a?w=400&h=400&fit=crop",
             schedule: { days: ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"], open: "09:00", close: "21:00" },
             status: "approved",
             category: "Supermarket",
             rating: 4.6,
-            locationTags: "Plaza Senayan, MRT Senayan",
+            locationTags: "Plaza Blok M, MRT Blok M",
             description: "Premium Supermarket, Imported Goods"
         },
         {
@@ -1897,13 +2077,13 @@ app.post('/api/seed-atm', async (c) => {
             lat: -6.2272,
             lng: 106.7988,
             whatsapp: "6281234567912",
-            address: "Senayan City Lt. LG",
+            address: "Blok M City Lt. LG",
             image: "https://images.unsplash.com/photo-1604719312566-8912e9227c6a?w=400&h=400&fit=crop",
             schedule: { days: ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"], open: "09:00", close: "21:00" },
             status: "approved",
             category: "Supermarket",
             rating: 4.7,
-            locationTags: "Senayan City, MRT Senayan",
+            locationTags: "Blok M City, MRT Blok M",
             description: "Gourmet Food Market, Premium Products"
         }
     ];
@@ -1944,6 +2124,7 @@ app.post('/api/seed-atm', async (c) => {
     }
 
     await redis.del('vendors_list');
+    await indexVendors();
 
     return c.json({
         message: 'ATM/Minimarket vendors seeded successfully!',

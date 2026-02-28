@@ -119,7 +119,7 @@ export default function Vendor({ vendor, products, onBack, onAddToCart, cart }) 
                     {/* Distance Badge */}
                     <div className="bg-highlight-blue rounded-full px-3 py-1.5 flex items-center gap-1">
                         <span className="text-white text-[15px] font-bold lowercase">
-                            {formatDistance(userDistance)}
+                            {vendor?.distanceLabel || formatDistance(userDistance)}
                         </span>
                         <ChevronRight size={14} className="text-white" />
                     </div>

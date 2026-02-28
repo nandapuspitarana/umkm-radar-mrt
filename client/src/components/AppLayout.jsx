@@ -7,8 +7,8 @@ import CategorySidebar from './CategorySidebar';
 
 export default function AppLayout({
     children,
-    title = 'Senayan Mastercard',
-    subtitle = 'Jakarta Pusat',
+    title = 'Blok M',
+    subtitle = 'Jakarta Selatan',
     activeCategory,
     // Search props
     onSearch,

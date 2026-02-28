@@ -55,7 +55,6 @@ const ADMIN_MENU = [
         collapsible: true,
         groupKey: 'homepage',
         items: [
-            { icon: Globe, label: 'Story / Publik', path: '/publik-banner' },
             { icon: Zap, label: 'Quick Access', path: '/quick-access-banners' },
             { icon: Briefcase, label: 'WFA', path: '/wfa-banners' },
             { icon: Heart, label: 'Tempat Favorit', path: '/favorite-banners' },
@@ -68,6 +67,7 @@ const ADMIN_MENU = [
         collapsible: true,
         groupKey: 'kategori',
         items: [
+            { icon: Globe, label: 'Story / Publik', path: '/publik-banner' },
             { icon: CreditCard, label: 'ATM', path: '/atm-banners' },
             { icon: Utensils, label: 'Kuliner', path: '/kuliner-banners' },
             { icon: Coffee, label: 'Ngopi', path: '/ngopi-banners' },

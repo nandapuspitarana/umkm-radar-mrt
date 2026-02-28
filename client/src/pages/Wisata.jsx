@@ -77,7 +77,7 @@ export default function Wisata() {
     return (
         <AppLayout
             title="Tempat Wisata Jakarta"
-            subtitle="Senayan Mastercard"
+            subtitle="Blok M"
             activeCategory="wisata"
         >
             <div className="pb-6">

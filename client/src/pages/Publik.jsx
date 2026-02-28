@@ -74,7 +74,7 @@ export default function Publik() {
     return (
         <AppLayout
             title="Fasilitas Umum / Ruang Publik"
-            subtitle="Senayan Mastercard"
+            subtitle="Blok M"
             activeCategory="publik"
         >
             <div className="pb-6">

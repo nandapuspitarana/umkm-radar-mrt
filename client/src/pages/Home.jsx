@@ -36,9 +36,9 @@ const FALLBACK_REKOMEN = [
 const favoritePlaces = [
     { id: 1, image: 'https://images.unsplash.com/photo-1571068316344-75bc76f77890?w=400&h=300&fit=crop', title: 'GBK (Gelora\nBung Karno)', distance: '300 m' },
     { id: 2, image: 'https://images.unsplash.com/photo-1555529669-e69e7aa0ba9a?w=400&h=300&fit=crop', title: 'FX Sudirman', distance: '150 m' },
-    { id: 3, image: 'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?w=400&h=300&fit=crop', title: 'Plaza Senayan', distance: '700 m' },
-    { id: 4, image: 'https://images.unsplash.com/photo-1567521464027-f127ff144326?w=400&h=300&fit=crop', title: 'Senayan City', distance: '900 m' },
-    { id: 5, image: 'https://images.unsplash.com/photo-1555529669-e69e7aa0ba9a?w=400&h=300&fit=crop', title: 'Senayan Park', distance: '1.2 km' },
+    { id: 3, image: 'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?w=400&h=300&fit=crop', title: 'Plaza Blok M', distance: '700 m' },
+    { id: 4, image: 'https://images.unsplash.com/photo-1567521464027-f127ff144326?w=400&h=300&fit=crop', title: 'Blok M Square', distance: '900 m' },
+    { id: 5, image: 'https://images.unsplash.com/photo-1555529669-e69e7aa0ba9a?w=400&h=300&fit=crop', title: 'Taman Literasi Blok M', distance: '1.2 km' },
 ];
 
 // Optimized Video/Image Banner Component
@@ -115,7 +115,7 @@ function StoryBanner({ story, onClick }) {
     );
 }
 
-export default function Home({ vendors, onSelectVendor, stationCategory = 'Senayan Mastercard', onStationChange }) {
+export default function Home({ vendors, onSelectVendor, stationCategory = 'Blok M', onStationChange }) {
     const [sortedVendors, setSortedVendors] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');

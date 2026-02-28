@@ -14,7 +14,7 @@ import { ShoppingBag } from 'lucide-react';
 import StaticPage from './pages/StaticPage';
 
 // Default station - bisa diganti nanti via UI
-const DEFAULT_STATION = 'Senayan Mastercard';
+const DEFAULT_STATION = 'Blok M';
 
 export default function App() {
   const [currentVendor, setCurrentVendor] = useState(null);

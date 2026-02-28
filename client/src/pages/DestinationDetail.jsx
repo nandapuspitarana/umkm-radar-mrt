@@ -197,13 +197,13 @@ export default function DestinationDetail() {
                             <RouteStep
                                 icons={transportIcons}
                                 icon="MRT"
-                                title={nearestStation || 'Stasiun MRT Senayan Mastercard'}
+                                title={nearestStation || 'Stasiun MRT Blok M'}
                                 subtitle="posisi kamu sekarang"
                             />
                             <RouteStep
                                 icons={transportIcons}
                                 icon="MRT"
-                                title={nearestStation || 'MRT Senayan Mastercard'}
+                                title={nearestStation || 'MRT Blok M'}
                                 subtitle="Arah Bundaran HI"
                             />
                             <RouteStep

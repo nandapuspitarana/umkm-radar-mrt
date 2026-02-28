@@ -11,12 +11,12 @@ const DEFAULT_STATIONS = [
     { name: 'Blok A', line: 'NS', area: 'Jakarta Selatan' },
     { name: 'Blok M BCA', line: 'NS', area: 'Jakarta Selatan' },
     { name: 'ASEAN', line: 'NS', area: 'Jakarta Selatan' },
-    { name: 'Senayan Mastercard', line: 'NS', area: 'Jakarta Selatan' },
-    { name: 'Istora Mandiri', line: 'NS', area: 'Jakarta Pusat' },
-    { name: 'Bendungan Hilir', line: 'NS', area: 'Jakarta Pusat' },
-    { name: 'Setiabudi Astra', line: 'NS', area: 'Jakarta Pusat' },
-    { name: 'Dukuh Atas BNI', line: 'NS', area: 'Jakarta Pusat' },
-    { name: 'Bundaran HI', line: 'NS', area: 'Jakarta Pusat' },
+    { name: 'Blok M', line: 'NS', area: 'Jakarta Selatan' },
+    { name: 'Istora Mandiri', line: 'NS', area: 'Jakarta Selatan' },
+    { name: 'Bendungan Hilir', line: 'NS', area: 'Jakarta Selatan' },
+    { name: 'Setiabudi Astra', line: 'NS', area: 'Jakarta Selatan' },
+    { name: 'Dukuh Atas BNI', line: 'NS', area: 'Jakarta Selatan' },
+    { name: 'Bundaran HI', line: 'NS', area: 'Jakarta Selatan' },
 ];
 
 export default function StationCategories() {
@@ -347,7 +347,7 @@ export default function StationCategories() {
                                 </label>
                                 <input
                                     className="w-full border border-gray-200 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-                                    placeholder="e.g. Senayan Mastercard"
+                                    placeholder="e.g. Blok M"
                                     value={formData.name}
                                     onChange={e => setFormData({ ...formData, name: e.target.value })}
                                 />

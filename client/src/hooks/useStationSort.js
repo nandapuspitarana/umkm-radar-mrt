@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 
 const STATION_KEY = 'umkm_station';
-const DEFAULT_STATION = 'Senayan Mastercard';
+const DEFAULT_STATION = 'Blok M';
 
 /**
  * useStationSort — sorts vendors by active MRT station category (instant, no GPS)
