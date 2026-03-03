@@ -1,13 +1,13 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Check } from 'lucide-react';
+import { getAssetUrl } from '../utils/api';
 
-// Transport mode data
 const transportData = [
     {
         id: 1,
         name: 'TransJakarta',
-        logoType: 'tije',
+        logoType: 'TiJe',
         halte: 'Halte Bundaran Senayan',
         jarak: '150 m dari posisi kamu',
         koridor: [
@@ -22,7 +22,7 @@ const transportData = [
     {
         id: 2,
         name: 'JakLingko (Mikrotrans)',
-        logoType: 'jaklingko',
+        logoType: 'JakLingko',
         halte: 'Bus Stop Bundaran Senayan',
         jarak: '230 m dari posisi kamu',
         koridor: [
@@ -32,30 +32,47 @@ const transportData = [
     },
 ];
 
-function TijeLogo() {
+const TRANSPORT_DEFAULTS = {
+    MRT: '/assets/transport/mrt-logo.svg',
+    TiJe: '/assets/transport/tije-logo.svg',
+    JakLingko: '/assets/transport/jaklingko-logo.svg',
+    KAI: '/assets/transport/kai-commuter-logo.svg',
+    LRT: '/assets/transport/lrt-logo.svg',
+    Whoosh: '/assets/transport/whoosh-logo.svg',
+};
+
+function TransportLogo({ logoType, transportIcons }) {
+    const customPath = transportIcons?.[logoType];
+    const src = customPath ? getAssetUrl(customPath) : TRANSPORT_DEFAULTS[logoType];
+
+    const [imgSrc, setImgSrc] = useState(src);
+
+    useEffect(() => {
+        setImgSrc(src);
+    }, [src]);
+
     return (
-        <div className="w-[30px] h-[30px] rounded-full overflow-hidden shrink-0">
-            <svg viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
-                <circle cx="15" cy="15" r="15" fill="#0033A0" />
-                <path d="M7 15.5C7 15.5 9 11 15 11C21 11 23 15.5 23 15.5" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
-                <path d="M10 17.5C10 17.5 11.5 14.5 15 14.5C18.5 14.5 20 17.5 20 17.5" stroke="#E4002B" strokeWidth="2" strokeLinecap="round" />
-                <circle cx="15" cy="19" r="1.5" fill="white" />
-            </svg>
+        <div className="w-[50px] h-[50px] bg-white rounded-full overflow-hidden shrink-0 flex items-center justify-center shadow-sm">
+            {imgSrc ? (
+                <img
+                    src={imgSrc}
+                    alt={logoType}
+                    className="w-[40px] h-[40px] object-contain rounded-full"
+                    onError={() => {
+                        // Fallback to default if custom fail
+                        if (customPath && imgSrc !== TRANSPORT_DEFAULTS[logoType]) {
+                            setImgSrc(TRANSPORT_DEFAULTS[logoType]);
+                        }
+                    }}
+                />
+            ) : (
+                <span className="text-gray-400 text-xs">{logoType}</span>
+            )}
         </div>
     );
 }
 
-function JakLingkoLogo() {
-    return (
-        <div className="w-[30px] h-[30px] rounded overflow-hidden shrink-0 flex items-center justify-center">
-            <svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
-                <rect width="60" height="60" rx="8" fill="#E4002B" />
-                <text x="5" y="28" fill="white" fontSize="18" fontWeight="bold" fontFamily="Arial, sans-serif">Jak</text>
-                <text x="5" y="48" fill="white" fontSize="13" fontWeight="600" fontFamily="Arial, sans-serif">Lingko</text>
-            </svg>
-        </div>
-    );
-}
+
 
 function RouteItem({ label }) {
     return (
@@ -70,13 +87,13 @@ function RouteItem({ label }) {
     );
 }
 
-function TransportCard({ item }) {
+function TransportCard({ item, transportIcons }) {
     return (
         <div className="bg-white rounded-[20px] shadow-[0px_4px_15px_0px_rgba(0,0,0,0.20)] pb-[15px] pt-[5px] px-[5px] flex flex-col gap-[10px]">
             {/* Header: logo + nama + halte + jarak */}
             <div className="bg-grey-100 rounded-[15px] p-[5px] flex gap-[5px] items-start">
-                <div className="bg-white rounded-full h-[50px] w-[50px] flex items-center justify-center shrink-0">
-                    {item.logoType === 'tije' ? <TijeLogo /> : <JakLingkoLogo />}
+                <div className="flex items-center justify-center shrink-0">
+                    <TransportLogo logoType={item.logoType} transportIcons={transportIcons} />
                 </div>
                 <div className="flex flex-col gap-[4px] py-[5px] flex-1 min-w-0">
                     <p className="capitalize font-bold text-[18px] text-black leading-tight">{item.name}</p>
@@ -97,6 +114,18 @@ function TransportCard({ item }) {
 
 export default function TransportasiUmum() {
     const navigate = useNavigate();
+    const [transportIcons, setTransportIcons] = useState({});
+
+    useEffect(() => {
+        fetch('/api/settings')
+            .then(res => res.json())
+            .then(data => {
+                if (data.transport_icons) {
+                    setTransportIcons(data.transport_icons);
+                }
+            })
+            .catch(err => console.error('Failed to fetch transport icons:', err));
+    }, []);
 
     return (
         <div className="min-h-screen bg-grey-100 flex flex-col">
@@ -118,7 +147,7 @@ export default function TransportasiUmum() {
                             Moda Integrasi Terdekat
                         </h1>
                         <p className="font-semibold text-[13px] text-highlight-blue tracking-[-0.05px] leading-tight whitespace-nowrap overflow-hidden text-ellipsis w-full">
-                            Senayan Mastercard
+                            Blok M
                         </p>
                     </div>
 
@@ -130,7 +159,7 @@ export default function TransportasiUmum() {
             {/* Content */}
             <main className="flex-1 overflow-y-auto p-[10px] flex flex-col gap-[10px] pb-8">
                 {transportData.map((item) => (
-                    <TransportCard key={item.id} item={item} />
+                    <TransportCard key={item.id} item={item} transportIcons={transportIcons} />
                 ))}
             </main>
         </div>
