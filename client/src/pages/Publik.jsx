@@ -4,12 +4,12 @@ import { MapPin, ChevronRight } from 'lucide-react';
 import AppLayout from '../components/AppLayout';
 
 // Category mapping for display titles
-const categoryTitles = {
-    'ruang-terbuka-olahraga': 'Ruang Terbuka Dan Olahraga',
-    'mall-plaza': 'Mall & Plaza Terbuka',
-    'infrastruktur-transit': 'Infrastruktur Pejalan & Transit',
-    'sosial-keagamaan': 'Fasilitas Sosial & Keagamaan',
-};
+const targetSubcategories = [
+    'Ruang Terbuka & Olahraga',
+    'Mall & Plaza Terbuka',
+    'Infrastruktur Pejalan & Transit',
+    'Fasilitas Sosial & Keagamaan'
+];
 
 // Helper function to extract YouTube video ID
 const getYouTubeVideoId = (url) => {
@@ -60,11 +60,13 @@ export default function Publik() {
     };
 
     // Group destinations by category
-    const destinationSections = Object.entries(categoryTitles).map(([key, title]) => {
-        const categoryDestinations = destinations.filter(dest => dest.category === key);
+    const publikDestinations = destinations.filter(dest => dest.category === 'Publik' || dest.category === 'Area Publik');
+    
+    const destinationSections = targetSubcategories.map(subcat => {
+        const categoryDestinations = publikDestinations.filter(dest => dest.subcategory === subcat);
         return {
-            id: key,
-            title,
+            id: subcat.replace(/W+/g, '-').toLowerCase(),
+            title: subcat,
             destinations: categoryDestinations
         };
     }).filter(section => section.destinations.length > 0);

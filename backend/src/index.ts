@@ -565,7 +565,29 @@ async function flushVendorCache() {
     }
 }
 
-// ==================== ELASTICSEARCH INDEX HELPER ====================
+// ==================== DESTINATIONS CACHE HELPER ====================
+// Flush ALL destination-related cache keys
+async function flushDestinationsCache() {
+    try {
+        let cursor = '0';
+        const keysToDelete: string[] = [];
+        do {
+            const [nextCursor, keys] = await redis.scan(
+                cursor, 'MATCH', 'destinations_*', 'COUNT', 100
+            );
+            cursor = nextCursor;
+            keysToDelete.push(...keys);
+        } while (cursor !== '0');
+
+        if (keysToDelete.length > 0) {
+            await redis.del(...keysToDelete);
+            console.log(`[Cache] Flushed ${keysToDelete.length} destination cache keys:`, keysToDelete);
+        }
+    } catch (redisError) {
+        console.warn('[Cache] Destinations Redis flush error:', redisError);
+    }
+}
+
 const ES_VENDORS_INDEX = 'vendors';
 
 async function indexVendors(): Promise<void> {
@@ -897,12 +919,8 @@ app.get('/api/vendors/grouped', async (c) => {
             let distanceMeters: number | null = null;
             let distanceLabel: string | null = null;
 
-            // Priority: use stored distance_meters if available (manual override from dashboard)
-            const storedDistance = (v as any).distance_meters || (v as any).distanceMeters;
-            if (storedDistance && storedDistance > 0) {
-                distanceMeters = storedDistance;
-                distanceLabel = formatDistance(storedDistance);
-            } else if (stationLat && stationLng && v.lat && v.lng) {
+            // Calculate distance from selected station via Haversine formula
+            if (stationLat && stationLng && v.lat && v.lng) {
                 distanceMeters = Math.round(haversineMeters(stationLat, stationLng, v.lat, v.lng));
                 distanceLabel = formatDistance(distanceMeters);
             }
@@ -959,6 +977,7 @@ app.get('/api/vendors/:id', async (c) => {
     try {
         const result = await db.select().from(vendors).where(eq(vendors.id, parseInt(id)));
         if (result.length === 0) return c.json(null, 404);
+        await flushDestinationsCache();
         return c.json(result[0]);
     } catch (error) {
         return c.json({ error: 'Failed to fetch vendor' }, 500);
@@ -966,6 +985,30 @@ app.get('/api/vendors/:id', async (c) => {
 });
 
 // 1c. Create Vendor
+
+app.post('/api/vendors/bulk', async (c) => {
+    try {
+        const body = await c.req.json();
+        if (!Array.isArray(body) || body.length === 0) {
+            return c.json({ error: 'Body must be a non-empty array' }, 400);
+        }
+        
+        const result = await db.insert(vendors).values(body).returning();
+        
+        await writeAuditLog({
+            entity: 'vendor', entityId: 0, entityName: 'Bulk Import',
+            action: 'CREATE',
+            actorName: c.req.header('X-Actor-Name') || 'Admin',
+            newData: { count: result.length },
+        });
+
+        await flushVendorCache();
+        return c.json({ message: 'Bulk vendors created', count: result.length, data: result }, 201);
+    } catch (error) {
+        return c.json({ error: (error as Error).message }, 500);
+    }
+});
+
 app.post('/api/vendors', async (c) => {
     try {
         const body = await c.req.json();
@@ -981,6 +1024,7 @@ app.post('/api/vendors', async (c) => {
 
         // Flush ALL vendor cache (per-station list + grouped)
         await flushVendorCache();
+        await flushDestinationsCache();
         return c.json(created);
     } catch (error) {
         console.error('Create Vendor Error:', error);
@@ -1014,6 +1058,7 @@ app.put('/api/vendors/:id', async (c) => {
 
         // Flush ALL vendor cache (per-station list + grouped)
         await flushVendorCache();
+        await flushDestinationsCache();
         return c.json(result[0]);
     } catch (error) {
         console.error(error);
@@ -1075,6 +1120,8 @@ app.get('/api/products', async (c) => {
         const result = await db.select().from(products).where(eq(products.vendorId, parseInt(vendorId)));
         return c.json(result);
     } catch (error) {
+        console.error('Failed to fetch products:', error);
+        return c.json({ error: 'Failed to fetch products', details: String(error) }, 500);
         return c.json({ error: 'Failed to fetch products' }, 500);
     }
 });
@@ -1098,6 +1145,7 @@ app.post('/api/products', async (c) => {
             isAvailable: body.isAvailable !== undefined ? body.isAvailable : true,
             rating: 0,
         }).returning();
+        await flushDestinationsCache();
         return c.json(result[0]);
     } catch (error) {
         console.error('Create Product Error:', error);
@@ -1126,6 +1174,7 @@ app.put('/api/products/:id', async (c) => {
             .returning();
 
         if (result.length === 0) return c.json({ error: 'Product not found' }, 404);
+        await flushDestinationsCache();
         return c.json(result[0]);
     } catch (error) {
         console.error('Update Product Error:', error);
@@ -1145,11 +1194,103 @@ app.delete('/api/products/:id', async (c) => {
     }
 });
 
-// 2b. Get All Destinations
+// 2b. Get All Destinations (Cached, with optional filtering + distance)
 app.get('/api/destinations', async (c) => {
     try {
-        const result = await db.select().from(destinations);
-        return c.json(result);
+        const category = c.req.query('category') || '';
+        const station  = c.req.query('station')  || 'Blok M';
+        const stationType = c.req.query('stationType') || '';
+
+        // Build a deterministic cache key from query params
+        const cacheKey = `destinations_list_${category}_${station}_${stationType}`;
+        try {
+            const cached = await redis.get(cacheKey);
+            if (cached) {
+                console.log(`[destinations] Cache HIT [key: ${cacheKey}]`);
+                return c.json(JSON.parse(cached));
+            }
+        } catch (redisError) {
+            console.warn('[destinations] Redis get error:', redisError);
+        }
+
+        // Fetch all active destinations
+        let result = await db.select().from(destinations).where(eq(destinations.isActive, true));
+
+        // In-memory filters
+        if (category) {
+            result = result.filter(d => d.category.toLowerCase().includes(category.toLowerCase()));
+        }
+        if (station) {
+            result = result.filter(d => d.nearestStation.toLowerCase().includes(station.toLowerCase()));
+        }
+        if (stationType) {
+            result = result.filter(d => d.stationType.toLowerCase() === stationType.toLowerCase());
+        }
+
+        // Attach distance from the requested station when possible
+        // Uses the already-stored distanceFromStation field (km) on each destination row
+        // If the client passes ?station=, also compute live Haversine vs location_areas
+        let stationLat: number | null = null;
+        let stationLng: number | null = null;
+        if (station) {
+            try {
+                const stationResult = await pool.query(
+                    `SELECT lat, lng FROM location_areas
+                     WHERE LOWER(station) LIKE $1 OR LOWER(name) LIKE $1
+                     LIMIT 1`,
+                    [`%${station.toLowerCase()}%`]
+                );
+                if (stationResult.rows.length > 0 && stationResult.rows[0].lat) {
+                    stationLat = stationResult.rows[0].lat;
+                    stationLng = stationResult.rows[0].lng;
+                }
+            } catch (_) { /* location_areas may not exist — graceful skip */ }
+        }
+
+        function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
+            const R = 6371000;
+            const toRad = (d: number) => d * Math.PI / 180;
+            const dLat = toRad(lat2 - lat1);
+            const dLng = toRad(lng2 - lng1);
+            const a = Math.sin(dLat / 2) ** 2 +
+                Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+                Math.sin(dLng / 2) ** 2;
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        }
+
+        function fmtDistance(meters: number): string {
+            if (meters < 1000) return `${Math.round(meters)} m`;
+            return `${(meters / 1000).toFixed(1)} km`;
+        }
+
+        const enriched = result.map(d => {
+            let distanceMeters: number | null = null;
+            let distanceLabel: string | null = null;
+            // Prefer live Haversine when station coords are available
+            if (stationLat && stationLng && d.lat && d.lng) {
+                distanceMeters = Math.round(haversineMeters(stationLat, stationLng, d.lat, d.lng));
+                distanceLabel = fmtDistance(distanceMeters);
+            } else if (d.distanceFromStation != null) {
+                // Fall back to stored distance (km) from nearest station field
+                distanceMeters = Math.round(d.distanceFromStation * 1000);
+                distanceLabel = fmtDistance(distanceMeters);
+            }
+            return { ...d, distanceMeters, distanceLabel, distance_from_station: distanceMeters ? distanceMeters / 1000 : d.distanceFromStation };
+        });
+
+        // Sort by distance ascending when a station is requested
+        if (station) {
+            enriched.sort((a, b) => (a.distanceMeters ?? Infinity) - (b.distanceMeters ?? Infinity));
+        }
+
+        // Cache for 5 minutes
+        try {
+            await redis.set(cacheKey, JSON.stringify(enriched), 'EX', 300);
+        } catch (redisError) {
+            console.warn('[destinations] Redis set error:', redisError);
+        }
+
+        return c.json(enriched);
     } catch (error) {
         console.error('Destinations endpoint error:', error);
         return c.json({ error: 'Failed to fetch destinations' }, 500);
@@ -1170,6 +1311,23 @@ app.get('/api/destinations/:id', async (c) => {
 });
 
 // 2d. Create Destination
+
+app.post('/api/destinations/bulk', async (c) => {
+    try {
+        const body = await c.req.json();
+        if (!Array.isArray(body) || body.length === 0) {
+            return c.json({ error: 'Body must be a non-empty array' }, 400);
+        }
+        
+        const result = await db.insert(destinations).values(body).returning();
+        await flushDestinationsCache();
+        
+        return c.json({ message: 'Bulk destinations created', count: result.length, data: result }, 201);
+    } catch (error) {
+        return c.json({ error: (error as Error).message }, 500);
+    }
+});
+
 app.post('/api/destinations', async (c) => {
     try {
         const body = await c.req.json();
@@ -1187,6 +1345,7 @@ app.post('/api/destinations', async (c) => {
             newData: created,
         });
 
+        await flushDestinationsCache();
         return c.json(created);
     } catch (error) {
         console.error('Create Destination Error:', error);
@@ -1241,6 +1400,7 @@ app.put('/api/destinations/:id', async (c) => {
             });
         }
 
+        await flushDestinationsCache();
         return c.json(result[0]);
     } catch (error) {
         console.error('Update Destination Error:', error);
@@ -1266,6 +1426,8 @@ app.delete('/api/destinations/:id', async (c) => {
             });
         }
 
+        // Invalidate destination cache
+        await flushDestinationsCache();
         return c.json({ success: true });
     } catch (error) {
         console.error('Delete Destination Error:', error);
@@ -1291,6 +1453,7 @@ app.post('/api/orders', async (c) => {
             pickupCode: pickupCode
         }).returning();
 
+        await flushDestinationsCache();
         return c.json(result[0]);
     } catch (error) {
         console.error(error);
@@ -1318,6 +1481,7 @@ app.patch('/api/orders/:id/status', async (c) => {
             .set({ status })
             .where(eq(orders.id, parseInt(id)))
             .returning();
+        await flushDestinationsCache();
         return c.json(result[0]);
     } catch (error) {
         return c.json({ error: 'Failed to update status' }, 500);
@@ -1326,6 +1490,108 @@ app.patch('/api/orders/:id/status', async (c) => {
 
 
 // Seed Endpoint (For Demo Purposes)
+
+app.post('/api/seed-destinations', async (c) => {
+    const existing = await db.select().from(destinations);
+    if (existing.length > 0) {
+        return c.json({ message: 'Destinations already seeded', count: existing.length });
+    }
+
+    const data = [
+        // Publik - Ruang Terbuka & Olahraga
+        {
+            name: "Taman Literasi Martha Christina Tiahahu",
+            description: "Taman hijau terbuka di jantung Blok M, lengkap dengan perpustakaan mini, area baca, dan tempat bersantai.",
+            lat: -6.2435, lng: 106.7997,
+            category: "Publik", subcategory: "Ruang Terbuka & Olahraga",
+            address: "Jl. Sisingamangaraja, Blok M, Jakarta Selatan",
+            image: "https://images.unsplash.com/photo-1519331379826-f10be5486c6f?w=600&h=400&fit=crop",
+            nearestStation: "Stasiun MRT Blok M", stationType: "MRT",
+            distanceFromStation: 150, walkingTimeMinutes: 2, ticketPrice: "Gratis"
+        },
+        {
+            name: "GOR Bulungan",
+            description: "Gelanggang Olahraga serbaguna yang sering digunakan untuk turnamen basket, voli, dan bulu tangkis.",
+            lat: -6.2415, lng: 106.7960,
+            category: "Publik", subcategory: "Ruang Terbuka & Olahraga",
+            address: "Jl. Bulungan No.1, Blok M, Jakarta Selatan",
+            image: "https://images.unsplash.com/photo-1577223625816-7546f13df25d?w=600&h=400&fit=crop",
+            nearestStation: "Stasiun MRT Blok M", stationType: "MRT",
+            distanceFromStation: 500, walkingTimeMinutes: 7, ticketPrice: "Bervariasi"
+        },
+        // Publik - Mall & Plaza Terbuka
+        {
+            name: "Blok M Square",
+            description: "Pusat perbelanjaan ikonik dengan ribuan kios, pujasera, dan pusat elektronik.",
+            lat: -6.2442, lng: 106.7990,
+            category: "Publik", subcategory: "Mall & Plaza Terbuka",
+            address: "Jl. Melawai 5, Blok M, Jakarta Selatan",
+            image: "https://images.unsplash.com/photo-1555529733-0e670560f7e1?w=600&h=400&fit=crop",
+            nearestStation: "Stasiun MRT Blok M", stationType: "MRT",
+            distanceFromStation: 300, walkingTimeMinutes: 4, ticketPrice: "Gratis"
+        },
+        // Publik - Infrastruktur Pejalan & Transit
+        {
+            name: "Terminal Blok M",
+            description: "Terminal terpadu modern yang terhubung langsung dengan TransJakarta dan MRT.",
+            lat: -6.2430, lng: 106.8010,
+            category: "Publik", subcategory: "Infrastruktur Pejalan & Transit",
+            address: "Kawasan Terminal Blok M, Jakarta Selatan",
+            image: "https://images.unsplash.com/photo-1506452583856-11f621980862?w=600&h=400&fit=crop",
+            nearestStation: "Stasiun MRT Blok M", stationType: "MRT",
+            distanceFromStation: 50, walkingTimeMinutes: 1, ticketPrice: "Gratis"
+        },
+        // Publik - Fasilitas Sosial & Keagamaan
+        {
+            name: "Masjid Nurul Iman Blok M Square",
+            description: "Masjid luas dan nyaman yang terletak di rooftop Blok M Square.",
+            lat: -6.2442, lng: 106.7990,
+            category: "Publik", subcategory: "Fasilitas Sosial & Keagamaan",
+            address: "Lantai 7 Blok M Square, Jakarta Selatan",
+            image: "https://images.unsplash.com/photo-1542382156909-9ae37b3f56fd?w=600&h=400&fit=crop",
+            nearestStation: "Stasiun MRT Blok M", stationType: "MRT",
+            distanceFromStation: 300, walkingTimeMinutes: 4, ticketPrice: "Gratis"
+        },
+        // Wisata - Belanja
+        {
+            name: "Little Tokyo Melawai",
+            description: "Kawasan belanja dan kuliner bernuansa Jepang otentik dengan berbagai restoran legendaris.",
+            lat: -6.2450, lng: 106.8000,
+            category: "belanja", subcategory: null,
+            address: "Kawasan Melawai, Blok M, Jakarta Selatan",
+            image: "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=600&h=400&fit=crop",
+            nearestStation: "Stasiun MRT Blok M", stationType: "MRT",
+            distanceFromStation: 400, walkingTimeMinutes: 6, ticketPrice: "Gratis"
+        },
+        {
+            name: "Pasaraya Blok M",
+            description: "Pusat perbelanjaan yang menampilkan kerajinan tangan, batik, dan suvenir khas Indonesia.",
+            lat: -6.2420, lng: 106.8015,
+            category: "belanja", subcategory: null,
+            address: "Jl. Iskandarsyah II No.2, Blok M, Jakarta Selatan",
+            image: "https://images.unsplash.com/photo-1519999482648-25049ddd37b1?w=600&h=400&fit=crop",
+            nearestStation: "Stasiun MRT Blok M", stationType: "MRT",
+            distanceFromStation: 600, walkingTimeMinutes: 8, ticketPrice: "Gratis"
+        },
+        // Wisata - Budaya & Seni
+        {
+            name: "M Bloc Space",
+            description: "Pusat kreatif komunal dengan live music, restoran, dan ruang ekshibisi seni, dulunya adalah rumah dinas Peruri.",
+            lat: -6.2435, lng: 106.7985,
+            category: "budaya-seni", subcategory: null,
+            address: "Jl. Panglima Polim No.37, Blok M, Jakarta Selatan",
+            image: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=600&h=400&fit=crop",
+            nearestStation: "Stasiun MRT Blok M", stationType: "MRT",
+            distanceFromStation: 200, walkingTimeMinutes: 3, ticketPrice: "Mulai Rp 20.000"
+        }
+    ];
+
+    const result = await db.insert(destinations).values(data).returning();
+    await flushDestinationsCache();
+    return c.json({ message: 'Blok M destinations seeded successfully', count: result.length, data: result });
+});
+
+
 app.post('/api/seed', async (c) => {
     // Check if vendors exist
     const v = await db.select().from(vendors);
@@ -2235,6 +2501,7 @@ app.post('/api/products', async (c) => {
     try {
         const body = await c.req.json();
         const result = await db.insert(products).values(body).returning();
+        await flushDestinationsCache();
         return c.json(result[0]);
     } catch (error) {
         return c.json({ error: 'Failed to create product' }, 500);
@@ -2250,6 +2517,7 @@ app.put('/api/products/:id', async (c) => {
             .set(body)
             .where(eq(products.id, parseInt(id)))
             .returning();
+        await flushDestinationsCache();
         return c.json(result[0]);
     } catch (error) {
         return c.json({ error: 'Failed to update product' }, 500);
@@ -2298,6 +2566,7 @@ app.post('/api/vouchers', async (c) => {
     try {
         const body = await c.req.json();
         const result = await db.insert(vouchers).values(body).returning();
+        await flushDestinationsCache();
         return c.json(result[0]);
     } catch (error) {
         return c.json({ error: 'Failed to create voucher' }, 500);
@@ -2372,6 +2641,7 @@ app.get('/api/categories/:id', async (c) => {
     try {
         const result = await db.select().from(categories).where(eq(categories.id, parseInt(id)));
         if (result.length === 0) return c.json(null, 404);
+        await flushDestinationsCache();
         return c.json(result[0]);
     } catch (error) {
         return c.json({ error: 'Failed to fetch category' }, 500);
@@ -2426,6 +2696,7 @@ app.put('/api/categories/:id', async (c) => {
             .returning();
 
         if (result.length === 0) return c.json({ error: 'Category not found' }, 404);
+        await flushDestinationsCache();
         return c.json(result[0]);
     } catch (error) {
         console.error('Category update error:', error);
@@ -2472,6 +2743,7 @@ app.get('/api/navigation/:id', async (c) => {
     try {
         const result = await db.select().from(navigationItems).where(eq(navigationItems.id, parseInt(id)));
         if (result.length === 0) return c.json(null, 404);
+        await flushDestinationsCache();
         return c.json(result[0]);
     } catch (error) {
         return c.json({ error: 'Failed to fetch navigation item' }, 500);
@@ -2527,6 +2799,7 @@ app.put('/api/navigation/:id', async (c) => {
             .returning();
 
         if (result.length === 0) return c.json({ error: 'Navigation item not found' }, 404);
+        await flushDestinationsCache();
         return c.json(result[0]);
     } catch (error) {
         console.error('Navigation update error:', error);
@@ -2663,7 +2936,8 @@ app.get('/api/settings/:key', async (c) => {
                 : result[0].value;
             return c.json({ key: result[0].key, value });
         } catch {
-            return c.json(result[0]);
+            await flushDestinationsCache();
+        return c.json(result[0]);
         }
     } catch (error) {
         console.error('Setting fetch error:', error);
@@ -2688,12 +2962,14 @@ app.put('/api/settings/:key', async (c) => {
                 .where(eq(settings.key, key))
                 .returning();
             await redis.del('settings_all');
-            return c.json(result[0]);
+            await flushDestinationsCache();
+        return c.json(result[0]);
         } else {
             // Create new
             const result = await db.insert(settings).values({ key, value }).returning();
             await redis.del('settings_all');
-            return c.json(result[0]);
+            await flushDestinationsCache();
+        return c.json(result[0]);
         }
     } catch (error) {
         console.error('Setting update error:', error);
@@ -2729,38 +3005,20 @@ app.post('/api/cleanup-products', async (c) => {
 // ==================== DESTINATIONS API ====================
 
 // Get all destinations
-app.get('/api/destinations', async (c) => {
-    try {
-        const category = c.req.query('category');
-        const station = c.req.query('station');
-        const stationType = c.req.query('stationType');
-
-        let query = db.select().from(destinations).where(eq(destinations.isActive, true));
-
-        const result = await query;
-
-        // Filter by category if provided
-        let filtered = result;
-        if (category) {
-            filtered = filtered.filter(d => d.category.toLowerCase().includes(category.toLowerCase()));
-        }
-        if (station) {
-            filtered = filtered.filter(d => d.nearestStation.toLowerCase().includes(station.toLowerCase()));
-        }
-        if (stationType) {
-            filtered = filtered.filter(d => d.stationType.toLowerCase() === stationType.toLowerCase());
-        }
-
-        return c.json(filtered);
-    } catch (error) {
-        console.error("Error fetching destinations:", error);
-        return c.json({ error: 'Failed to fetch destinations' }, 500);
-    }
-});
-
-// Get destinations grouped by category
+// Get destinations grouped by category (Cached)
 app.get('/api/destinations/grouped', async (c) => {
     try {
+        const cacheKey = 'destinations_grouped';
+        try {
+            const cached = await redis.get(cacheKey);
+            if (cached) {
+                console.log('[destinations/grouped] Cache HIT');
+                return c.json(JSON.parse(cached));
+            }
+        } catch (redisError) {
+            console.warn('[destinations/grouped] Redis get error:', redisError);
+        }
+
         const result = await db.select().from(destinations).where(eq(destinations.isActive, true));
 
         // Group by category
@@ -2771,6 +3029,13 @@ app.get('/api/destinations/grouped', async (c) => {
             }
             grouped[dest.category].push(dest);
         });
+
+        // Cache for 5 minutes
+        try {
+            await redis.set(cacheKey, JSON.stringify(grouped), 'EX', 300);
+        } catch (redisError) {
+            console.warn('[destinations/grouped] Redis set error:', redisError);
+        }
 
         return c.json(grouped);
     } catch (error) {
@@ -2789,6 +3054,7 @@ app.get('/api/destinations/:id', async (c) => {
             return c.json({ error: 'Destination not found' }, 404);
         }
 
+        await flushDestinationsCache();
         return c.json(result[0]);
     } catch (error) {
         console.error("Error fetching destination:", error);
@@ -3376,6 +3642,26 @@ app.post('/api/cache/flush-vendors', async (c) => {
     } catch (error) {
         console.error('Cache flush error:', error);
         return c.json({ error: 'Failed to flush cache' }, 500);
+    }
+});
+
+/**
+ * POST /api/cache/flush-destinations
+ * Flush semua cache destination (list + grouped, semua variasi filter).
+ * Dipanggil dari dashboard saat perlu sync manual.
+ * Biasanya tidak perlu manual — backend auto-flush saat CRUD destination.
+ */
+app.post('/api/cache/flush-destinations', async (c) => {
+    try {
+        await flushDestinationsCache();
+        return c.json({
+            success: true,
+            message: 'Destination cache flushed. Data segar akan di-fetch pada request berikutnya.',
+            timestamp: new Date().toISOString(),
+        });
+    } catch (error) {
+        console.error('Destination cache flush error:', error);
+        return c.json({ error: 'Failed to flush destination cache' }, 500);
     }
 });
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 // Default fallback paths (static SVG di public/)
@@ -51,6 +51,8 @@ function useTransportIcons() {
 export default function DestinationDetail() {
     const { id } = useParams();
     const navigate = useNavigate();
+    const location = useLocation();
+    const isWisata = location.pathname.includes('/wisata');
     const [destination, setDestination] = useState(null);
     const [loading, setLoading] = useState(true);
     const [imgError, setImgError] = useState(false);
@@ -225,13 +227,13 @@ export default function DestinationDetail() {
                     </div>
 
                     {/* Ticket Price Card */}
-                    {(destination.ticketPrice || destination.ticket_price) && (
+                    {isWisata && (
                         <div className="bg-white border-[0.5px] border-grey-200 rounded-[20px] shadow-[0px_4px_15px_0px_rgba(0,0,0,0.2)] px-[20px] py-[15px] flex items-center gap-[10px]">
                             <span className="text-[18px]">🎟️</span>
                             <div>
                                 <p className="font-bold text-[13px] text-grey-700">Harga Tiket</p>
                                 <p className="font-medium text-[13px] text-grey-600">
-                                    {destination.ticketPrice || destination.ticket_price}
+                                    {destination.ticketPrice || destination.ticket_price || 'Gratis'}
                                 </p>
                             </div>
                         </div>
@@ -242,8 +244,7 @@ export default function DestinationDetail() {
     );
 }
 
-// ========== Route Step Component ==========
-function RouteStep({ icons, icon, title, subtitle }) {
+function RouteStep({ icon, title, subtitle, icons }) {
     const isDestination = icon === 'Destination';
     // Custom src dari settings (bisa jadi /api/raw/...), fallback ke static default
     const customSrc = icons?.[icon];

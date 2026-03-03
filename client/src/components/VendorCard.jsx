@@ -52,7 +52,7 @@ export default function VendorCard({ vendor, onClick, fallbackEmoji = '🍽️' 
 
                 {/* Description — 11px Inter medium, grey-400 */}
                 <p className="font-medium text-[11px] text-grey-400 truncate leading-[12px] tracking-[-0.05px]">
-                    {vendor.description || vendor.category || ''}
+                    {vendor.subcategory || vendor.description || vendor.category || ''}
                 </p>
 
                 {/* Address + Schedule with right padding for distance chip */}

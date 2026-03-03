@@ -8,6 +8,7 @@ import Wisata from './pages/Wisata';
 import DestinationDetail from './pages/DestinationDetail';
 import Atm from './pages/Atm';
 import Vendor from './pages/Vendor';
+import TransportasiUmum from './pages/TransportasiUmum';
 import CartSheet from './components/CartSheet';
 import { ShoppingBag } from 'lucide-react';
 
@@ -399,6 +400,7 @@ export default function App() {
       <Route path="/wisata" element={<div className="antialiased text-gray-800"><Wisata /></div>} />
       <Route path="/wisata/:id" element={<div className="antialiased text-gray-800"><DestinationDetail /></div>} />
       <Route path="/publik/:id" element={<div className="antialiased text-gray-800"><DestinationDetail /></div>} />
+      <Route path="/transportasi-umum" element={<div className="antialiased text-gray-800"><TransportasiUmum /></div>} />
 
       <Route path="/terms" element={<StaticPage title="Syarat & Ketentuan" pageKey="page_terms" />} />
       <Route path="/about" element={<StaticPage title="Tentang Kami" pageKey="page_about" />} />

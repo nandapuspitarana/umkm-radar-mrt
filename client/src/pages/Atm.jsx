@@ -135,13 +135,13 @@ export default function Atm({ vendors, preSorted = false, onSelectVendor }) {
                     <div className="overflow-x-auto no-scrollbar">
                         <div className="flex gap-[5px] pr-[10px]">
                             {bannersLoading && [1, 2, 3, 4].map(i => (
-                                <div key={i} className="w-[200px] h-[200px] rounded-[20px] bg-grey-200 flex-shrink-0 animate-pulse" />
+                                <div key={i} className="w-[135px] h-[103px] rounded-[20px] bg-grey-200 flex-shrink-0 animate-pulse" />
                             ))}
                             {!bannersLoading && atmBanners.map(banner => (
                                 <div
                                     key={banner.id}
                                     onClick={() => handleBannerClick(banner)}
-                                    className={`w-[200px] h-[200px] rounded-[20px] overflow-hidden flex-shrink-0 relative group bg-white shadow-sm ${banner.link ? 'cursor-pointer hover:shadow-md' : ''}`}
+                                    className={`w-[135px] h-[103px] rounded-[20px] overflow-hidden flex-shrink-0 relative group bg-white shadow-sm ${banner.link ? 'cursor-pointer hover:shadow-md' : ''}`}
                                 >
                                     <img src={banner.image} className="absolute inset-0 w-full h-full object-cover" alt={banner.title || 'ATM'} onError={e => e.target.style.display = 'none'} />
                                     {banner.title && (

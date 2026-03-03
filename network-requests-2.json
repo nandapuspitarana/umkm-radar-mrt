@@ -1,0 +1,4 @@
+[GET] http://localhost:8083/api/vendors => [200] OK
+[GET] http://localhost:8083/api/vendors => [200] OK
+[GET] http://localhost:8083/api/products?vendorId=11 => [500] Internal Server Error
+[GET] http://localhost:8083/api/products?vendorId=11 => [500] Internal Server Error

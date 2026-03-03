@@ -24,6 +24,7 @@ export const vendors = pgTable('vendors', {
     schedule: jsonb('schedule'), // { days: [], open: "06:00", close: "21:00", holidayClosed: true }
     status: text('status').default('pending'), // approved, pending, rejected
     category: text('category').default('Umum'), // DEPRECATED: Use categoryId instead
+    subcategory: text('subcategory'),
     categoryId: integer('category_id').references(() => categories.id), // Foreign key to categories table
     rating: doublePrecision('rating').default(0),
     locationTags: text('location_tags'), // e.g. "Dekat MRT BNI, Dukuh Atas"
@@ -36,7 +37,8 @@ export const products = pgTable('products', {
     name: text('name').notNull(),
     price: integer('price').notNull(),
     originalPrice: integer('original_price'),
-    category: text('category').notNull(), // DEPRECATED: Use categoryId instead
+    category: text('category').notNull(),
+    // subcategory: text('subcategory'), // DEPRECATED: Use categoryId instead
     categoryId: integer('category_id').references(() => categories.id), // Foreign key to categories table
     image: text('image').notNull(),
     rating: doublePrecision('rating').default(0),
