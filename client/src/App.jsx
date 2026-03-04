@@ -13,6 +13,7 @@ import CartSheet from './components/CartSheet';
 import { ShoppingBag } from 'lucide-react';
 
 import StaticPage from './pages/StaticPage';
+import SplashScreen from './pages/SplashScreen';
 
 // Default station - bisa diganti nanti via UI
 const DEFAULT_STATION = 'Blok M';
@@ -33,6 +34,15 @@ export default function App() {
   const [stationCategory, setStationCategory] = useState(() => {
     return localStorage.getItem('umkm_station') || DEFAULT_STATION;
   });
+
+  const [showSplash, setShowSplash] = useState(() => {
+    return !sessionStorage.getItem('splash_shown');
+  });
+
+  const handleSplashComplete = () => {
+    sessionStorage.setItem('splash_shown', 'true');
+    setShowSplash(false);
+  };
 
   const handleStationChange = (station) => {
     setStationCategory(station);
@@ -328,83 +338,86 @@ export default function App() {
   );
 
   return (
-    <Routes>
-      <Route path="/" element={<MainView />} />
+    <>
+      {showSplash && <SplashScreen onComplete={handleSplashComplete} />}
+      <Routes>
+        <Route path="/" element={<MainView />} />
 
-      {/* ── /kuliner — menerima vendors yang sudah pre-sorted ── */}
-      <Route path="/kuliner" element={
-        <div className="antialiased text-gray-800">
-          {currentVendor ? (
-            <VendorView onBack={() => setCurrentVendor(null)} />
-          ) : (
-            <Kuliner
-              vendors={vendorsByCategory.kuliner}
-              allVendors={vendors}
-              preSorted={vendorsByCategory._loaded}
-              onSelectVendor={setCurrentVendor}
-            />
-          )}
-          <FloatingCart />
-          <CartLayer />
-        </div>
-      } />
+        {/* ── /kuliner — menerima vendors yang sudah pre-sorted ── */}
+        <Route path="/kuliner" element={
+          <div className="antialiased text-gray-800">
+            {currentVendor ? (
+              <VendorView onBack={() => setCurrentVendor(null)} />
+            ) : (
+              <Kuliner
+                vendors={vendorsByCategory.kuliner}
+                allVendors={vendors}
+                preSorted={vendorsByCategory._loaded}
+                onSelectVendor={setCurrentVendor}
+              />
+            )}
+            <FloatingCart />
+            <CartLayer />
+          </div>
+        } />
 
-      {/* ── /ngopi — menerima vendors yang sudah pre-sorted ── */}
-      <Route path="/ngopi" element={
-        <div className="antialiased text-gray-800">
-          {currentVendor ? (
-            <VendorView onBack={() => setCurrentVendor(null)} />
-          ) : (
-            <Ngopi
-              vendors={vendorsByCategory.ngopi}
-              allVendors={vendors}
-              preSorted={vendorsByCategory._loaded}
-              onSelectVendor={setCurrentVendor}
-            />
-          )}
-          <FloatingCart />
-          <CartLayer />
-        </div>
-      } />
+        {/* ── /ngopi — menerima vendors yang sudah pre-sorted ── */}
+        <Route path="/ngopi" element={
+          <div className="antialiased text-gray-800">
+            {currentVendor ? (
+              <VendorView onBack={() => setCurrentVendor(null)} />
+            ) : (
+              <Ngopi
+                vendors={vendorsByCategory.ngopi}
+                allVendors={vendors}
+                preSorted={vendorsByCategory._loaded}
+                onSelectVendor={setCurrentVendor}
+              />
+            )}
+            <FloatingCart />
+            <CartLayer />
+          </div>
+        } />
 
-      {/* ── /atm — menerima vendors yang sudah pre-sorted ── */}
-      <Route path="/atm" element={
-        <div className="antialiased text-gray-800">
-          {currentVendor ? (
-            <VendorView onBack={() => setCurrentVendor(null)} />
-          ) : (
-            <Atm
-              vendors={vendorsByCategory.atm}
-              allVendors={vendors}
-              preSorted={vendorsByCategory._loaded}
-              onSelectVendor={setCurrentVendor}
-            />
-          )}
-          <FloatingCart />
-          <CartLayer />
-        </div>
-      } />
+        {/* ── /atm — menerima vendors yang sudah pre-sorted ── */}
+        <Route path="/atm" element={
+          <div className="antialiased text-gray-800">
+            {currentVendor ? (
+              <VendorView onBack={() => setCurrentVendor(null)} />
+            ) : (
+              <Atm
+                vendors={vendorsByCategory.atm}
+                allVendors={vendors}
+                preSorted={vendorsByCategory._loaded}
+                onSelectVendor={setCurrentVendor}
+              />
+            )}
+            <FloatingCart />
+            <CartLayer />
+          </div>
+        } />
 
-      <Route path="/publik" element={
-        <div className="antialiased text-gray-800">
-          {currentVendor ? (
-            <VendorView onBack={() => setCurrentVendor(null)} />
-          ) : (
-            <Publik vendors={vendors} onSelectVendor={setCurrentVendor} />
-          )}
-          <FloatingCart />
-          <CartLayer />
-        </div>
-      } />
+        <Route path="/publik" element={
+          <div className="antialiased text-gray-800">
+            {currentVendor ? (
+              <VendorView onBack={() => setCurrentVendor(null)} />
+            ) : (
+              <Publik vendors={vendors} onSelectVendor={setCurrentVendor} />
+            )}
+            <FloatingCart />
+            <CartLayer />
+          </div>
+        } />
 
-      <Route path="/wisata" element={<div className="antialiased text-gray-800"><Wisata /></div>} />
-      <Route path="/wisata/:id" element={<div className="antialiased text-gray-800"><DestinationDetail /></div>} />
-      <Route path="/publik/:id" element={<div className="antialiased text-gray-800"><DestinationDetail /></div>} />
-      <Route path="/transportasi-umum" element={<div className="antialiased text-gray-800"><TransportasiUmum /></div>} />
+        <Route path="/wisata" element={<div className="antialiased text-gray-800"><Wisata /></div>} />
+        <Route path="/wisata/:id" element={<div className="antialiased text-gray-800"><DestinationDetail /></div>} />
+        <Route path="/publik/:id" element={<div className="antialiased text-gray-800"><DestinationDetail /></div>} />
+        <Route path="/transportasi-umum" element={<div className="antialiased text-gray-800"><TransportasiUmum /></div>} />
 
-      <Route path="/terms" element={<StaticPage title="Syarat & Ketentuan" pageKey="page_terms" />} />
-      <Route path="/about" element={<StaticPage title="Tentang Kami" pageKey="page_about" />} />
-      <Route path="/privacy" element={<StaticPage title="Kebijakan Privasi" pageKey="page_privacy" />} />
-    </Routes>
+        <Route path="/terms" element={<StaticPage title="Syarat & Ketentuan" pageKey="page_terms" />} />
+        <Route path="/about" element={<StaticPage title="Tentang Kami" pageKey="page_about" />} />
+        <Route path="/privacy" element={<StaticPage title="Kebijakan Privasi" pageKey="page_privacy" />} />
+      </Routes>
+    </>
   );
 }

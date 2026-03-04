@@ -1,0 +1,123 @@
+[
+  {
+    "id": 8,
+    "name": "Ruang Terbuka & Olahraga",
+    "slug": "ruang-terbuka-olahraga",
+    "type": "publik",
+    "icon": "trees",
+    "bannerImage": null,
+    "sortOrder": 1,
+    "isActive": true,
+    "createdAt": "2026-03-03T23:41:40.114Z"
+  },
+  {
+    "id": 1,
+    "name": "Wisata Sejarah & Museum",
+    "slug": "sejarah-museum",
+    "type": "wisata",
+    "icon": "landmark",
+    "bannerImage": null,
+    "sortOrder": 1,
+    "isActive": true,
+    "createdAt": "2026-03-03T18:30:51.885Z"
+  },
+  {
+    "id": 9,
+    "name": "Mall & Plaza Terbuka",
+    "slug": "mall-plaza-terbuka",
+    "type": "publik",
+    "icon": "shopping-bag",
+    "bannerImage": null,
+    "sortOrder": 2,
+    "isActive": true,
+    "createdAt": "2026-03-03T23:41:40.142Z"
+  },
+  {
+    "id": 2,
+    "name": "Wisata Budaya & Seni",
+    "slug": "budaya-seni",
+    "type": "wisata",
+    "icon": "palette",
+    "bannerImage": null,
+    "sortOrder": 2,
+    "isActive": true,
+    "createdAt": "2026-03-03T18:30:51.901Z"
+  },
+  {
+    "id": 3,
+    "name": "Wisata Religi",
+    "slug": "religi",
+    "type": "wisata",
+    "icon": "church",
+    "bannerImage": null,
+    "sortOrder": 3,
+    "isActive": true,
+    "createdAt": "2026-03-03T18:30:51.925Z"
+  },
+  {
+    "id": 10,
+    "name": "Infrastruktur Pejalan & Transit",
+    "slug": "infrastruktur-pejalan-transit",
+    "type": "publik",
+    "icon": "footprints",
+    "bannerImage": null,
+    "sortOrder": 3,
+    "isActive": true,
+    "createdAt": "2026-03-03T23:41:40.177Z"
+  },
+  {
+    "id": 11,
+    "name": "Fasilitas Sosial & Keagamaan",
+    "slug": "fasilitas-sosial-keagamaan",
+    "type": "publik",
+    "icon": "heart",
+    "bannerImage": null,
+    "sortOrder": 4,
+    "isActive": true,
+    "createdAt": "2026-03-03T23:41:40.458Z"
+  },
+  {
+    "id": 4,
+    "name": "Wisata Alam & Ruang Terbuka",
+    "slug": "alam-ruang-terbuka",
+    "type": "wisata",
+    "icon": "trees",
+    "bannerImage": null,
+    "sortOrder": 4,
+    "isActive": true,
+    "createdAt": "2026-03-03T18:30:51.955Z"
+  },
+  {
+    "id": 5,
+    "name": "Wisata Keluarga & Rekreasi",
+    "slug": "keluarga-rekreasi",
+    "type": "wisata",
+    "icon": "smile",
+    "bannerImage": null,
+    "sortOrder": 5,
+    "isActive": true,
+    "createdAt": "2026-03-03T18:30:51.986Z"
+  },
+  {
+    "id": 6,
+    "name": "Wisata Edukasi",
+    "slug": "edukasi",
+    "type": "wisata",
+    "icon": "graduation-cap",
+    "bannerImage": null,
+    "sortOrder": 6,
+    "isActive": true,
+    "createdAt": "2026-03-03T18:30:52.010Z"
+  },
+  {
+    "id": 7,
+    "name": "Wisata Belanja",
+    "slug": "belanja",
+    "type": "wisata",
+    "icon": "shopping-bag",
+    "bannerImage": null,
+    "sortOrder": 7,
+    "isActive": true,
+    "createdAt": "2026-03-03T18:30:52.038Z"
+  }
+]

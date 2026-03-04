@@ -119,6 +119,31 @@ export const navigationItems = pgTable('navigation_items', {
     createdAt: timestamp('created_at').defaultNow(),
 });
 
+// Destination Categories - For categorizing tourist destinations
+export const destinationCategories = pgTable('destination_categories', {
+    id: serial('id').primaryKey(),
+    name: text('name').notNull(),           // Display name: "Wisata Alam & Ruang Terbuka"
+    slug: text('slug').notNull().unique(), // URL slug: "alam-ruang-terbuka"
+    type: text('type').notNull().default('wisata'), // 'wisata' | 'publik'
+    icon: text('icon'),                    // Optional icon name
+    bannerImage: text('banner_image'),     // Banner image for category page
+    sortOrder: integer('sort_order').default(0),
+    isActive: boolean('is_active').default(true),
+    createdAt: timestamp('created_at').defaultNow(),
+});
+
+// Destination Subcategories - Sub-categories under each category
+export const destinationSubcategories = pgTable('destination_subcategories', {
+    id: serial('id').primaryKey(),
+    categoryId: integer('category_id').references(() => destinationCategories.id).notNull(),
+    name: text('name').notNull(),
+    slug: text('slug').notNull(),
+    bannerImage: text('banner_image'),     // Banner image for subcategory section
+    sortOrder: integer('sort_order').default(0),
+    isActive: boolean('is_active').default(true),
+    createdAt: timestamp('created_at').defaultNow(),
+});
+
 // Destinations - Tourist spots with transport navigation
 export const destinations = pgTable('destinations', {
     id: serial('id').primaryKey(),
@@ -126,8 +151,10 @@ export const destinations = pgTable('destinations', {
     description: text('description'),
     lat: doublePrecision('lat').notNull(),
     lng: doublePrecision('lng').notNull(),
-    category: text('category').notNull(), // 'Wisata Alam', 'Wisata Budaya', 'Wisata Sejarah', 'Wisata Religi'
-    subcategory: text('subcategory'),
+    category: text('category'), // DEPRECATED: Use categoryId instead
+    subcategory: text('subcategory'), // DEPRECATED: Use subcategoryId instead
+    categoryId: integer('category_id').references(() => destinationCategories.id),
+    subcategoryId: integer('subcategory_id').references(() => destinationSubcategories.id),
     address: text('address'),
     image: text('image'),
 

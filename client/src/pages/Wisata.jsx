@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronRight, MapPin } from 'lucide-react';
+import { MapPin, ChevronRight } from 'lucide-react';
 import AppLayout from '../components/AppLayout';
 
-// Helper to extract YouTube video ID
+// Helper function to extract YouTube video ID
 const getYouTubeVideoId = (url) => {
     if (!url) return null;
     const patterns = [
@@ -17,40 +17,43 @@ const getYouTubeVideoId = (url) => {
     return null;
 };
 
-// Category titles matching database categories
-const categoryTitles = {
-    'sejarah-museum': 'Wisata Sejarah & Museum',
-    'budaya-seni': 'Wisata Budaya & Seni',
-    'religi': 'Wisata Religi',
-    'alam-ruang-terbuka': 'Wisata Alam & Ruang Terbuka',
-    'keluarga-rekreasi': 'Wisata Keluarga & Rekreasi',
-    'edukasi': 'Wisata Edukasi',
-    'belanja': 'Wisata Belanja',
-};
-
 export default function Wisata() {
     const [destinations, setDestinations] = useState([]);
+    const [categories, setCategories] = useState([]);
+    const [subcategories, setSubcategories] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [bannerUrl, setBannerUrl] = useState('');
-    const [bannerLoading, setBannerLoading] = useState(true);
+    const [bannerImage, setBannerImage] = useState('https://images.unsplash.com/photo-1518548419970-58e3b4079ab2?w=600&h=400&fit=crop');
 
     useEffect(() => {
+        fetchCategories();
         fetchDestinations();
         fetchBanner();
     }, []);
 
     const fetchBanner = async () => {
-        setBannerLoading(true);
         try {
-            const res = await fetch('/api/settings');
-            const data = await res.json();
-            if (data.wisata_banner) {
-                setBannerUrl(data.wisata_banner);
+            const response = await fetch('/api/settings');
+            const data = await response.json();
+            if (data.wisata_banner && data.wisata_banner.trim() !== '') {
+                setBannerImage(data.wisata_banner);
             }
         } catch (error) {
-            console.error('Failed to fetch wisata banner:', error);
-        } finally {
-            setBannerLoading(false);
+            console.error('Failed to fetch banner:', error);
+        }
+    };
+
+    const fetchCategories = async () => {
+        try {
+            const response = await fetch('/api/destination-categories?type=wisata');
+            const data = await response.json();
+            setCategories(data.filter(c => c.isActive));
+            
+            // Fetch subcategories
+            const subResponse = await fetch('/api/destination-subcategories');
+            const subData = await subResponse.json();
+            setSubcategories(subData.filter(s => s.isActive && s.categoryType === 'wisata'));
+        } catch (error) {
+            console.error('Failed to fetch categories:', error);
         }
     };
 
@@ -66,28 +69,40 @@ export default function Wisata() {
         }
     };
 
-    // Group destinations by category
-    const destinationSections = Object.entries(categoryTitles).map(([key, title]) => {
-        const categoryDestinations = destinations.filter(dest => dest.category === key);
-        return { id: key, title, destinations: categoryDestinations };
+    // Group destinations by category (using categoryId or fallback to category text)
+    const destinationSections = categories.map(cat => {
+        // Get subcategories for this category
+        const catSubcats = subcategories.filter(s => s.categoryId === cat.id);
+        
+        // Get destinations for this category
+        const categoryDestinations = destinations.filter(dest => 
+            dest.categoryId === cat.id || 
+            dest.category === cat.name ||
+            dest.category === cat.slug
+        );
+
+        return {
+            id: cat.slug,
+            title: cat.name,
+            bannerImage: cat.bannerImage,
+            subcategories: catSubcats,
+            destinations: categoryDestinations
+        };
     }).filter(section => section.destinations.length > 0);
 
-    const videoId = getYouTubeVideoId(bannerUrl);
+    const videoId = getYouTubeVideoId(bannerImage);
 
     return (
         <AppLayout
-            title="Tempat Wisata Jakarta"
+            title="Wisata"
             subtitle="Blok M"
             activeCategory="wisata"
         >
             <div className="pb-6">
-                {/* Dynamic Banner */}
-                <div className="p-[10px]">
-                    <div className="relative w-full aspect-video bg-grey-300 rounded-[20px] overflow-hidden">
-                        {bannerLoading ? (
-                            <div className="w-full h-full bg-grey-200 animate-pulse" />
-                        ) : videoId ? (
-                            /* YouTube: scale(1.05) agar cover penuh tanpa black bars */
+                {/* Banner Image/Video */}
+                <div className="p-2.5">
+                    <div className="relative w-full aspect-video bg-grey-900 rounded-[20px] overflow-hidden">
+                        {videoId ? (
                             <iframe
                                 src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=0&showinfo=0&rel=0&modestbranding=1&vq=hd720`}
                                 style={{
@@ -101,11 +116,11 @@ export default function Wisata() {
                                 }}
                                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                                 allowFullScreen
-                                title="Wisata Banner"
+                                title="Banner Video"
                             />
-                        ) : bannerUrl && (bannerUrl.endsWith('.mp4') || bannerUrl.endsWith('.webm')) ? (
+                        ) : bannerImage && (bannerImage.endsWith('.mp4') || bannerImage.endsWith('.webm') || bannerImage.includes('video')) ? (
                             <video
-                                src={bannerUrl}
+                                src={bannerImage}
                                 className="w-full h-full object-cover"
                                 autoPlay
                                 muted
@@ -114,11 +129,11 @@ export default function Wisata() {
                             />
                         ) : (
                             <img
-                                src={bannerUrl || 'https://images.unsplash.com/photo-1555993539-1732b0258235?w=600&h=400&fit=crop'}
-                                alt="Jakarta cityscape"
+                                src={bannerImage}
+                                alt="Wisata"
                                 className="w-full h-full object-cover"
                                 onError={(e) => {
-                                    e.target.src = 'https://images.unsplash.com/photo-1555993539-1732b0258235?w=600&h=400&fit=crop';
+                                    e.target.src = 'https://images.unsplash.com/photo-1518548419970-58e3b4079ab2?w=600&h=400&fit=crop';
                                 }}
                             />
                         )}
@@ -130,7 +145,7 @@ export default function Wisata() {
                     <div className="flex items-center justify-center py-20">
                         <div className="text-center">
                             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-                            <p className="text-grey-600">Memuat destinasi wisata...</p>
+                            <p className="text-grey-600">Memuat destinasi...</p>
                         </div>
                     </div>
                 ) : destinationSections.length === 0 ? (
@@ -142,7 +157,7 @@ export default function Wisata() {
                     </div>
                 ) : (
                     destinationSections.map((section) => (
-                        <DestinationSection key={section.id} section={section} />
+                        <DestinationSection key={section.id} section={section} subcategories={subcategories} />
                     ))
                 )}
             </div>
@@ -150,30 +165,90 @@ export default function Wisata() {
     );
 }
 
-// Section Component
-function DestinationSection({ section }) {
+// Section Component with Subcategory Banner
+function DestinationSection({ section, subcategories }) {
+    const [showAll, setShowAll] = useState(false);
+    
+    // Get subcategories for this section's category
+    const sectionSubcats = subcategories.filter(s => s.categoryId === section.subcategories?.[0]?.categoryId);
+    
+    // Find banner from subcategory or use category banner
+    const sectionBanner = section.bannerImage;
+    const bannerVideoId = getYouTubeVideoId(sectionBanner);
+
     return (
-        <div className="flex flex-col gap-[10px] py-[5px] pr-[10px]">
-            {/* Section Header */}
-            <div className="flex items-center gap-[5px] pl-[20px] pr-[10px] pt-[10px]">
-                <h2 className="font-bold text-[15px] text-black capitalize flex-1 leading-[0]">
-                    <p className="leading-normal">{section.title}</p>
-                </h2>
-                <div className="flex items-center pt-[3px]">
-                    <div className="transform -rotate-90">
-                        <ChevronRight size={11} className="text-grey-600" />
+        <div className="py-1.5 pr-2.5">
+            {/* Subcategory Banner (if exists) */}
+            {sectionBanner && (
+                <div className="px-2.5 mb-2">
+                    <div className="relative w-full h-32 rounded-[15px] overflow-hidden">
+                        {bannerVideoId ? (
+                            <iframe
+                                src={`https://www.youtube.com/embed/${bannerVideoId}?autoplay=1&mute=1&loop=1&playlist=${bannerVideoId}&controls=0&showinfo=0&rel=0&modestbranding=1`}
+                                className="absolute inset-0 w-full h-full"
+                                style={{ border: 'none' }}
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                title={`${section.title} Banner`}
+                            />
+                        ) : sectionBanner.endsWith('.mp4') || sectionBanner.endsWith('.webm') ? (
+                            <video
+                                src={sectionBanner}
+                                className="w-full h-full object-cover"
+                                autoPlay
+                                muted
+                                loop
+                                playsInline
+                            />
+                        ) : (
+                            <img
+                                src={sectionBanner.startsWith('http') ? sectionBanner : `/api/assets/${sectionBanner}`}
+                                alt={section.title}
+                                className="w-full h-full object-cover"
+                            />
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                        <div className="absolute bottom-3 left-4">
+                            <h3 className="text-white font-bold text-lg">{section.title}</h3>
+                        </div>
                     </div>
                 </div>
-            </div>
+            )}
+            
+            {/* Section Header (if no banner) */}
+            {!sectionBanner && (
+                <div className="flex items-center gap-1.5 px-5 pt-2.5 pb-2">
+                    <h2 className="font-bold text-[15px] text-black capitalize flex-1">
+                        {section.title}
+                    </h2>
+                    <div className="flex items-center pt-0.5">
+                        <div className="flex items-center justify-center h-[11px] w-[10px] -rotate-90">
+                            <ChevronRight size={10} className="text-grey-600" />
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Horizontal Scroll Cards */}
-            <div className="overflow-x-auto no-scrollbar px-[10px]">
-                <div className="flex gap-[5px]">
-                    {section.destinations.map((dest) => (
+            <div className="overflow-x-auto no-scrollbar">
+                <div className="flex gap-1.5 px-2.5">
+                    {section.destinations.slice(0, showAll ? undefined : 10).map((dest) => (
                         <DestinationCard key={dest.id} destination={dest} />
                     ))}
                 </div>
             </div>
+            
+            {/* Show More Button */}
+            {section.destinations.length > 10 && !showAll && (
+                <div className="px-5 py-2">
+                    <button 
+                        type="button"
+                        onClick={() => setShowAll(true)}
+                        className="text-primary text-sm font-medium"
+                    >
+                        Lihat Semua ({section.destinations.length})
+                    </button>
+                </div>
+            )}
         </div>
     );
 }
@@ -196,6 +271,9 @@ function DestinationCard({ destination }) {
     return (
         <div
             onClick={() => navigate(`/wisata/${destination.id}`)}
+            onKeyDown={(e) => e.key === 'Enter' && navigate(`/wisata/${destination.id}`)}
+            role="button"
+            tabIndex={0}
             className="w-[200px] h-[133px] rounded-[15px] overflow-hidden flex-shrink-0 cursor-pointer relative group"
         >
             {/* Background Image */}

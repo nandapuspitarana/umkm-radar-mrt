@@ -4,7 +4,7 @@ import { cors } from 'hono/cors';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import * as dotenv from 'dotenv';
-import { vendors, products, orders, settings, users, vouchers, assets, categories, navigationItems, destinations } from './db/schema';
+import { vendors, products, orders, settings, users, vouchers, assets, categories, navigationItems, destinations, destinationCategories, destinationSubcategories } from './db/schema';
 import { eq, desc, and, sql } from 'drizzle-orm';
 import { randomBytes } from 'crypto';
 import Redis from 'ioredis';
@@ -600,16 +600,16 @@ async function indexVendors(): Promise<void> {
                 body: {
                     mappings: {
                         properties: {
-                            id:           { type: 'integer' },
-                            name:         { type: 'text', analyzer: 'standard' },
-                            description:  { type: 'text', analyzer: 'standard' },
-                            address:      { type: 'text', analyzer: 'standard' },
-                            category:     { type: 'keyword' },
+                            id: { type: 'integer' },
+                            name: { type: 'text', analyzer: 'standard' },
+                            description: { type: 'text', analyzer: 'standard' },
+                            address: { type: 'text', analyzer: 'standard' },
+                            category: { type: 'keyword' },
                             locationTags: { type: 'text', analyzer: 'standard' },
-                            status:       { type: 'keyword' },
-                            rating:       { type: 'float' },
-                            lat:          { type: 'float' },
-                            lng:          { type: 'float' },
+                            status: { type: 'keyword' },
+                            rating: { type: 'float' },
+                            lat: { type: 'float' },
+                            lng: { type: 'float' },
                         },
                     },
                 },
@@ -629,19 +629,19 @@ async function indexVendors(): Promise<void> {
         const body = allVendors.flatMap((v) => [
             { index: { _index: ES_VENDORS_INDEX, _id: String(v.id) } },
             {
-                id:           v.id,
-                name:         v.name,
-                description:  v.description || '',
-                address:      v.address || '',
-                category:     v.category || '',
+                id: v.id,
+                name: v.name,
+                description: v.description || '',
+                address: v.address || '',
+                category: v.category || '',
                 locationTags: v.locationTags || '',
-                status:       v.status || '',
-                rating:       v.rating || 0,
-                lat:          v.lat,
-                lng:          v.lng,
-                whatsapp:     v.whatsapp || '',
-                image:        v.image || '',
-                schedule:     v.schedule,
+                status: v.status || '',
+                rating: v.rating || 0,
+                lat: v.lat,
+                lng: v.lng,
+                whatsapp: v.whatsapp || '',
+                image: v.image || '',
+                schedule: v.schedule,
             },
         ]);
 
@@ -687,9 +687,9 @@ function getCategorySlug(v: { category?: string | null; categoryId?: number | nu
  * Falls back to Postgres when ES is unavailable or q is empty.
  */
 app.get('/api/vendors/search', async (c) => {
-    const q        = (c.req.query('q') || '').trim();
+    const q = (c.req.query('q') || '').trim();
     const category = (c.req.query('category') || '').trim();
-    const station  = (c.req.query('station') || '').trim();
+    const station = (c.req.query('station') || '').trim();
 
     // If no search term, fall back to a simple DB query
     if (!q) {
@@ -706,9 +706,9 @@ app.get('/api/vendors/search', async (c) => {
         const mustClauses: any[] = [
             {
                 multi_match: {
-                    query:  q,
+                    query: q,
                     fields: ['name^3', 'description^2', 'address', 'locationTags^2', 'category'],
-                    type:   'best_fields',
+                    type: 'best_fields',
                     fuzziness: 'AUTO',
                 },
             },
@@ -725,7 +725,7 @@ app.get('/api/vendors/search', async (c) => {
         const esQuery: any = {
             query: {
                 bool: {
-                    must:   mustClauses,
+                    must: mustClauses,
                     ...(filterClauses.length > 0 ? { filter: filterClauses } : {}),
                 },
             },
@@ -734,7 +734,7 @@ app.get('/api/vendors/search', async (c) => {
 
         const { body: esResult } = await esClient.search({
             index: ES_VENDORS_INDEX,
-            body:  esQuery,
+            body: esQuery,
         });
 
         const hits = esResult.hits?.hits ?? [];
@@ -992,9 +992,9 @@ app.post('/api/vendors/bulk', async (c) => {
         if (!Array.isArray(body) || body.length === 0) {
             return c.json({ error: 'Body must be a non-empty array' }, 400);
         }
-        
+
         const result = await db.insert(vendors).values(body).returning();
-        
+
         await writeAuditLog({
             entity: 'vendor', entityId: 0, entityName: 'Bulk Import',
             action: 'CREATE',
@@ -1198,7 +1198,7 @@ app.delete('/api/products/:id', async (c) => {
 app.get('/api/destinations', async (c) => {
     try {
         const category = c.req.query('category') || '';
-        const station  = c.req.query('station')  || 'Blok M';
+        const station = c.req.query('station') || 'Blok M';
         const stationType = c.req.query('stationType') || '';
 
         // Build a deterministic cache key from query params
@@ -1318,10 +1318,10 @@ app.post('/api/destinations/bulk', async (c) => {
         if (!Array.isArray(body) || body.length === 0) {
             return c.json({ error: 'Body must be a non-empty array' }, 400);
         }
-        
+
         const result = await db.insert(destinations).values(body).returning();
         await flushDestinationsCache();
-        
+
         return c.json({ message: 'Bulk destinations created', count: result.length, data: result }, 201);
     } catch (error) {
         return c.json({ error: (error as Error).message }, 500);
@@ -1369,7 +1369,7 @@ app.put('/api/destinations/:id', async (c) => {
             'address', 'image', 'nearestStation', 'stationType',
             'distanceFromStation', 'walkingTimeMinutes',
             'openingHours', 'ticketPrice', 'contact', 'website',
-            'transitHints', 'isActive',
+            'transitHints', 'isActive', 'categoryId', 'subcategoryId'
         ] as const;
 
         const updateData: Record<string, any> = { updatedAt: new Date() };
@@ -1383,6 +1383,8 @@ app.put('/api/destinations/:id', async (c) => {
         if ('distanceFromStation' in updateData) updateData.distanceFromStation = parseFloat(updateData.distanceFromStation) || null;
         if ('walkingTimeMinutes' in updateData) updateData.walkingTimeMinutes = parseInt(updateData.walkingTimeMinutes) || null;
         if ('isActive' in updateData) updateData.isActive = Boolean(updateData.isActive);
+        if ('categoryId' in updateData) updateData.categoryId = updateData.categoryId || null;
+        if ('subcategoryId' in updateData) updateData.subcategoryId = updateData.subcategoryId || null;
 
         const result = await db.update(destinations)
             .set(updateData)
@@ -1432,6 +1434,201 @@ app.delete('/api/destinations/:id', async (c) => {
     } catch (error) {
         console.error('Delete Destination Error:', error);
         return c.json({ error: 'Failed to delete destination' }, 500);
+    }
+});
+
+// ==================== DESTINATION CATEGORIES ====================
+
+// Get All Destination Categories (with optional type filter)
+app.get('/api/destination-categories', async (c) => {
+    try {
+        const type = c.req.query('type'); // 'wisata' | 'publik'
+        let query = db.select().from(destinationCategories);
+
+        if (type) {
+            const result = await db.select().from(destinationCategories)
+                .where(eq(destinationCategories.type, type))
+                .orderBy(destinationCategories.sortOrder);
+            return c.json(result);
+        }
+
+        const result = await db.select().from(destinationCategories).orderBy(destinationCategories.sortOrder);
+        return c.json(result);
+    } catch (error) {
+        console.error('Get Destination Categories Error:', error);
+        return c.json({ error: 'Failed to fetch destination categories' }, 500);
+    }
+});
+
+// Get Single Destination Category
+app.get('/api/destination-categories/:id', async (c) => {
+    try {
+        const id = c.req.param('id');
+        const result = await db.select().from(destinationCategories).where(eq(destinationCategories.id, parseInt(id)));
+        if (result.length === 0) return c.json({ error: 'Category not found' }, 404);
+        return c.json(result[0]);
+    } catch (error) {
+        console.error('Get Destination Category Error:', error);
+        return c.json({ error: 'Failed to fetch destination category' }, 500);
+    }
+});
+
+// Create Destination Category
+app.post('/api/destination-categories', async (c) => {
+    try {
+        const body = await c.req.json();
+        const result = await db.insert(destinationCategories).values({
+            name: body.name,
+            slug: body.slug,
+            type: body.type || 'wisata',
+            icon: body.icon || null,
+            bannerImage: body.bannerImage || null,
+            sortOrder: body.sortOrder || 0,
+            isActive: body.isActive !== undefined ? body.isActive : true,
+        }).returning();
+        return c.json(result[0], 201);
+    } catch (error) {
+        console.error('Create Destination Category Error:', error);
+        return c.json({ error: 'Failed to create destination category' }, 500);
+    }
+});
+
+// Update Destination Category
+app.put('/api/destination-categories/:id', async (c) => {
+    try {
+        const id = c.req.param('id');
+        const body = await c.req.json();
+        const result = await db.update(destinationCategories)
+            .set({
+                name: body.name,
+                slug: body.slug,
+                type: body.type,
+                icon: body.icon,
+                bannerImage: body.bannerImage,
+                sortOrder: body.sortOrder,
+                isActive: body.isActive,
+            })
+            .where(eq(destinationCategories.id, parseInt(id)))
+            .returning();
+        if (result.length === 0) return c.json({ error: 'Category not found' }, 404);
+        await flushDestinationsCache();
+        return c.json(result[0]);
+    } catch (error) {
+        console.error('Update Destination Category Error:', error);
+        return c.json({ error: 'Failed to update destination category' }, 500);
+    }
+});
+
+// Delete Destination Category
+app.delete('/api/destination-categories/:id', async (c) => {
+    try {
+        const id = c.req.param('id');
+        await db.delete(destinationCategories).where(eq(destinationCategories.id, parseInt(id)));
+        await flushDestinationsCache();
+        return c.json({ success: true });
+    } catch (error) {
+        console.error('Delete Destination Category Error:', error);
+        return c.json({ error: 'Failed to delete destination category' }, 500);
+    }
+});
+
+// ==================== DESTINATION SUBCATEGORIES ====================
+
+// Get All Destination Subcategories (with category info)
+app.get('/api/destination-subcategories', async (c) => {
+    try {
+        const result = await db
+            .select({
+                id: destinationSubcategories.id,
+                name: destinationSubcategories.name,
+                slug: destinationSubcategories.slug,
+                bannerImage: destinationSubcategories.bannerImage,
+                categoryId: destinationSubcategories.categoryId,
+                sortOrder: destinationSubcategories.sortOrder,
+                isActive: destinationSubcategories.isActive,
+                createdAt: destinationSubcategories.createdAt,
+                categoryName: destinationCategories.name,
+                categoryType: destinationCategories.type,
+            })
+            .from(destinationSubcategories)
+            .leftJoin(destinationCategories, eq(destinationSubcategories.categoryId, destinationCategories.id))
+            .orderBy(destinationSubcategories.sortOrder);
+        return c.json(result);
+    } catch (error) {
+        console.error('Get Destination Subcategories Error:', error);
+        return c.json({ error: 'Failed to fetch destination subcategories' }, 500);
+    }
+});
+
+// Get Subcategories by Category ID
+app.get('/api/destination-subcategories/by-category/:categoryId', async (c) => {
+    try {
+        const categoryId = c.req.param('categoryId');
+        const result = await db.select()
+            .from(destinationSubcategories)
+            .where(eq(destinationSubcategories.categoryId, parseInt(categoryId)))
+            .orderBy(destinationSubcategories.sortOrder);
+        return c.json(result);
+    } catch (error) {
+        console.error('Get Destination Subcategories by Category Error:', error);
+        return c.json({ error: 'Failed to fetch destination subcategories' }, 500);
+    }
+});
+
+// Create Destination Subcategory
+app.post('/api/destination-subcategories', async (c) => {
+    try {
+        const body = await c.req.json();
+        const result = await db.insert(destinationSubcategories).values({
+            categoryId: body.categoryId,
+            name: body.name,
+            slug: body.slug,
+            bannerImage: body.bannerImage || null,
+            sortOrder: body.sortOrder || 0,
+            isActive: body.isActive !== undefined ? body.isActive : true,
+        }).returning();
+        return c.json(result[0], 201);
+    } catch (error) {
+        console.error('Create Destination Subcategory Error:', error);
+        return c.json({ error: 'Failed to create destination subcategory' }, 500);
+    }
+});
+
+// Update Destination Subcategory
+app.put('/api/destination-subcategories/:id', async (c) => {
+    try {
+        const id = c.req.param('id');
+        const body = await c.req.json();
+        const result = await db.update(destinationSubcategories)
+            .set({
+                categoryId: body.categoryId,
+                name: body.name,
+                slug: body.slug,
+                bannerImage: body.bannerImage,
+                sortOrder: body.sortOrder,
+                isActive: body.isActive,
+            })
+            .where(eq(destinationSubcategories.id, parseInt(id)))
+            .returning();
+        if (result.length === 0) return c.json({ error: 'Subcategory not found' }, 404);
+        await flushDestinationsCache();
+        return c.json(result[0]);
+    } catch (error) {
+        console.error('Update Destination Subcategory Error:', error);
+        return c.json({ error: 'Failed to update destination subcategory' }, 500);
+    }
+});
+
+// Delete Destination Subcategory
+app.delete('/api/destination-subcategories/:id', async (c) => {
+    try {
+        const id = c.req.param('id');
+        await db.delete(destinationSubcategories).where(eq(destinationSubcategories.id, parseInt(id)));
+        await flushDestinationsCache();
+        return c.json({ success: true });
+    } catch (error) {
+        console.error('Delete Destination Subcategory Error:', error);
+        return c.json({ error: 'Failed to delete destination subcategory' }, 500);
     }
 });
 
@@ -2937,7 +3134,7 @@ app.get('/api/settings/:key', async (c) => {
             return c.json({ key: result[0].key, value });
         } catch {
             await flushDestinationsCache();
-        return c.json(result[0]);
+            return c.json(result[0]);
         }
     } catch (error) {
         console.error('Setting fetch error:', error);
@@ -2963,13 +3160,13 @@ app.put('/api/settings/:key', async (c) => {
                 .returning();
             await redis.del('settings_all');
             await flushDestinationsCache();
-        return c.json(result[0]);
+            return c.json(result[0]);
         } else {
             // Create new
             const result = await db.insert(settings).values({ key, value }).returning();
             await redis.del('settings_all');
             await flushDestinationsCache();
-        return c.json(result[0]);
+            return c.json(result[0]);
         }
     } catch (error) {
         console.error('Setting update error:', error);

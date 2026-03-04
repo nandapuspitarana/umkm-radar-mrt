@@ -1,0 +1,115 @@
+{
+  "dests": [
+    {
+      "id": 93,
+      "name": "Taman Literasi Martha Tiahahu",
+      "cId": null,
+      "sId": null,
+      "cName": "Ruang Terbuka & Olahraga",
+      "sName": ""
+    },
+    {
+      "id": 97,
+      "name": "Masjid Nurul Iman Blok M Square",
+      "cId": null,
+      "sId": null,
+      "cName": "Publik",
+      "sName": "Fasilitas Sosial & Keagamaan"
+    },
+    {
+      "id": 95,
+      "name": "Blok M Square",
+      "cId": null,
+      "sId": null,
+      "cName": "Publik",
+      "sName": "Mall & Plaza Terbuka"
+    },
+    {
+      "id": 100,
+      "name": "M Bloc Space",
+      "cId": null,
+      "sId": null,
+      "cName": "Publik",
+      "sName": ""
+    },
+    {
+      "id": 98,
+      "name": "Little Tokyo Melawai",
+      "cId": null,
+      "sId": null,
+      "cName": "belanja",
+      "sName": ""
+    },
+    {
+      "id": 96,
+      "name": "Terminal Blok M",
+      "cId": null,
+      "sId": null,
+      "cName": "Publik",
+      "sName": "Infrastruktur Pejalan & Transit"
+    },
+    {
+      "id": 94,
+      "name": "GOR Bulungan",
+      "cId": null,
+      "sId": null,
+      "cName": "Publik",
+      "sName": "Ruang Terbuka & Olahraga"
+    },
+    {
+      "id": 99,
+      "name": "Pasaraya Blok M",
+      "cId": null,
+      "sId": null,
+      "cName": "Publik",
+      "sName": "Mall & Plaza Terbuka"
+    }
+  ],
+  "cats": [
+    {
+      "id": 8,
+      "name": "Ruang Terbuka & Olahraga"
+    },
+    {
+      "id": 1,
+      "name": "Wisata Sejarah & Museum"
+    },
+    {
+      "id": 9,
+      "name": "Mall & Plaza Terbuka"
+    },
+    {
+      "id": 2,
+      "name": "Wisata Budaya & Seni"
+    },
+    {
+      "id": 3,
+      "name": "Wisata Religi"
+    },
+    {
+      "id": 10,
+      "name": "Infrastruktur Pejalan & Transit"
+    },
+    {
+      "id": 11,
+      "name": "Fasilitas Sosial & Keagamaan"
+    },
+    {
+      "id": 4,
+      "name": "Wisata Alam & Ruang Terbuka"
+    },
+    {
+      "id": 5,
+      "name": "Wisata Keluarga & Rekreasi"
+    },
+    {
+      "id": 6,
+      "name": "Wisata Edukasi"
+    },
+    {
+      "id": 7,
+      "name": "Wisata Belanja"
+    }
+  ],
+  "subs": []
+}

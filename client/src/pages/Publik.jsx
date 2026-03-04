@@ -3,14 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { MapPin, ChevronRight } from 'lucide-react';
 import AppLayout from '../components/AppLayout';
 
-// Category mapping for display titles
-const targetSubcategories = [
-    'Ruang Terbuka & Olahraga',
-    'Mall & Plaza Terbuka',
-    'Infrastruktur Pejalan & Transit',
-    'Fasilitas Sosial & Keagamaan'
-];
-
 // Helper function to extract YouTube video ID
 const getYouTubeVideoId = (url) => {
     if (!url) return null;
@@ -27,10 +19,13 @@ const getYouTubeVideoId = (url) => {
 
 export default function Publik() {
     const [destinations, setDestinations] = useState([]);
+    const [categories, setCategories] = useState([]);
+    const [subcategories, setSubcategories] = useState([]);
     const [loading, setLoading] = useState(true);
     const [bannerImage, setBannerImage] = useState('https://images.unsplash.com/photo-1519331379826-f10be5486c6f?w=600&h=400&fit=crop');
 
     useEffect(() => {
+        fetchCategories();
         fetchDestinations();
         fetchBanner();
     }, []);
@@ -47,6 +42,21 @@ export default function Publik() {
         }
     };
 
+    const fetchCategories = async () => {
+        try {
+            const response = await fetch('/api/destination-categories?type=publik');
+            const data = await response.json();
+            setCategories(data.filter(c => c.isActive));
+            
+            // Fetch subcategories
+            const subResponse = await fetch('/api/destination-subcategories');
+            const subData = await subResponse.json();
+            setSubcategories(subData.filter(s => s.isActive && s.categoryType === 'publik'));
+        } catch (error) {
+            console.error('Failed to fetch categories:', error);
+        }
+    };
+
     const fetchDestinations = async () => {
         try {
             const response = await fetch('/api/destinations');
@@ -59,17 +69,48 @@ export default function Publik() {
         }
     };
 
-    // Group destinations by category
-    const publikDestinations = destinations.filter(dest => dest.category === 'Publik' || dest.category === 'Area Publik');
+    // Get publik category IDs
+    const publikCategoryIds = categories.map(c => c.id);
     
-    const destinationSections = targetSubcategories.map(subcat => {
-        const categoryDestinations = publikDestinations.filter(dest => dest.subcategory === subcat);
+    // Filter destinations that belong to publik categories
+    const publikDestinations = destinations.filter(dest => 
+        publikCategoryIds.includes(dest.categoryId) ||
+        dest.category === 'Publik' || 
+        dest.category === 'Area Publik'
+    );
+
+    // Group destinations by subcategory (for publik, subcategories are the main sections)
+    const destinationSections = subcategories.map(subcat => {
+        const subcatDestinations = publikDestinations.filter(dest => 
+            dest.subcategoryId === subcat.id ||
+            dest.subcategory === subcat.name
+        );
+
         return {
-            id: subcat.replace(/W+/g, '-').toLowerCase(),
-            title: subcat,
-            destinations: categoryDestinations
+            id: subcat.slug,
+            title: subcat.name,
+            bannerImage: subcat.bannerImage,
+            destinations: subcatDestinations
         };
     }).filter(section => section.destinations.length > 0);
+
+    // If no subcategories, group by categories
+    const categorySections = categories.map(cat => {
+        const catDestinations = publikDestinations.filter(dest => 
+            dest.categoryId === cat.id ||
+            dest.category === cat.name
+        );
+
+        return {
+            id: cat.slug,
+            title: cat.name,
+            bannerImage: cat.bannerImage,
+            destinations: catDestinations
+        };
+    }).filter(section => section.destinations.length > 0);
+
+    // Use subcategory sections if available, otherwise use category sections
+    const finalSections = destinationSections.length > 0 ? destinationSections : categorySections;
 
     const videoId = getYouTubeVideoId(bannerImage);
 
@@ -84,16 +125,12 @@ export default function Publik() {
                 <div className="p-2.5">
                     <div className="relative w-full aspect-video bg-grey-900 rounded-[20px] overflow-hidden">
                         {videoId ? (
-                            /* YouTube: iframe dibuat full cover tanpa black bars */
                             <iframe
                                 src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=0&showinfo=0&rel=0&modestbranding=1&vq=hd720`}
                                 style={{
                                     position: 'absolute',
                                     top: '50%',
                                     left: '50%',
-                                    /* Overscan sedikit untuk menghilangkan black bars:
-                                       container 16:9, YT secara internal bisa ada UI bar.
-                                       Scale 1.05 cukup untuk cover penuh */
                                     width: '100%',
                                     height: '100%',
                                     transform: 'translate(-50%, -50%) scale(1.05)',
@@ -133,7 +170,7 @@ export default function Publik() {
                             <p className="text-grey-600">Memuat destinasi...</p>
                         </div>
                     </div>
-                ) : destinationSections.length === 0 ? (
+                ) : finalSections.length === 0 ? (
                     <div className="flex items-center justify-center py-20">
                         <div className="text-center">
                             <p className="text-grey-600 mb-2">Belum ada destinasi publik</p>
@@ -141,7 +178,7 @@ export default function Publik() {
                         </div>
                     </div>
                 ) : (
-                    destinationSections.map((section) => (
+                    finalSections.map((section) => (
                         <DestinationSection key={section.id} section={section} />
                     ))
                 )}
@@ -150,53 +187,110 @@ export default function Publik() {
     );
 }
 
-// Section Component
+// Section Component with Banner
 function DestinationSection({ section }) {
+    const [showAll, setShowAll] = useState(false);
+    const sectionBanner = section.bannerImage;
+    const bannerVideoId = getYouTubeVideoId(sectionBanner);
+
     return (
         <div className="py-1.5 pr-2.5">
-            {/* Section Header */}
-            <div className="flex items-center gap-1.5 px-5 pt-2.5 pb-2">
-                <h2 className="font-bold text-[15px] text-black capitalize flex-1">
-                    {section.title}
-                </h2>
-                <div className="flex items-center pt-0.5">
-                    <div className="flex items-center justify-center h-[11px] w-[10px] -rotate-90">
-                        <ChevronRight size={10} className="text-grey-600" />
+            {/* Subcategory Banner (if exists) */}
+            {sectionBanner && (
+                <div className="px-2.5 mb-2">
+                    <div className="relative w-full h-32 rounded-[15px] overflow-hidden">
+                        {bannerVideoId ? (
+                            <iframe
+                                src={`https://www.youtube.com/embed/${bannerVideoId}?autoplay=1&mute=1&loop=1&playlist=${bannerVideoId}&controls=0&showinfo=0&rel=0&modestbranding=1`}
+                                className="absolute inset-0 w-full h-full"
+                                style={{ border: 'none' }}
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                title={`${section.title} Banner`}
+                            />
+                        ) : sectionBanner.endsWith('.mp4') || sectionBanner.endsWith('.webm') ? (
+                            <video
+                                src={sectionBanner}
+                                className="w-full h-full object-cover"
+                                autoPlay
+                                muted
+                                loop
+                                playsInline
+                            />
+                        ) : (
+                            <img
+                                src={sectionBanner.startsWith('http') ? sectionBanner : `/api/assets/${sectionBanner}`}
+                                alt={section.title}
+                                className="w-full h-full object-cover"
+                            />
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                        <div className="absolute bottom-3 left-4">
+                            <h3 className="text-white font-bold text-lg">{section.title}</h3>
+                        </div>
                     </div>
                 </div>
-            </div>
+            )}
+            
+            {/* Section Header (if no banner) */}
+            {!sectionBanner && (
+                <div className="flex items-center gap-1.5 px-5 pt-2.5 pb-2">
+                    <h2 className="font-bold text-[15px] text-black capitalize flex-1">
+                        {section.title}
+                    </h2>
+                    <div className="flex items-center pt-0.5">
+                        <div className="flex items-center justify-center h-[11px] w-[10px] -rotate-90">
+                            <ChevronRight size={10} className="text-grey-600" />
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Horizontal Scroll Cards */}
             <div className="overflow-x-auto no-scrollbar">
                 <div className="flex gap-1.5 px-2.5">
-                    {section.destinations.map((dest) => (
+                    {section.destinations.slice(0, showAll ? undefined : 10).map((dest) => (
                         <DestinationCard key={dest.id} destination={dest} />
                     ))}
                 </div>
             </div>
+            
+            {/* Show More Button */}
+            {section.destinations.length > 10 && !showAll && (
+                <div className="px-5 py-2">
+                    <button 
+                        type="button"
+                        onClick={() => setShowAll(true)}
+                        className="text-primary text-sm font-medium"
+                    >
+                        Lihat Semua ({section.destinations.length})
+                    </button>
+                </div>
+            )}
         </div>
     );
 }
 
 // Destination Card Component matching Figma design
 function DestinationCard({ destination }) {
-    // Format distance properly - distance_from_station is in kilometers
-    const formatDistance = (distanceKm) => {
-        if (!distanceKm && distanceKm !== 0) return '0 m';
-        if (distanceKm < 1) {
-            return `${Math.round(distanceKm * 1000)} m`;
+    const navigate = useNavigate();
+    const imageUrl = destination.image || 'https://images.unsplash.com/photo-1519331379826-f10be5486c6f?w=400&h=300&fit=crop';
+
+    const formatDistance = (distanceInKm) => {
+        if (!distanceInKm && distanceInKm !== 0) return '0 m';
+        if (distanceInKm < 1) {
+            return `${Math.round(distanceInKm * 1000)} m`;
         }
-        return `${distanceKm.toFixed(1)} km`;
+        return `${distanceInKm.toFixed(1)} km`;
     };
 
     const distance = formatDistance(destination.distance_from_station);
 
-    const navigate = useNavigate();
-    const imageUrl = destination.image || 'https://images.unsplash.com/photo-1519331379826-f10be5486c6f?w=400&h=300&fit=crop';
-
     return (
         <div
             onClick={() => navigate(`/publik/${destination.id}`)}
+            onKeyDown={(e) => e.key === 'Enter' && navigate(`/publik/${destination.id}`)}
+            role="button"
+            tabIndex={0}
             className="w-[200px] h-[133px] rounded-[15px] overflow-hidden flex-shrink-0 cursor-pointer relative group"
         >
             {/* Background Image */}
