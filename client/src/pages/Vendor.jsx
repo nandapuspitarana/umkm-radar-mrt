@@ -247,7 +247,7 @@ function ProductCard({ product, onAdd }) {
                 </h3>
 
                 {/* Description */}
-                <p className="text-[11px] text-grey-400 font-semibold truncate capitalize leading-tight">
+                <p className="text-[11px] text-grey-400 font-semibold line-clamp-2 capitalize leading-tight">
                     {product.description || product.category}
                 </p>
             </div>

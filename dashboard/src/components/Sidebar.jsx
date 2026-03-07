@@ -25,6 +25,7 @@ import {
     Globe,
     Zap,
     Briefcase,
+    FolderOpen,
 } from 'lucide-react';
 
 // ─── Menu config ───────────────────────────────────────────────────────────────
@@ -47,6 +48,7 @@ const ADMIN_MENU = [
             { icon: LayoutGrid, label: 'Menu Utama App', path: '/main-menu' },
             { icon: Bus, label: 'Icon Transport', path: '/transport-icons' },
             { icon: Layers, label: 'Sub-Kategori', path: '/sub-kategori' },
+            { icon: FolderOpen, label: 'Asset Manager', path: '/assets' },
         ],
     },
     {
