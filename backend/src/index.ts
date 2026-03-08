@@ -174,41 +174,83 @@ app.get('/api/proxy/minio/*', async (c) => {
     }
 });
 
-// Simplified uploads proxy endpoint - serves files from MinIO using relative paths
-// Example: /uploads/banners/123.jpg -> MinIO: banners/123.jpg
+// Uploads proxy endpoint — serves files from MinIO
+// For VIDEO files: redirect to a short-lived presigned URL. This lets Safari/iOS
+//   talk directly to MinIO which natively handles Range requests (required for video).
+// For IMAGE/other files: proxy through backend with proper ETag + cache headers.
 app.get('/uploads/*', async (c) => {
     try {
         const { minioClient, BUCKET_NAME } = await import('./storage');
-        // Remove /uploads/ prefix to get the actual path in MinIO
-        const path = c.req.path.replace('/uploads/', '');
-
-        // Get object from MinIO
-        const stream = await minioClient.getObject(BUCKET_NAME, path);
+        // Remove /uploads/ prefix. URL fragments (#t=0.001) are stripped by browser before HTTP.
+        const rawPath = c.req.path.replace('/uploads/', '').replace(/^\//, '');
+        const cleanPath = rawPath.split('#')[0]; // safety strip
 
         // Determine content type
-        const ext = path.split('.').pop()?.toLowerCase();
+        const ext = cleanPath.split('.').pop()?.toLowerCase() ?? '';
         const mimeTypes: Record<string, string> = {
             'mp4': 'video/mp4',
             'webm': 'video/webm',
             'mov': 'video/quicktime',
+            'm4v': 'video/mp4',
             'jpg': 'image/jpeg',
             'jpeg': 'image/jpeg',
             'png': 'image/png',
             'gif': 'image/gif',
             'svg': 'image/svg+xml',
-            'webp': 'image/webp'
+            'webp': 'image/webp',
         };
+        const contentType = mimeTypes[ext] || 'application/octet-stream';
+        const isVideo = ['mp4', 'webm', 'mov', 'm4v'].includes(ext);
 
-        const contentType = mimeTypes[ext || ''] || 'application/octet-stream';
+        // ── VIDEO: redirect directly to public MinIO URL ──
+        // Safari REQUIRES proper Range request support for HTML5 video.
+        // Our proxy cannot easily implement stateful Range responses.
+        // Since bucket is already public-read, just redirect to the MinIO public URL.
+        // PUBLIC_ASSET_URL = "https://assets.pengaruh.my.id" (prod) or "http://localhost:9000/assets" (dev)
+        if (isVideo) {
+            const publicBase = (process.env.PUBLIC_ASSET_URL || 'http://localhost:9000/assets').replace(/\/$/, '');
+            // PUBLIC_ASSET_URL already includes bucket name in path (e.g. /assets)
+            const videoPublicUrl = `${publicBase}/${cleanPath}`;
+            return c.redirect(videoPublicUrl, 302);
+        }
 
-        // Stream the file
-        return new Response(stream as any, {
-            headers: {
-                'Content-Type': contentType,
-                'Cache-Control': 'public, max-age=31536000',
-                'Access-Control-Allow-Origin': '*',
-            }
-        });
+        // ── IMAGE / OTHER: proxy with ETag + 304 + cache headers ──
+        let stat: any = null;
+        try {
+            stat = await minioClient.statObject(BUCKET_NAME, cleanPath);
+        } catch (_) {
+            return c.json({ error: 'File not found' }, 404);
+        }
+
+        const etag = stat.etag ? `"${stat.etag}"` : null;
+        const lastModified = stat.lastModified ? new Date(stat.lastModified).toUTCString() : null;
+        const size: number | undefined = stat.size;
+
+        // 304 Not Modified — skip re-download if browser already has this version
+        const ifNoneMatch = c.req.header('if-none-match');
+        if (etag && ifNoneMatch === etag) {
+            return new Response(null, {
+                status: 304,
+                headers: {
+                    'ETag': etag,
+                    'Cache-Control': 'public, max-age=31536000, immutable',
+                }
+            });
+        }
+
+        // Stream the image
+        const stream = await minioClient.getObject(BUCKET_NAME, cleanPath);
+
+        const headers: Record<string, string> = {
+            'Content-Type': contentType,
+            'Cache-Control': 'public, max-age=31536000, immutable',
+            'Access-Control-Allow-Origin': '*',
+        };
+        if (etag) headers['ETag'] = etag;
+        if (lastModified) headers['Last-Modified'] = lastModified;
+        if (size !== undefined) headers['Content-Length'] = String(size);
+
+        return new Response(stream as any, { headers });
     } catch (error) {
         console.error('Uploads proxy error:', error);
         return c.json({ error: 'File not found' }, 404);
@@ -3045,6 +3087,8 @@ app.get('/api/settings', async (c) => {
         try {
             const cached = await redis.get(cacheKey);
             if (cached) {
+                // Cache hit: set HTTP caching header so browser caches too
+                c.header('Cache-Control', 'public, max-age=300, stale-while-revalidate=30');
                 return c.json(JSON.parse(cached));
             }
         } catch (redisError) {
@@ -3072,6 +3116,8 @@ app.get('/api/settings', async (c) => {
             console.warn('Redis settings set error:', redisError);
         }
 
+        // Set HTTP caching header so browser/CDN can cache too (5 min, swr 30s)
+        c.header('Cache-Control', 'public, max-age=300, stale-while-revalidate=30');
         return c.json(settingsObj);
     } catch (error) {
         console.error('Settings fetch error:', error);

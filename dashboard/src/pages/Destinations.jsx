@@ -2,7 +2,23 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Search, Edit2, Trash2, MapPin, X, Save, Image as ImageIcon, Loader2, Tag, FolderOpen, ChevronDown } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
 import ImageUploader from '../components/ImageUploader';
-import { getImageUrl, getAssetUrl } from '../utils/api';
+
+/**
+ * Resolve any stored image path → /uploads/* backend proxy.
+ * Handles: full MinIO URL, /assets/..., /uploads/..., bare paths.
+ */
+const resolveImgUrl = (raw) => {
+    if (!raw) return '';
+    if (raw.startsWith('http') && raw.includes(':9000')) {
+        const idx = raw.indexOf('/assets/');
+        if (idx !== -1) return '/uploads/' + raw.slice(idx + '/assets/'.length);
+        return raw;
+    }
+    if (raw.startsWith('http')) return raw;
+    if (raw.startsWith('/assets/')) return '/uploads/' + raw.slice('/assets/'.length);
+    if (raw.startsWith('/uploads/')) return raw;
+    return '/uploads/' + raw.replace(/^\//, '');
+};
 
 export default function Destinations() {
     // Tab state
@@ -471,7 +487,7 @@ export default function Destinations() {
                                                 <div className="w-16 h-12 bg-gray-100 rounded-lg overflow-hidden border border-gray-200">
                                                     {dest.image ? (
                                                         <img
-                                                            src={getImageUrl(dest.image, { w: 100, h: 75, resize: 'fit' })}
+                                                            src={resolveImgUrl(dest.image)}
                                                             alt={dest.name}
                                                             className="w-full h-full object-cover"
                                                             onError={(e) => {
@@ -598,7 +614,7 @@ export default function Destinations() {
                                             <td className="px-6 py-4">
                                                 {cat.bannerImage ? (
                                                     <img
-                                                        src={getImageUrl(cat.bannerImage, { w: 64, h: 40, resize: 'fit' })}
+                                                        src={resolveImgUrl(cat.bannerImage)}
                                                         alt="Banner"
                                                         className="h-10 w-16 object-cover rounded border"
                                                         onError={(e) => {
@@ -686,7 +702,7 @@ export default function Destinations() {
                                                         <td className="px-6 py-3">
                                                             {sub.bannerImage ? (
                                                                 <img
-                                                                    src={getImageUrl(sub.bannerImage, { w: 56, h: 32, resize: 'fit' })}
+                                                                    src={resolveImgUrl(sub.bannerImage)}
                                                                     alt="Banner"
                                                                     className="h-8 w-14 object-cover rounded border"
                                                                     onError={(e) => {

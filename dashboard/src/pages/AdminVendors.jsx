@@ -14,6 +14,28 @@ const formatRupiah = (val) => {
     return 'Rp ' + Number(val).toLocaleString('id-ID');
 };
 
+/**
+ * Resolve any stored image path → /uploads/* backend proxy.
+ * Handles: full MinIO URL, /assets/..., /uploads/..., bare paths.
+ */
+const resolveImgUrl = (raw) => {
+    if (!raw) return '';
+    // Full localhost:9000 MinIO URL
+    if (raw.startsWith('http') && raw.includes(':9000')) {
+        const idx = raw.indexOf('/assets/');
+        if (idx !== -1) return '/uploads/' + raw.slice(idx + '/assets/'.length);
+        return raw;
+    }
+    // Any other absolute URL (external CDN)
+    if (raw.startsWith('http')) return raw;
+    // /assets/banners/a.jpg → /uploads/banners/a.jpg
+    if (raw.startsWith('/assets/')) return '/uploads/' + raw.slice('/assets/'.length);
+    // Already /uploads/...
+    if (raw.startsWith('/uploads/')) return raw;
+    // Bare path
+    return '/uploads/' + raw.replace(/^\//, '');
+};
+
 // ─── Field Error Component ───────────────────────────────────────────────────
 function FieldError({ msg }) {
     if (!msg) return null;
@@ -399,10 +421,17 @@ function ProductPanel({ vendor, onClose }) {
                                             <div className="w-14 h-14 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0">
                                                 {product.image ? (
                                                     <img
-                                                        src={product.image}
+                                                        src={resolveImgUrl(product.image)}
                                                         alt={product.name}
                                                         className="w-full h-full object-cover"
-                                                        onError={e => { e.target.style.display = 'none'; }}
+                                                        onError={e => {
+                                                            // fallback: try the raw value, then hide
+                                                            if (e.target.src !== product.image) {
+                                                                e.target.src = product.image;
+                                                            } else {
+                                                                e.target.style.display = 'none';
+                                                            }
+                                                        }}
                                                     />
                                                 ) : (
                                                     <div className="w-full h-full flex items-center justify-center text-gray-300">
@@ -615,7 +644,7 @@ export default function AdminVendors() {
                 const wsname = wb.SheetNames[0];
                 const ws = wb.Sheets[wsname];
                 const data = XLSX.utils.sheet_to_json(ws);
-                
+
                 const res = await fetch("/api/vendors/bulk", {
                     method: "POST",
                     headers: { "Content-Type": "application/json", "X-Actor-Name": localStorage.getItem("username") || "Admin" },
@@ -754,10 +783,10 @@ export default function AdminVendors() {
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                                 </svg>
                             </button>
-                            
+
                             {showMenu && (
                                 <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-[100]">
-                                    <button 
+                                    <button
                                         onClick={() => { setShowMenu(false); downloadTemplate(); }}
                                         className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 hover:text-blue-600 border-b border-gray-50 flex items-center gap-2"
                                     >
@@ -769,7 +798,7 @@ export default function AdminVendors() {
                                         Import Excel (Bulk)
                                         <input type="file" accept=".xlsx, .xls" className="hidden" onChange={(e) => { importExcel(e); }} />
                                     </label>
-                                    <button 
+                                    <button
                                         onClick={() => { setShowMenu(false); exportExcel(); }}
                                         className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 hover:text-green-600 flex items-center gap-2"
                                     >
@@ -855,7 +884,18 @@ export default function AdminVendors() {
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-3">
                                                     {vendor.image ? (
-                                                        <img src={vendor.image} alt={vendor.name} className="w-9 h-9 rounded-lg object-cover flex-shrink-0" onError={e => { e.target.style.display = 'none'; }} />
+                                                        <img
+                                                            src={resolveImgUrl(vendor.image)}
+                                                            alt={vendor.name}
+                                                            className="w-9 h-9 rounded-lg object-cover flex-shrink-0"
+                                                            onError={e => {
+                                                                if (e.target.src !== vendor.image) {
+                                                                    e.target.src = vendor.image;
+                                                                } else {
+                                                                    e.target.style.display = 'none';
+                                                                }
+                                                            }}
+                                                        />
                                                     ) : (
                                                         <div className="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
                                                             <Store size={16} className="text-gray-400" />

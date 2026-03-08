@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
-import { Upload, X, Loader2, Image as ImageIcon, Video } from 'lucide-react';
+import { Upload, X, Loader2, Image as ImageIcon, Video, FolderOpen } from 'lucide-react';
 import { getImageUrl } from '../utils/api';
+import AssetPickerModal from './AssetPickerModal';
 
 /**
  * ImageUploader - Reusable component for uploading images/videos to MinIO
@@ -18,7 +19,8 @@ export default function ImageUploader({
     const [uploading, setUploading] = useState(false);
     const [dragActive, setDragActive] = useState(false);
     const [error, setError] = useState(null);
-    const [compressInfo, setCompressInfo] = useState(null); // e.g. "3.2 MB → 1.8 MB"
+    const [compressInfo, setCompressInfo] = useState(null);
+    const [pickerOpen, setPickerOpen] = useState(false);
     const fileInputRef = useRef(null);
 
     const IMAGE_MAX_MB = 2;
@@ -191,6 +193,46 @@ export default function ImageUploader({
         setError(null);
     };
 
+    /**
+     * Resolve any stored image path to a usable preview URL.
+     * Maps every URL variant → /uploads/... backend proxy.
+     *
+     * Examples:
+     *   http://localhost:9000/assets/banners/a.jpg  → /uploads/banners/a.jpg
+     *   /assets/banners/a.jpg                       → /uploads/banners/a.jpg
+     *   /uploads/banners/a.jpg                      → /uploads/banners/a.jpg
+     *   banners/a.jpg                               → /uploads/banners/a.jpg
+     *   https://cdn.example.com/img.jpg             → (returned as-is)
+     */
+    const resolvePreviewUrl = (raw) => {
+        if (!raw) return '';
+
+        // Full MinIO / localhost URL: extract path after the bucket name "assets"
+        if (raw.startsWith('http') && raw.includes(':9000')) {
+            // e.g. http://localhost:9000/assets/banners/a.jpg → banners/a.jpg
+            const idx = raw.indexOf('/assets/');
+            if (idx !== -1) {
+                const storagePath = raw.slice(idx + '/assets/'.length);
+                return `/uploads/${storagePath}`;
+            }
+            return raw; // unknown format, return as-is
+        }
+
+        // Any other absolute external URL → use as-is
+        if (raw.startsWith('http')) return raw;
+
+        // /assets/banners/a.jpg → /uploads/banners/a.jpg
+        if (raw.startsWith('/assets/')) {
+            return '/uploads/' + raw.slice('/assets/'.length);
+        }
+
+        // Already a /uploads/... proxy path
+        if (raw.startsWith('/uploads/')) return raw;
+
+        // Bare path: banners/a.jpg or /banners/a.jpg → /uploads/banners/a.jpg
+        return '/uploads/' + raw.replace(/^\//, '');
+    };
+
     return (
         <div className="space-y-2">
             {/* Preview */}
@@ -205,12 +247,12 @@ export default function ImageUploader({
                         />
                     ) : (
                         <img
-                            src={getImageUrl(value, { w: 400, resize: 'fit' })}
+                            src={resolvePreviewUrl(value)}
                             alt="Preview"
                             className="w-full h-full object-cover"
                             onError={(e) => {
-                                // If proxy fails (e.g. local blob), try direct url
-                                if (e.target.src !== value) {
+                                // Fallback chain: proxy → direct value → hide
+                                if (e.target.src === resolvePreviewUrl(value) && e.target.src !== value) {
                                     e.target.src = value;
                                 } else {
                                     e.target.style.display = 'none';
@@ -266,6 +308,16 @@ export default function ImageUploader({
                 </div>
             )}
 
+            {/* Pick from Asset Manager button */}
+            <button
+                type="button"
+                onClick={() => setPickerOpen(true)}
+                className="w-full flex items-center justify-center gap-2 py-2 px-4 text-sm font-medium text-blue-600 border border-blue-200 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+            >
+                <FolderOpen size={15} />
+                Pilih dari Asset Manager
+            </button>
+
             {/* Manual URL Input */}
             <div className="flex gap-2">
                 <input
@@ -286,6 +338,14 @@ export default function ImageUploader({
             {compressInfo && !error && (
                 <p className="text-xs text-green-600 flex items-center gap-1"><span>✓</span>{compressInfo}</p>
             )}
+
+            {/* Asset Picker Modal */}
+            <AssetPickerModal
+                open={pickerOpen}
+                onClose={() => setPickerOpen(false)}
+                onSelect={(url) => { onChange(url); setError(null); }}
+                filterType={category === 'product' || category === 'logo' || category === 'banner' ? 'image' : ''}
+            />
         </div>
     );
 }

@@ -67,12 +67,14 @@ function StoryBanner({ story, onClick }) {
             {isVideo ? (
                 <video
                     ref={videoRef}
-                    src={getAssetUrl(story.image)}
+                    src={getAssetUrl(story.image) + '#t=0.001'}
                     className="w-full h-full object-cover transition-transform group-hover:scale-105"
                     muted
                     loop
                     playsInline
                     autoPlay
+                    preload="metadata"
+                    onLoadedMetadata={() => setIsLoaded(true)}
                     onLoadedData={() => setIsLoaded(true)}
                     onError={(e) => {
                         console.error('Video thumbnail error:', story.image, e);
@@ -85,7 +87,9 @@ function StoryBanner({ story, onClick }) {
                     src={getImageUrl(story.image, { w: 350, resize: 'fill' })}
                     alt={story.title}
                     className="w-full h-full object-cover transition-transform group-hover:scale-105"
-                    loading="lazy"
+                    loading="eager"
+                    fetchPriority="high"
+                    decoding="async"
                     onLoad={() => setIsLoaded(true)}
                     onError={(e) => {
                         console.error('Image load error for:', story.image, e);
@@ -130,7 +134,10 @@ export default function Home({ vendors, onSelectVendor, stationCategory = 'Blok 
     // Fetch banners from settings API
     useEffect(() => {
         setBannersLoading(true);
-        fetch('/api/settings')
+        fetch('/api/settings', {
+            // Hint browser to cache response; server also sends Cache-Control
+            headers: { 'Accept': 'application/json' },
+        })
             .then(res => res.json())
             .then(data => {
                 // Story banners
@@ -142,7 +149,19 @@ export default function Home({ vendors, onSelectVendor, stationCategory = 'Blok 
                         banners = data.homepage_banners.banners;
                     }
                     const validBanners = banners.filter(b => b.image && b.image.trim() !== '');
-                    if (validBanners.length > 0) setStoryBanners(validBanners);
+                    if (validBanners.length > 0) {
+                        setStoryBanners(validBanners);
+                        // Preload the first banner image so it appears instantly
+                        const firstImg = validBanners[0];
+                        if (firstImg && firstImg.image && !firstImg.image.match(/\.(mp4|webm|mov|m4v)$/i)) {
+                            const link = document.createElement('link');
+                            link.rel = 'preload';
+                            link.as = 'image';
+                            link.href = getImageUrl(firstImg.image, { w: 350, resize: 'fill' });
+                            link.fetchPriority = 'high';
+                            document.head.appendChild(link);
+                        }
+                    }
                 }
                 // Quick access banners
                 if (data.quick_access_banners && Array.isArray(data.quick_access_banners) && data.quick_access_banners.length > 0) {

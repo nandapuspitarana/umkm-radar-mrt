@@ -104,6 +104,18 @@ export default function Assets() {
         return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
     };
 
+    // Strip protocol + host, keep only path (e.g. /assets/banners/file.jpg)
+    const toRelativeUrl = (url) => {
+        if (!url) return '';
+        try {
+            const u = new URL(url);
+            return u.pathname + u.search + u.hash;
+        } catch {
+            // Already a relative path or invalid URL – return as-is
+            return url.startsWith('/') ? url : '/' + url;
+        }
+    };
+
     if (auth.role !== 'admin') {
         return (
             <div className="flex min-h-screen bg-gray-50">
@@ -270,7 +282,7 @@ export default function Assets() {
                                         <td className="px-4 py-2">
                                             <div className="flex gap-1">
                                                 <button
-                                                    onClick={() => copyToClipboard(asset.directUrl, asset.id)}
+                                                    onClick={() => copyToClipboard(toRelativeUrl(asset.directUrl), asset.id)}
                                                     className="p-1.5 hover:bg-gray-100 rounded"
                                                     title="Copy URL"
                                                 >
@@ -328,12 +340,12 @@ export default function Assets() {
                                         <div className="flex gap-2">
                                             <input
                                                 type="text"
-                                                value={selectedAsset.directUrl}
+                                                value={toRelativeUrl(selectedAsset.directUrl)}
                                                 readOnly
                                                 className="flex-1 px-3 py-2 bg-gray-100 rounded text-sm"
                                             />
                                             <button
-                                                onClick={() => copyToClipboard(selectedAsset.directUrl, 'direct')}
+                                                onClick={() => copyToClipboard(toRelativeUrl(selectedAsset.directUrl), 'direct')}
                                                 className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
                                             >
                                                 {copiedId === 'direct' ? <Check size={18} /> : <Copy size={18} />}
@@ -345,12 +357,12 @@ export default function Assets() {
                                         <div className="flex gap-2">
                                             <input
                                                 type="text"
-                                                value={selectedAsset.directUrl}
+                                                value={toRelativeUrl(selectedAsset.directUrl)}
                                                 readOnly
                                                 className="flex-1 px-3 py-2 bg-gray-100 rounded text-sm"
                                             />
                                             <button
-                                                onClick={() => copyToClipboard(selectedAsset.directUrl, 'img')}
+                                                onClick={() => copyToClipboard(toRelativeUrl(selectedAsset.directUrl), 'img')}
                                                 className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
                                             >
                                                 {copiedId === 'img' ? <Check size={18} /> : <Copy size={18} />}

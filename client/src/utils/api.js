@@ -2,71 +2,78 @@
 const API_BASE = ''; // Relative path, handled by vite proxy
 
 /**
- * Get image URL via backend imgproxy
+ * Resolve any stored image path → /uploads/* backend proxy.
+ *
+ * Handles all URL formats stored in the database:
+ *   http://localhost:9000/assets/banners/a.jpg  → /uploads/banners/a.jpg
+ *   /assets/banners/a.jpg                       → /uploads/banners/a.jpg
+ *   /uploads/banners/a.jpg                      → /uploads/banners/a.jpg
+ *   banners/a.jpg                               → /uploads/banners/a.jpg
+ *   https://cdn.example.com/img.jpg             → as-is (external CDN)
  */
-export function getImageUrl(path, options = {}) {
-    if (!path) return '';
+export function resolveImgUrl(raw) {
+    if (!raw) return '';
 
-    // Handle legacy localhost URLs (convert to relative)
-    let cleanPath = path;
-    if (path.includes('localhost:9000/assets/')) {
-        cleanPath = path.replace(/https?:\/\/localhost:9000\/assets\//, '');
-    } else if (path.startsWith('http')) {
-        return path; // Return external URLs as is
+    // Full localhost:9000 MinIO URL → extract path after bucket "assets"
+    if (raw.startsWith('http') && raw.includes(':9000')) {
+        const idx = raw.indexOf('/assets/');
+        if (idx !== -1) return `${API_BASE}/uploads/` + raw.slice(idx + '/assets/'.length);
+        return raw;
     }
 
-    // Clean leading slash
-    cleanPath = cleanPath.startsWith('/') ? cleanPath.substring(1) : cleanPath;
+    // Any other absolute external URL (CDN, etc.) → use as-is
+    if (raw.startsWith('http')) return raw;
 
-    // Strip "uploads/" prefix — files stored as /uploads/logo/x.jpg in DB
-    // are fetched from MinIO as logo/x.jpg (without the uploads/ prefix)
-    if (cleanPath.startsWith('uploads/')) {
-        cleanPath = cleanPath.replace(/^uploads\//, '');
+    // /assets/banners/a.jpg → /uploads/banners/a.jpg
+    if (raw.startsWith('/assets/')) {
+        return `${API_BASE}/uploads/` + raw.slice('/assets/'.length);
     }
 
-    // Default options
-    const {
-        resize = 'fit',
-        w = 0,
-        h = 0,
-        gravity = 'no',
-        enlarge = 0,
-        ext = 'webp'
-    } = options;
+    // Already a /uploads/... proxy path
+    if (raw.startsWith('/uploads/')) return raw;
 
-    // Construct query string
-    const query = new URLSearchParams();
-    if (resize) query.append('resize', resize);
-    if (w) query.append('w', w);
-    if (h) query.append('h', h);
-    if (gravity) query.append('gravity', gravity);
-    if (enlarge) query.append('enlarge', enlarge);
-    if (ext) query.append('ext', ext);
+    // Strip leading /uploads/ if stored with prefix
+    if (raw.startsWith('uploads/')) {
+        return `${API_BASE}/uploads/` + raw.slice('uploads/'.length);
+    }
 
-    return `${API_BASE}/api/image/${cleanPath}?${query.toString()}`;
+    // Bare path like  banners/a.jpg  or  /banners/a.jpg
+    return `${API_BASE}/uploads/` + raw.replace(/^\//, '');
 }
 
 /**
- * Get raw asset URL (Video/File) via backend proxy
+ * Get image URL — kept for backward compatibility.
+ * Previously used imgproxy (/api/image/...) which required imgproxy to be running.
+ * Now routes through the simpler /uploads/* backend proxy instead.
+ * The `options` parameter is accepted but ignored (no longer used for resizing here).
+ */
+export function getImageUrl(path, options = {}) {
+    return resolveImgUrl(path);
+}
+
+/**
+ * Get raw asset URL (Video/File) via backend proxy.
  */
 export function getAssetUrl(path) {
     if (!path) return '';
 
-    // Handle legacy localhost URLs (convert to relative)
-    let cleanPath = path;
-    if (path.includes('localhost:9000/assets/')) {
-        cleanPath = path.replace(/https?:\/\/localhost:9000\/assets\//, '');
-    } else if (path.startsWith('http') && !path.includes('/api/')) {
-        return path; // Return external URLs as is
+    // Full localhost MinIO URL
+    if (path.startsWith('http') && path.includes(':9000')) {
+        const idx = path.indexOf('/assets/');
+        if (idx !== -1) return `${API_BASE}/uploads/` + path.slice(idx + '/assets/'.length);
+        return path;
     }
 
-    // Clean leading slash
-    cleanPath = cleanPath.startsWith('/') ? cleanPath.substring(1) : cleanPath;
+    // External URL
+    if (path.startsWith('http')) return path;
 
-    // Strip "uploads/" prefix — same logic as getImageUrl
-    if (cleanPath.startsWith('uploads/')) {
-        cleanPath = cleanPath.replace(/^uploads\//, '');
+    // /assets/... → /uploads/...
+    if (path.startsWith('/assets/')) {
+        return `${API_BASE}/uploads/` + path.slice('/assets/'.length);
     }
 
-    return `${API_BASE}/api/raw/${cleanPath}`;
+    if (path.startsWith('/uploads/')) return path;
+    if (path.startsWith('uploads/')) return `${API_BASE}/uploads/` + path.slice('uploads/'.length);
+
+    return `${API_BASE}/uploads/` + path.replace(/^\//, '');
 }

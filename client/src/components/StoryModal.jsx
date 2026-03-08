@@ -246,11 +246,13 @@ export default function StoryModal({ isOpen, onClose, story, stories = [], curre
                                 {isVideo ? (
                                     <video
                                         ref={videoRef}
-                                        src={mediaSrc}
+                                        src={mediaSrc + '#t=0.001'}
                                         className="w-full h-full object-cover"
                                         playsInline
                                         loop={false}
                                         muted={isMuted}
+                                        preload="auto"
+                                        onLoadedMetadata={handleVideoLoaded}
                                         onLoadedData={handleVideoLoaded}
                                         onTimeUpdate={handleVideoTimeUpdate}
                                         onEnded={handleVideoEnded}
