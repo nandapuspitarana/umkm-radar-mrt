@@ -530,6 +530,7 @@ export default function AdminVendors() {
     const [loading, setLoading] = useState(true);
     const [editingId, setEditingId] = useState(null);
     const [expandedVendorId, setExpandedVendorId] = useState(null);
+    const [stationTags, setStationTags] = useState([]);
 
     const initialForm = {
         name: '', whatsapp: '', category: 'Umum',
@@ -587,9 +588,24 @@ export default function AdminVendors() {
 
     const fetchVendors = async () => {
         try {
-            const res = await fetch('/api/vendors');
-            const data = await res.json();
+            const [vendorRes, settingsRes] = await Promise.all([
+                fetch('/api/vendors'),
+                fetch('/api/settings')
+            ]);
+            const data = await vendorRes.json();
             if (Array.isArray(data)) setVendors(data);
+
+            const settings = await settingsRes.json();
+            const savedStations = settings.station_categories;
+            if (savedStations && Array.isArray(savedStations) && savedStations.length > 0) {
+                setStationTags(savedStations.map(s => s.name));
+            } else {
+                setStationTags([
+                    'Lebak Bulus Grab', 'Fatmawati Indomaret', 'Cipete Raya', 'Haji Nawi',
+                    'Blok A', 'Blok M BCA', 'ASEAN', 'Blok M', 'Istora Mandiri',
+                    'Bendungan Hilir', 'Setiabudi Astra', 'Dukuh Atas BNI', 'Bundaran HI'
+                ]);
+            }
         } catch (error) {
             console.error(error);
         } finally {
@@ -1093,16 +1109,21 @@ export default function AdminVendors() {
                             {/* Tag Lokasi */}
                             <div>
                                 <label htmlFor="locationTags" className="block text-sm font-medium text-gray-700 mb-1">
-                                    Tag Lokasi (Landmark/Titik Poin)
+                                    Tag Lokasi (Stasiun MRT Terdekat)
                                 </label>
-                                <p className="text-xs text-gray-400 mb-2">Contoh: "Dekat MRT Bundaran HI", "Samping BNI 46"</p>
-                                <input
+                                <p className="text-xs text-gray-400 mb-2">Pilih nama stasiun agar vendor tampil di kategori stasiun tersebut.</p>
+                                <select
                                     id="locationTags" data-testid="input-locationTags"
                                     className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
                                     value={formData.locationTags}
                                     onChange={e => setVendorField('locationTags', e.target.value)}
-                                    placeholder="Masukkan landmark terdekat..."
-                                />
+                                >
+                                    <option value="">-- Pilih Stasiun Terdekat --</option>
+                                    {stationTags.map((tag, idx) => (
+                                        <option key={idx} value={tag}>{tag}</option>
+                                    ))}
+                                    <option value="Lainnya">Lainnya</option>
+                                </select>
                             </div>
 
                             {/* Foto Toko */}

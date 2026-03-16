@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getImageUrl } from '../utils/api';
+import { Link } from 'react-router-dom';
 
 export default function TransportLinks() {
     const [transportModa, setTransportModa] = useState([]); // Fetched from database
@@ -110,10 +111,8 @@ function TransportLinkItem({ moda, heightClass }) {
     const imgMaxHeight = heightClass.split(' ')[1] || 'max-h-[50px]';
 
     return (
-        <a
-            href={moda.url}
-            target="_blank"
-            rel="noopener noreferrer"
+        <Link
+            to="/transportasi-umum"
             className={`flex-1 ${containerHeight} bg-white rounded-[15px] flex items-center justify-center overflow-hidden hover:shadow-md transition-shadow`}
         >
             {imgError ? (
@@ -128,6 +127,6 @@ function TransportLinkItem({ moda, heightClass }) {
                     onError={() => setImgError(true)}
                 />
             )}
-        </a>
+        </Link>
     );
 }

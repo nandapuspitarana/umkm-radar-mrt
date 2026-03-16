@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapPin, ChevronRight } from 'lucide-react';
 import AppLayout from '../components/AppLayout';
+import { useUserLocation, calculateDistance, formatDistance } from '../hooks/useUserLocation';
 
 // Helper function to extract YouTube video ID
 const getYouTubeVideoId = (url) => {
@@ -47,7 +48,7 @@ export default function Wisata() {
             const response = await fetch('/api/destination-categories?type=wisata');
             const data = await response.json();
             setCategories(data.filter(c => c.isActive));
-            
+
             // Fetch subcategories
             const subResponse = await fetch('/api/destination-subcategories');
             const subData = await subResponse.json();
@@ -73,10 +74,10 @@ export default function Wisata() {
     const destinationSections = categories.map(cat => {
         // Get subcategories for this category
         const catSubcats = subcategories.filter(s => s.categoryId === cat.id);
-        
+
         // Get destinations for this category
-        const categoryDestinations = destinations.filter(dest => 
-            dest.categoryId === cat.id || 
+        const categoryDestinations = destinations.filter(dest =>
+            dest.categoryId === cat.id ||
             dest.category === cat.name ||
             dest.category === cat.slug
         );
@@ -168,10 +169,10 @@ export default function Wisata() {
 // Section Component with Subcategory Banner
 function DestinationSection({ section, subcategories }) {
     const [showAll, setShowAll] = useState(false);
-    
+
     // Get subcategories for this section's category
     const sectionSubcats = subcategories.filter(s => s.categoryId === section.subcategories?.[0]?.categoryId);
-    
+
     // Find banner from subcategory or use category banner
     const sectionBanner = section.bannerImage;
     const bannerVideoId = getYouTubeVideoId(sectionBanner);
@@ -213,7 +214,7 @@ function DestinationSection({ section, subcategories }) {
                     </div>
                 </div>
             )}
-            
+
             {/* Section Header (if no banner) */}
             {!sectionBanner && (
                 <div className="flex items-center gap-1.5 px-5 pt-2.5 pb-2">
@@ -236,11 +237,11 @@ function DestinationSection({ section, subcategories }) {
                     ))}
                 </div>
             </div>
-            
+
             {/* Show More Button */}
             {section.destinations.length > 10 && !showAll && (
                 <div className="px-5 py-2">
-                    <button 
+                    <button
                         type="button"
                         onClick={() => setShowAll(true)}
                         className="text-primary text-sm font-medium"
@@ -256,17 +257,16 @@ function DestinationSection({ section, subcategories }) {
 // Destination Card Component matching Figma design
 function DestinationCard({ destination }) {
     const navigate = useNavigate();
+    const userLocation = useUserLocation();
     const imageUrl = destination.image || 'https://images.unsplash.com/photo-1555993539-1732b0258235?w=400&h=300&fit=crop';
 
-    const formatDistance = (distanceInKm) => {
-        if (!distanceInKm || distanceInKm === 0) return '0 m';
-        if (distanceInKm < 1) {
-            return `${Math.round(distanceInKm * 1000)} m`;
-        }
-        return `${distanceInKm.toFixed(1)} km`;
-    };
+    // Prioritize dynamically calculated distance if user location is available
+    let distanceInKm = destination.distance_from_station ?? destination.distanceFromStation;
+    if (userLocation && destination.lat && destination.lng) {
+        distanceInKm = calculateDistance(userLocation.lat, userLocation.lng, destination.lat, destination.lng);
+    }
 
-    const distance = formatDistance(destination.distance_from_station);
+    const distance = formatDistance(distanceInKm);
 
     return (
         <div

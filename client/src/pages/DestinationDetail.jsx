@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, useNavigate, useLocation as useReactRouterLocation } from 'react-router-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useUserLocation, calculateDistance, formatDistance } from '../hooks/useUserLocation';
 
 // Default fallback paths (static SVG di public/)
 const DEFAULT_TRANSPORT_ICONS = {
@@ -51,8 +52,9 @@ function useTransportIcons() {
 export default function DestinationDetail() {
     const { id } = useParams();
     const navigate = useNavigate();
-    const location = useLocation();
-    const isWisata = location.pathname.includes('/wisata');
+    const reactRouterLocation = useReactRouterLocation();
+    const userLocation = useUserLocation();
+    const isWisata = reactRouterLocation.pathname.includes('/wisata');
     const [destination, setDestination] = useState(null);
     const [loading, setLoading] = useState(true);
     const [imgError, setImgError] = useState(false);
@@ -99,14 +101,13 @@ export default function DestinationDetail() {
     }
 
     const openingHours = destination.openingHours || destination.opening_hours || '06:00 - 20:00';
-    const distanceFromStation = destination.distanceFromStation ?? destination.distance_from_station ?? null;
     const nearestStation = destination.nearestStation || destination.nearest_station || '';
 
-    const formatDistance = (distanceInKm) => {
-        if (!distanceInKm || distanceInKm === 0) return '0 m';
-        if (distanceInKm < 1) return `${Math.round(distanceInKm * 1000)} m`;
-        return `${distanceInKm.toFixed(1)} km`;
-    };
+    // Calculate dynamic distance if user location is available
+    let computedDistance = destination.distanceFromStation ?? destination.distance_from_station ?? null;
+    if (userLocation && destination.lat && destination.lng) {
+        computedDistance = calculateDistance(userLocation.lat, userLocation.lng, destination.lat, destination.lng);
+    }
 
     const FALLBACK_IMAGES = {
         'Wisata Alam': 'https://images.unsplash.com/photo-1519331379826-f10be5486c6f?w=600&h=400&fit=crop',
@@ -142,10 +143,10 @@ export default function DestinationDetail() {
                             </p>
                         </div>
 
-                        {distanceFromStation !== null && (
+                        {computedDistance !== null && (
                             <div className="bg-primary text-white rounded-[50px] px-[10px] pb-[8px] pt-[6px] flex items-center gap-[2px] flex-shrink-0">
                                 <span className="font-bold text-[15px] tracking-[0.225px] lowercase leading-none">
-                                    {formatDistance(distanceFromStation)}
+                                    {formatDistance(computedDistance)}
                                 </span>
                                 <div className="transform -rotate-90">
                                     <ChevronRight size={11} className="text-white" />
@@ -218,8 +219,8 @@ export default function DestinationDetail() {
                                 icons={transportIcons}
                                 icon="Destination"
                                 title={destination.name}
-                                subtitle={distanceFromStation
-                                    ? `±${formatDistance(distanceFromStation)} dari halte`
+                                subtitle={computedDistance
+                                    ? `±${formatDistance(computedDistance)} dari lokasi kamu`
                                     : '±100 meter dari halte'
                                 }
                             />

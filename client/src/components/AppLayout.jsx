@@ -116,9 +116,9 @@ export default function AppLayout({
                             onClick={() => setIsMenuOpen(true)}
                             className="flex flex-col gap-[3px] w-[12px]"
                         >
-                            <div className="w-full aspect-square bg-grey-600 rounded-full" />
-                            <div className="w-full aspect-square bg-grey-600 rounded-full" />
-                            <div className="w-full aspect-square bg-grey-600 rounded-full" />
+                            <div className="w-full aspect-square rounded-full bg-[#FA0000]" />
+                            <div className="w-full aspect-square rounded-full bg-[#FD0]" />
+                            <div className="w-full aspect-square rounded-full bg-[#0969DA]" />
                         </button>
                     </div>
                 </div>

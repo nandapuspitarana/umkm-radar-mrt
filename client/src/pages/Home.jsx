@@ -108,7 +108,7 @@ function StoryBanner({ story, onClick }) {
             )}
 
             {/* Gradient & Text Overlay - Always visible */}
-            <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/90 pointer-events-none z-20" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent pointer-events-none z-20" />
             <div className="absolute bottom-[15px] left-[15px] right-[15px] pointer-events-none z-30">
                 <p className="text-white font-bold text-[16px] capitalize leading-tight drop-shadow-md pb-1">{story.title}</p>
                 {story.subtitle && (

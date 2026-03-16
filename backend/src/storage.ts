@@ -87,7 +87,7 @@ export async function uploadToMinIO(fileBuffer: Buffer, fileName: string, folder
 
         const metadata = {
             'Content-Type': contentType,
-            'Cache-Control': 'public, max-age=31536000',
+            'Cache-Control': process.env.NODE_ENV === 'production' ? 'public, max-age=31536000' : 'no-cache, no-store, must-revalidate',
         };
 
         await minioClient.putObject(

@@ -92,6 +92,24 @@ redis.on('connect', () => {
     console.log('✅ Redis connected successfully');
 });
 
+const isProd = process.env.NODE_ENV === 'production';
+
+// Helpers for cache control headers based on environment
+const CACHE_CONTROL_LONG = isProd ? 'public, max-age=31536000' : 'no-cache, no-store, must-revalidate';
+const CACHE_CONTROL_LONG_IMMUTABLE = isProd ? 'public, max-age=31536000, immutable' : 'no-cache, no-store, must-revalidate';
+const CACHE_CONTROL_SHORT = isProd ? 'public, max-age=300, stale-while-revalidate=30' : 'no-cache, no-store, must-revalidate';
+
+// DEV MODE: Bypass Redis cache
+if (!isProd) {
+    console.log('⚠️ Development mode: Redis caching is DISABLED');
+    // Override get to always return null (cache miss)
+    const originalGet = redis.get.bind(redis);
+    redis.get = async (...args: any[]) => null as any;
+    // Override set to just do nothing
+    const originalSet = redis.set.bind(redis);
+    redis.set = async (...args: any[]) => 'OK' as any;
+}
+
 // Elasticsearch Connection
 const esClient = new ESClient({
     node: process.env.ELASTICSEARCH_URL || 'http://localhost:9200',
@@ -164,7 +182,7 @@ app.get('/api/proxy/minio/*', async (c) => {
         return new Response(stream as any, {
             headers: {
                 'Content-Type': contentType,
-                'Cache-Control': 'public, max-age=31536000',
+                'Cache-Control': CACHE_CONTROL_LONG,
                 'Access-Control-Allow-Origin': '*',
             }
         });
@@ -202,16 +220,39 @@ app.get('/uploads/*', async (c) => {
         const contentType = mimeTypes[ext] || 'application/octet-stream';
         const isVideo = ['mp4', 'webm', 'mov', 'm4v'].includes(ext);
 
-        // ── VIDEO: redirect directly to public MinIO URL ──
-        // Safari REQUIRES proper Range request support for HTML5 video.
-        // Our proxy cannot easily implement stateful Range responses.
-        // Since bucket is already public-read, just redirect to the MinIO public URL.
-        // PUBLIC_ASSET_URL = "https://assets.pengaruh.my.id" (prod) or "http://localhost:9000/assets" (dev)
+        // ── VIDEO: proxy with Range request support ──
+        // IMPORTANT: Do NOT redirect to PUBLIC_ASSET_URL — it may be localhost:9000 in prod,
+        // which is inaccessible to browsers (causes net::ERR_SSL_PROTOCOL_ERROR).
+        // Instead, proxy directly from MinIO internal endpoint with Range support.
         if (isVideo) {
-            const publicBase = (process.env.PUBLIC_ASSET_URL || 'http://localhost:9000/assets').replace(/\/$/, '');
-            // PUBLIC_ASSET_URL already includes bucket name in path (e.g. /assets)
-            const videoPublicUrl = `${publicBase}/${cleanPath}`;
-            return c.redirect(videoPublicUrl, 302);
+            // Use internal MinIO URL (server-side, not browser-side)
+            const minioInternal = (process.env.MINIO_URL || `http://${process.env.MINIO_ENDPOINT || 'localhost'}:${process.env.MINIO_PORT || '9000'}`).replace(/\/$/, '');
+            const videoInternalUrl = `${minioInternal}/${BUCKET_NAME}/${cleanPath}`;
+
+            // Forward Range header (required for video seeking on Safari/iOS)
+            const reqHeaders: Record<string, string> = {};
+            const range = c.req.header('range');
+            if (range) reqHeaders['Range'] = range;
+
+            const upstream = await fetch(videoInternalUrl, { headers: reqHeaders });
+
+            if (!upstream.ok && upstream.status !== 206) {
+                return c.json({ error: 'Video not found' }, 404);
+            }
+
+            const resHeaders = new Headers();
+            ['content-type', 'content-length', 'content-range', 'accept-ranges', 'etag', 'last-modified'].forEach(key => {
+                const val = upstream.headers.get(key);
+                if (val) resHeaders.set(key, val);
+            });
+            if (!resHeaders.has('accept-ranges')) resHeaders.set('Accept-Ranges', 'bytes');
+            resHeaders.set('Access-Control-Allow-Origin', '*');
+            resHeaders.set('Cache-Control', CACHE_CONTROL_LONG);
+
+            return new Response(upstream.body, {
+                status: upstream.status,
+                headers: resHeaders,
+            });
         }
 
         // ── IMAGE / OTHER: proxy with ETag + 304 + cache headers ──
@@ -233,7 +274,7 @@ app.get('/uploads/*', async (c) => {
                 status: 304,
                 headers: {
                     'ETag': etag,
-                    'Cache-Control': 'public, max-age=31536000, immutable',
+                    'Cache-Control': CACHE_CONTROL_LONG_IMMUTABLE,
                 }
             });
         }
@@ -243,7 +284,7 @@ app.get('/uploads/*', async (c) => {
 
         const headers: Record<string, string> = {
             'Content-Type': contentType,
-            'Cache-Control': 'public, max-age=31536000, immutable',
+            'Cache-Control': CACHE_CONTROL_LONG_IMMUTABLE,
             'Access-Control-Allow-Origin': '*',
         };
         if (etag) headers['ETag'] = etag;
@@ -304,7 +345,7 @@ app.get('/api/image/*', async (c) => {
         return new Response(response.body, {
             headers: {
                 'Content-Type': response.headers.get('Content-Type') || 'image/webp',
-                'Cache-Control': 'public, max-age=31536000',
+                'Cache-Control': CACHE_CONTROL_LONG,
                 'Access-Control-Allow-Origin': '*',
             }
         });
@@ -353,7 +394,7 @@ app.get('/api/raw/*', async (c) => {
 
         if (!resHeaders.has('accept-ranges')) resHeaders.set('Accept-Ranges', 'bytes');
         resHeaders.set('Access-Control-Allow-Origin', '*');
-        resHeaders.set('Cache-Control', 'public, max-age=31536000');
+        resHeaders.set('Cache-Control', CACHE_CONTROL_LONG);
 
         return new Response(response.body, {
             status: response.status,
@@ -3088,7 +3129,7 @@ app.get('/api/settings', async (c) => {
             const cached = await redis.get(cacheKey);
             if (cached) {
                 // Cache hit: set HTTP caching header so browser caches too
-                c.header('Cache-Control', 'public, max-age=300, stale-while-revalidate=30');
+                c.header('Cache-Control', CACHE_CONTROL_SHORT);
                 return c.json(JSON.parse(cached));
             }
         } catch (redisError) {
@@ -3117,7 +3158,7 @@ app.get('/api/settings', async (c) => {
         }
 
         // Set HTTP caching header so browser/CDN can cache too (5 min, swr 30s)
-        c.header('Cache-Control', 'public, max-age=300, stale-while-revalidate=30');
+        c.header('Cache-Control', CACHE_CONTROL_SHORT);
         return c.json(settingsObj);
     } catch (error) {
         console.error('Settings fetch error:', error);

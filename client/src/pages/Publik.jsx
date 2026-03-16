@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapPin, ChevronRight } from 'lucide-react';
 import AppLayout from '../components/AppLayout';
+import { useUserLocation, calculateDistance, formatDistance } from '../hooks/useUserLocation';
 
 // Helper function to extract YouTube video ID
 const getYouTubeVideoId = (url) => {
@@ -47,7 +48,7 @@ export default function Publik() {
             const response = await fetch('/api/destination-categories?type=publik');
             const data = await response.json();
             setCategories(data.filter(c => c.isActive));
-            
+
             // Fetch subcategories
             const subResponse = await fetch('/api/destination-subcategories');
             const subData = await subResponse.json();
@@ -71,17 +72,17 @@ export default function Publik() {
 
     // Get publik category IDs
     const publikCategoryIds = categories.map(c => c.id);
-    
+
     // Filter destinations that belong to publik categories
-    const publikDestinations = destinations.filter(dest => 
+    const publikDestinations = destinations.filter(dest =>
         publikCategoryIds.includes(dest.categoryId) ||
-        dest.category === 'Publik' || 
+        dest.category === 'Publik' ||
         dest.category === 'Area Publik'
     );
 
     // Group destinations by subcategory (for publik, subcategories are the main sections)
     const destinationSections = subcategories.map(subcat => {
-        const subcatDestinations = publikDestinations.filter(dest => 
+        const subcatDestinations = publikDestinations.filter(dest =>
             dest.subcategoryId === subcat.id ||
             dest.subcategory === subcat.name
         );
@@ -96,7 +97,7 @@ export default function Publik() {
 
     // If no subcategories, group by categories
     const categorySections = categories.map(cat => {
-        const catDestinations = publikDestinations.filter(dest => 
+        const catDestinations = publikDestinations.filter(dest =>
             dest.categoryId === cat.id ||
             dest.category === cat.name
         );
@@ -230,7 +231,7 @@ function DestinationSection({ section }) {
                     </div>
                 </div>
             )}
-            
+
             {/* Section Header (if no banner) */}
             {!sectionBanner && (
                 <div className="flex items-center gap-1.5 px-5 pt-2.5 pb-2">
@@ -253,11 +254,11 @@ function DestinationSection({ section }) {
                     ))}
                 </div>
             </div>
-            
+
             {/* Show More Button */}
             {section.destinations.length > 10 && !showAll && (
                 <div className="px-5 py-2">
-                    <button 
+                    <button
                         type="button"
                         onClick={() => setShowAll(true)}
                         className="text-primary text-sm font-medium"
@@ -273,17 +274,16 @@ function DestinationSection({ section }) {
 // Destination Card Component matching Figma design
 function DestinationCard({ destination }) {
     const navigate = useNavigate();
+    const userLocation = useUserLocation();
     const imageUrl = destination.image || 'https://images.unsplash.com/photo-1519331379826-f10be5486c6f?w=400&h=300&fit=crop';
 
-    const formatDistance = (distanceInKm) => {
-        if (!distanceInKm && distanceInKm !== 0) return '0 m';
-        if (distanceInKm < 1) {
-            return `${Math.round(distanceInKm * 1000)} m`;
-        }
-        return `${distanceInKm.toFixed(1)} km`;
-    };
+    // Prioritize dynamically calculated distance if user location is available
+    let distanceInKm = destination.distance_from_station ?? destination.distanceFromStation;
+    if (userLocation && destination.lat && destination.lng) {
+        distanceInKm = calculateDistance(userLocation.lat, userLocation.lng, destination.lat, destination.lng);
+    }
 
-    const distance = formatDistance(destination.distance_from_station);
+    const distance = formatDistance(distanceInKm);
 
     return (
         <div

@@ -152,7 +152,7 @@ export default function Kuliner({ vendors, preSorted = false, onSelectVendor }) 
                                     {banner.image && (
                                         <img src={banner.image} alt={banner.title || 'Kuliner'} className="w-full h-full object-cover transition-transform group-hover:scale-105" onError={e => e.target.style.display = 'none'} />
                                     )}
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+
                                     {banner.title && (
                                         <div className="absolute bottom-3 left-3 right-3">
                                             <div className="bg-white/90 px-3 py-1.5 rounded-lg">
