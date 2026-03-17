@@ -24,6 +24,7 @@ export default function Wisata() {
     const [subcategories, setSubcategories] = useState([]);
     const [loading, setLoading] = useState(true);
     const [bannerImage, setBannerImage] = useState('https://images.unsplash.com/photo-1518548419970-58e3b4079ab2?w=600&h=400&fit=crop');
+    const [searchQuery, setSearchQuery] = useState('');
 
     useEffect(() => {
         fetchCategories();
@@ -76,11 +77,20 @@ export default function Wisata() {
         const catSubcats = subcategories.filter(s => s.categoryId === cat.id);
 
         // Get destinations for this category
-        const categoryDestinations = destinations.filter(dest =>
+        let categoryDestinations = destinations.filter(dest =>
             dest.categoryId === cat.id ||
             dest.category === cat.name ||
             dest.category === cat.slug
         );
+
+        if (searchQuery) {
+            const q = searchQuery.toLowerCase();
+            categoryDestinations = categoryDestinations.filter(d => 
+                d.name.toLowerCase().includes(q) || 
+                (d.category && d.category.toLowerCase().includes(q)) ||
+                (d.subcategory && d.subcategory.toLowerCase().includes(q))
+            );
+        }
 
         return {
             id: cat.slug,
@@ -98,10 +108,13 @@ export default function Wisata() {
             title="Wisata"
             subtitle="Blok M"
             activeCategory="wisata"
+            searchValue={searchQuery}
+            onSearch={setSearchQuery}
         >
             <div className="pb-6">
                 {/* Banner Image/Video */}
-                <div className="p-2.5">
+                {!searchQuery && (
+                    <div className="p-2.5">
                     <div className="relative w-full aspect-video bg-grey-900 rounded-[20px] overflow-hidden">
                         {videoId ? (
                             <iframe
@@ -140,6 +153,7 @@ export default function Wisata() {
                         )}
                     </div>
                 </div>
+                )}
 
                 {/* Destination Sections */}
                 {loading ? (

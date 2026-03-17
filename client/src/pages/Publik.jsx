@@ -24,6 +24,7 @@ export default function Publik() {
     const [subcategories, setSubcategories] = useState([]);
     const [loading, setLoading] = useState(true);
     const [bannerImage, setBannerImage] = useState('https://images.unsplash.com/photo-1519331379826-f10be5486c6f?w=600&h=400&fit=crop');
+    const [searchQuery, setSearchQuery] = useState('');
 
     useEffect(() => {
         fetchCategories();
@@ -82,10 +83,19 @@ export default function Publik() {
 
     // Group destinations by subcategory (for publik, subcategories are the main sections)
     const destinationSections = subcategories.map(subcat => {
-        const subcatDestinations = publikDestinations.filter(dest =>
+        let subcatDestinations = publikDestinations.filter(dest =>
             dest.subcategoryId === subcat.id ||
             dest.subcategory === subcat.name
         );
+
+        if (searchQuery) {
+            const q = searchQuery.toLowerCase();
+            subcatDestinations = subcatDestinations.filter(d => 
+                d.name.toLowerCase().includes(q) || 
+                (d.category && d.category.toLowerCase().includes(q)) ||
+                (d.subcategory && d.subcategory.toLowerCase().includes(q))
+            );
+        }
 
         return {
             id: subcat.slug,
@@ -97,10 +107,19 @@ export default function Publik() {
 
     // If no subcategories, group by categories
     const categorySections = categories.map(cat => {
-        const catDestinations = publikDestinations.filter(dest =>
+        let catDestinations = publikDestinations.filter(dest =>
             dest.categoryId === cat.id ||
             dest.category === cat.name
         );
+
+        if (searchQuery) {
+            const q = searchQuery.toLowerCase();
+            catDestinations = catDestinations.filter(d => 
+                d.name.toLowerCase().includes(q) || 
+                (d.category && d.category.toLowerCase().includes(q)) ||
+                (d.subcategory && d.subcategory.toLowerCase().includes(q))
+            );
+        }
 
         return {
             id: cat.slug,
@@ -120,10 +139,13 @@ export default function Publik() {
             title="Fasilitas Umum / Ruang Publik"
             subtitle="Blok M"
             activeCategory="publik"
+            searchValue={searchQuery}
+            onSearch={setSearchQuery}
         >
             <div className="pb-6">
                 {/* Banner Image/Video */}
-                <div className="p-2.5">
+                {!searchQuery && (
+                    <div className="p-2.5">
                     <div className="relative w-full aspect-video bg-grey-900 rounded-[20px] overflow-hidden">
                         {videoId ? (
                             <iframe
@@ -162,6 +184,7 @@ export default function Publik() {
                         )}
                     </div>
                 </div>
+                )}
 
                 {/* Destination Sections */}
                 {loading ? (

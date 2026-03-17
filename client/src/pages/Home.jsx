@@ -236,121 +236,8 @@ export default function Home({ vendors, onSelectVendor, stationCategory = 'Blok 
             searchValue={searchQuery}
             onSearch={setSearchQuery}
         >
-            {/* Story Banners */}
-            <div className="overflow-x-auto no-scrollbar pt-2.5 px-2.5 pb-1.5">
-                <div className="flex gap-1.5 pr-2.5">
-                    {/* Loading Skeleton */}
-                    {bannersLoading && [1, 2, 3].map((i) => (
-                        <div
-                            key={`loading-${i}`}
-                            className="w-[175px] h-[300px] rounded-[20px] bg-grey-200 flex-shrink-0 animate-pulse"
-                        />
-                    ))}
-
-                    {/* Actual Banners from Database */}
-                    {!bannersLoading && storyBanners.map((story) => (
-                        <StoryBanner
-                            key={story.id}
-                            story={story}
-                            onClick={() => setSelectedStory(story)}
-                        />
-                    ))}
-
-                    {/* Empty State */}
-                    {!bannersLoading && storyBanners.length === 0 && (
-                        <div className="w-full py-8 text-center text-grey-400">
-                            <p className="text-sm">Belum ada banner story.</p>
-                            <p className="text-xs">Kelola di Admin Dashboard → Settings</p>
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            {/* Transport Links Section */}
-            <TransportLinks />
-
-
-            {/* Quick Access Section — data dari dashboard */}
-            <ContentSection title="Butuh Cepat Dan Dekat">
-                {(() => {
-                    const mediumItems = quickAccessItems.filter(i => i.type !== 'stacked');
-                    const stackedGroupsMap = {};
-                    quickAccessItems.filter(i => i.type === 'stacked').forEach(i => {
-                        const grp = i.group ?? 1;
-                        if (!stackedGroupsMap[grp]) stackedGroupsMap[grp] = [];
-                        stackedGroupsMap[grp].push(i);
-                    });
-
-                    return (
-                        <>
-                            {mediumItems.map((item) => (
-                                <ContentCard
-                                    key={item.id}
-                                    image={item.image}
-                                    title={item.title}
-                                    subtitle={item.subtitle}
-                                    size="medium"
-                                    onClick={() => item.link && (window.location.href = item.link)}
-                                />
-                            ))}
-                            {Object.entries(stackedGroupsMap)
-                                .sort(([a], [b]) => Number(a) - Number(b))
-                                .map(([grp, items]) => (
-                                    <StackedCards
-                                        key={grp}
-                                        items={items}
-                                        onClick={(item) => item.link && (window.location.href = item.link)}
-                                    />
-                                ))
-                            }
-                        </>
-                    );
-                })()}
-            </ContentSection>
-
-            {/* WFA Section — data dari dashboard */}
-            <ContentSection title="Nunggu Sekalian WFA">
-                {wfaItems.map((item) => (
-                    <ContentCard
-                        key={item.id}
-                        image={item.image}
-                        title={item.title}
-                        subtitle={item.subtitle}
-                        size="large"
-                        onClick={() => item.link && (window.location.href = item.link)}
-                    />
-                ))}
-            </ContentSection>
-
-            {/* Favorite Places Section */}
-            <ContentSection title="Tempat Favorit">
-                {favoritePlacesItems.map((item) => (
-                    <FavoriteCard
-                        key={item.id}
-                        image={item.image}
-                        title={item.title}
-                        distance={item.distance}
-                        onClick={() => item.link && (window.location.href = item.link)}
-                    />
-                ))}
-            </ContentSection>
-
-            {/* Rekomendasi Lainnya Section */}
-            <ContentSection title="Rekomendasi Lainnya">
-                {rekomenItems.map((item) => (
-                    <ContentCard
-                        key={item.id}
-                        image={item.image}
-                        title={item.title}
-                        subtitle={item.subtitle}
-                        size="small"
-                        onClick={() => item.link && (window.location.href = item.link)}
-                    />
-                ))}
-            </ContentSection>
-
-            {/* Vendor List or Search Results */}
-            {searchQuery && (
+            {/* Jika sedang mencari, tampilkan HANYA hasil pencarian */}
+            {searchQuery ? (
                 <ContentSection title={`Hasil Pencarian "${searchQuery}"`}>
                     {filteredVendors.length > 0 ? (
                         filteredVendors.map(vendor => (
@@ -387,6 +274,120 @@ export default function Home({ vendors, onSelectVendor, stationCategory = 'Blok 
                         </div>
                     )}
                 </ContentSection>
+            ) : (
+                <>
+                    {/* Story Banners */}
+                    <div className="overflow-x-auto no-scrollbar pt-2.5 px-2.5 pb-1.5">
+                        <div className="flex gap-1.5 pr-2.5">
+                            {/* Loading Skeleton */}
+                            {bannersLoading && [1, 2, 3].map((i) => (
+                                <div
+                                    key={`loading-${i}`}
+                                    className="w-[175px] h-[300px] rounded-[20px] bg-grey-200 flex-shrink-0 animate-pulse"
+                                />
+                            ))}
+
+                            {/* Actual Banners from Database */}
+                            {!bannersLoading && storyBanners.map((story) => (
+                                <StoryBanner
+                                    key={story.id}
+                                    story={story}
+                                    onClick={() => setSelectedStory(story)}
+                                />
+                            ))}
+
+                            {/* Empty State */}
+                            {!bannersLoading && storyBanners.length === 0 && (
+                                <div className="w-full py-8 text-center text-grey-400">
+                                    <p className="text-sm">Belum ada banner story.</p>
+                                    <p className="text-xs">Kelola di Admin Dashboard → Settings</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Transport Links Section */}
+                    <TransportLinks />
+
+                    {/* Quick Access Section — data dari dashboard */}
+                    <ContentSection title="Butuh Cepat Dan Dekat">
+                        {(() => {
+                            const mediumItems = quickAccessItems.filter(i => i.type !== 'stacked');
+                            const stackedGroupsMap = {};
+                            quickAccessItems.filter(i => i.type === 'stacked').forEach(i => {
+                                const grp = i.group ?? 1;
+                                if (!stackedGroupsMap[grp]) stackedGroupsMap[grp] = [];
+                                stackedGroupsMap[grp].push(i);
+                            });
+
+                            return (
+                                <>
+                                    {mediumItems.map((item) => (
+                                        <ContentCard
+                                            key={item.id}
+                                            image={item.image}
+                                            title={item.title}
+                                            subtitle={item.subtitle}
+                                            size="medium"
+                                            onClick={() => item.link && (window.location.href = item.link)}
+                                        />
+                                    ))}
+                                    {Object.entries(stackedGroupsMap)
+                                        .sort(([a], [b]) => Number(a) - Number(b))
+                                        .map(([grp, items]) => (
+                                            <StackedCards
+                                                key={grp}
+                                                items={items}
+                                                onClick={(item) => item.link && (window.location.href = item.link)}
+                                            />
+                                        ))
+                                    }
+                                </>
+                            );
+                        })()}
+                    </ContentSection>
+
+                    {/* WFA Section — data dari dashboard */}
+                    <ContentSection title="Nunggu Sekalian WFA">
+                        {wfaItems.map((item) => (
+                            <ContentCard
+                                key={item.id}
+                                image={item.image}
+                                title={item.title}
+                                subtitle={item.subtitle}
+                                size="large"
+                                onClick={() => item.link && (window.location.href = item.link)}
+                            />
+                        ))}
+                    </ContentSection>
+
+                    {/* Favorite Places Section */}
+                    <ContentSection title="Tempat Favorit">
+                        {favoritePlacesItems.map((item) => (
+                            <FavoriteCard
+                                key={item.id}
+                                image={item.image}
+                                title={item.title}
+                                distance={item.distance}
+                                onClick={() => item.link && (window.location.href = item.link)}
+                            />
+                        ))}
+                    </ContentSection>
+
+                    {/* Rekomendasi Lainnya Section */}
+                    <ContentSection title="Rekomendasi Lainnya">
+                        {rekomenItems.map((item) => (
+                            <ContentCard
+                                key={item.id}
+                                image={item.image}
+                                title={item.title}
+                                subtitle={item.subtitle}
+                                size="small"
+                                onClick={() => item.link && (window.location.href = item.link)}
+                            />
+                        ))}
+                    </ContentSection>
+                </>
             )}
 
             {/* Bottom Padding */}

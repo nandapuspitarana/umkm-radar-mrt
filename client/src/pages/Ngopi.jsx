@@ -122,7 +122,7 @@ export default function Ngopi({ vendors, preSorted = false, onSelectVendor }) {
             </div>
 
             {/* Banners */}
-            {(bannersLoading || ngopiBanners.length > 0) && (
+            {!searchQuery && (bannersLoading || ngopiBanners.length > 0) && (
                 <div className="bg-gradient-to-b from-grey-100 via-grey-100/80 to-transparent px-[10px]">
                     <div className="overflow-x-auto no-scrollbar">
                         <div className="flex gap-[5px] pr-[10px]">
