@@ -37,12 +37,15 @@ export default function SplashScreen({ onComplete }) {
 
                 {/* Radar Map Pin Graphic */}
                 <div className="relative w-full h-[120px] mb-4 flex items-center justify-center">
-                    {/* Radar Circles */}
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[220px] h-[80px] border border-teal-400 rounded-[100%] opacity-30 animate-ping" style={{ animationDuration: '3s' }}></div>
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[160px] h-[60px] border border-teal-500 rounded-[100%] opacity-50"></div>
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[100px] h-[40px] border border-teal-600 rounded-[100%] opacity-70"></div>
-
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[200px] h-[75px] bg-gradient-to-t from-teal-200/40 to-transparent rounded-[100%]"></div>
+                    {/* Radar Circles Wrapper - fixing animate-ping translate override issue */}
+                    <div className="absolute top-[calc(50%+15px)] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[220px] h-[80px]">
+                        {/* the circles map perfectly to inset-0 m-auto so transforms don't conflict with ping keyframes */}
+                        <div className="absolute inset-0 m-auto w-[220px] h-[80px] border border-teal-400 rounded-[100%] opacity-30 animate-ping" style={{ animationDuration: '3s' }}></div>
+                        <div className="absolute inset-0 m-auto w-[160px] h-[60px] border border-teal-500 rounded-[100%] opacity-50"></div>
+                        <div className="absolute inset-0 m-auto w-[100px] h-[40px] border border-teal-600 rounded-[100%] opacity-70"></div>
+                        
+                        <div className="absolute inset-0 m-auto w-[200px] h-[75px] bg-gradient-to-t from-teal-200/40 to-transparent rounded-[100%]"></div>
+                    </div>
 
                     {/* Map Pin */}
                     <div className="relative z-10 w-[60px] h-[80px] -mt-10 animate-bounce" style={{ animationDuration: '2s' }}>
