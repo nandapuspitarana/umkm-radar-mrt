@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, ChevronRight } from 'lucide-react';
+import { MapPin } from 'lucide-react';
 import AppLayout from '../components/AppLayout';
 import { useUserLocation, calculateDistance, formatDistance } from '../hooks/useUserLocation';
 
@@ -77,6 +77,7 @@ export default function Publik() {
     // Filter destinations that belong to publik categories
     const publikDestinations = destinations.filter(dest =>
         publikCategoryIds.includes(dest.categoryId) ||
+        (dest.categoryIds && dest.categoryIds.some(id => publikCategoryIds.includes(id))) ||
         dest.category === 'Publik' ||
         dest.category === 'Area Publik'
     );
@@ -85,6 +86,7 @@ export default function Publik() {
     const destinationSections = subcategories.map(subcat => {
         let subcatDestinations = publikDestinations.filter(dest =>
             dest.subcategoryId === subcat.id ||
+            dest.subcategoryIds?.includes(subcat.id) ||
             dest.subcategory === subcat.name
         );
 
@@ -109,6 +111,7 @@ export default function Publik() {
     const categorySections = categories.map(cat => {
         let catDestinations = publikDestinations.filter(dest =>
             dest.categoryId === cat.id ||
+            dest.categoryIds?.includes(cat.id) ||
             dest.category === cat.name
         );
 
@@ -261,11 +264,6 @@ function DestinationSection({ section }) {
                     <h2 className="font-bold text-[15px] text-black capitalize flex-1">
                         {section.title}
                     </h2>
-                    <div className="flex items-center pt-0.5">
-                        <div className="flex items-center justify-center h-[11px] w-[10px] -rotate-90">
-                            <ChevronRight size={10} className="text-grey-600" />
-                        </div>
-                    </div>
                 </div>
             )}
 

@@ -155,6 +155,8 @@ export const destinations = pgTable('destinations', {
     subcategory: text('subcategory'), // DEPRECATED: Use subcategoryId instead
     categoryId: integer('category_id').references(() => destinationCategories.id),
     subcategoryId: integer('subcategory_id').references(() => destinationSubcategories.id),
+    categoryIds: jsonb('category_ids'),
+    subcategoryIds: jsonb('subcategory_ids'),
     address: text('address'),
     image: text('image'),
 

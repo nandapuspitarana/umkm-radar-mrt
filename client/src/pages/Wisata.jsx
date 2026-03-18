@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, ChevronRight } from 'lucide-react';
+import { MapPin } from 'lucide-react';
 import AppLayout from '../components/AppLayout';
 import { useUserLocation, calculateDistance, formatDistance } from '../hooks/useUserLocation';
 
@@ -79,6 +79,7 @@ export default function Wisata() {
         // Get destinations for this category
         let categoryDestinations = destinations.filter(dest =>
             dest.categoryId === cat.id ||
+            dest.categoryIds?.includes(cat.id) ||
             dest.category === cat.name ||
             dest.category === cat.slug
         );
@@ -235,11 +236,6 @@ function DestinationSection({ section, subcategories }) {
                     <h2 className="font-bold text-[15px] text-black capitalize flex-1">
                         {section.title}
                     </h2>
-                    <div className="flex items-center pt-0.5">
-                        <div className="flex items-center justify-center h-[11px] w-[10px] -rotate-90">
-                            <ChevronRight size={10} className="text-grey-600" />
-                        </div>
-                    </div>
                 </div>
             )}
 

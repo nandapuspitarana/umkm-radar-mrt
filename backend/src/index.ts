@@ -1418,7 +1418,13 @@ app.post('/api/destinations', async (c) => {
             return c.json({ error: 'Name, Latitude, and Longitude are required' }, 400);
         }
 
-        const result = await db.insert(destinations).values(body).returning();
+        const insertData = { ...body };
+        if (insertData.categoryId === '') insertData.categoryId = null;
+        if (insertData.subcategoryId === '') insertData.subcategoryId = null;
+        if (!insertData.categoryIds) insertData.categoryIds = [];
+        if (!insertData.subcategoryIds) insertData.subcategoryIds = [];
+
+        const result = await db.insert(destinations).values(insertData).returning();
         const created = result[0];
 
         await writeAuditLog({
@@ -1446,13 +1452,13 @@ app.put('/api/destinations/:id', async (c) => {
         const oldResult = await db.select().from(destinations).where(eq(destinations.id, parseInt(id)));
         const oldData = oldResult[0];
 
-        // Sanitize: only pick known schema fields
         const allowed = [
             'name', 'description', 'lat', 'lng', 'category', 'subcategory',
             'address', 'image', 'nearestStation', 'stationType',
             'distanceFromStation', 'walkingTimeMinutes',
             'openingHours', 'ticketPrice', 'contact', 'website',
-            'transitHints', 'isActive', 'categoryId', 'subcategoryId'
+            'transitHints', 'isActive', 'categoryId', 'subcategoryId',
+            'categoryIds', 'subcategoryIds'
         ] as const;
 
         const updateData: Record<string, any> = { updatedAt: new Date() };

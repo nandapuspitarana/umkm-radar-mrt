@@ -61,19 +61,44 @@ export default function Destinations() {
         ticketPrice: '',
         contact: '',
         website: '',
-        isActive: true
+        isActive: true,
+        categoryIds: [],
+        subcategoryIds: []
     };
 
     const [formData, setFormData] = useState(initialForm);
     const [websiteError, setWebsiteError] = useState('');
     const [coordErrors, setCoordErrors] = useState({ lat: '', lng: '' });
+    const [stationTags, setStationTags] = useState([]);
 
     // Fetch all data on mount
     useEffect(() => {
         fetchDestinations();
         fetchCategories();
         fetchSubcategories();
+        fetchStations();
     }, []);
+
+    const fetchStations = async () => {
+        try {
+            const res = await fetch('/api/settings');
+            if (res.ok) {
+                const settings = await res.json();
+                const savedStations = settings.station_categories;
+                if (savedStations && Array.isArray(savedStations) && savedStations.length > 0) {
+                    setStationTags(savedStations.map(s => s.name));
+                } else {
+                    setStationTags([
+                        'Lebak Bulus Grab', 'Fatmawati Indomaret', 'Cipete Raya', 'Haji Nawi',
+                        'Blok A', 'Blok M BCA', 'ASEAN', 'Blok M', 'Istora Mandiri',
+                        'Bendungan Hilir', 'Setiabudi Astra', 'Dukuh Atas BNI', 'Bundaran HI'
+                    ]);
+                }
+            }
+        } catch (error) {
+            console.error("Failed to fetch stations", error);
+        }
+    };
 
     const fetchDestinations = async () => {
         try {
@@ -195,8 +220,8 @@ export default function Destinations() {
         setCurrentDest(null);
         setFormData({
             ...initialForm,
-            categoryId: categories[0]?.id || '',
-            category: categories[0]?.name || ''
+            categoryIds: [],
+            subcategoryIds: []
         });
         setIsModalOpen(true);
     };
@@ -210,6 +235,8 @@ export default function Destinations() {
             categoryId: dest.categoryId || '',
             subcategory: dest.subcategory || '',
             subcategoryId: dest.subcategoryId || '',
+            categoryIds: dest.categoryIds || [],
+            subcategoryIds: dest.subcategoryIds || [],
             address: dest.address || '',
             image: dest.image || '',
             lat: parseFloat(dest.lat) || -6.1944,
@@ -510,10 +537,35 @@ export default function Destinations() {
                                                 <div className="text-xs text-gray-500 truncate max-w-[200px]">{dest.address}</div>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <span className="px-2 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-700">
-                                                    {dest.category}
-                                                </span>
-                                                {dest.subcategory && (
+                                                {dest.categoryIds && dest.categoryIds.length > 0 ? (
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {dest.categoryIds.map(cid => {
+                                                            const catName = categories.find(c => c.id === cid)?.name || 'Unknown';
+                                                            return (
+                                                                <span key={cid} className="px-2 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-700">
+                                                                    {catName}
+                                                                </span>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                ) : (
+                                                    <span className="px-2 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-700">
+                                                        {dest.category || '-'}
+                                                    </span>
+                                                )}
+                                                
+                                                {dest.subcategoryIds && dest.subcategoryIds.length > 0 ? (
+                                                    <div className="flex flex-wrap gap-1 mt-1">
+                                                        {dest.subcategoryIds.map(sid => {
+                                                            const subName = subcategories.find(s => s.id === sid)?.name || 'Unknown';
+                                                            return (
+                                                                <span key={sid} className="text-[10px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full border border-gray-200">
+                                                                    {subName}
+                                                                </span>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                ) : dest.subcategory && (
                                                     <span className="block mt-1 text-[10px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full border border-gray-200">
                                                         {dest.subcategory}
                                                     </span>
@@ -765,32 +817,60 @@ export default function Destinations() {
                                     </div>
 
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Kategori *</label>
-                                        <select
-                                            className="w-full border p-2 rounded-lg"
-                                            value={formData.categoryId || ''}
-                                            onChange={handleCategoryChange}
-                                        >
-                                            <option value="">Pilih Kategori</option>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Kategori (Bisa pilih lebih dari 1) *</label>
+                                        <div className="border rounded-lg p-3 max-h-40 overflow-y-auto space-y-2 bg-gray-50">
                                             {categories.filter(c => c.isActive).map(cat => (
-                                                <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                                <label key={cat.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                                                    <input 
+                                                        type="checkbox" 
+                                                        className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4"
+                                                        checked={formData.categoryIds?.includes(cat.id) || formData.categoryId === cat.id}
+                                                        onChange={(e) => {
+                                                            let newIds = [...(formData.categoryIds || [])];
+                                                            if (formData.categoryId && !newIds.includes(formData.categoryId)) {
+                                                                newIds.push(formData.categoryId); // migrate old selection if touched
+                                                            }
+                                                            if (e.target.checked) {
+                                                                if (!newIds.includes(cat.id)) newIds.push(cat.id);
+                                                            } else {
+                                                                newIds = newIds.filter(id => id !== cat.id);
+                                                            }
+                                                            setFormData({...formData, categoryIds: newIds, categoryId: newIds.length > 0 ? newIds[0] : ''});
+                                                        }}
+                                                    />
+                                                    {cat.name}
+                                                </label>
                                             ))}
-                                        </select>
+                                        </div>
                                     </div>
 
-                                    {formData.categoryId && getSubcategoriesForCategory(formData.categoryId).length > 0 && (
+                                    {formData.categoryIds?.length > 0 && (
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-1">Sub Kategori</label>
-                                            <select
-                                                className="w-full border p-2 rounded-lg"
-                                                value={formData.subcategoryId || ''}
-                                                onChange={handleSubcategoryChange}
-                                            >
-                                                <option value="">Pilih Sub Kategori</option>
-                                                {getSubcategoriesForCategory(formData.categoryId).map(sub => (
-                                                    <option key={sub.id} value={sub.id}>{sub.name}</option>
+                                            <div className="border rounded-lg p-3 max-h-40 overflow-y-auto space-y-2 bg-gray-50">
+                                                {formData.categoryIds.flatMap(catId => getSubcategoriesForCategory(catId)).map(sub => (
+                                                    <label key={sub.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                                                        <input 
+                                                            type="checkbox" 
+                                                            className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4"
+                                                            checked={formData.subcategoryIds?.includes(sub.id) || formData.subcategoryId === sub.id}
+                                                            onChange={(e) => {
+                                                                let newIds = [...(formData.subcategoryIds || [])];
+                                                                if (formData.subcategoryId && !newIds.includes(formData.subcategoryId)) {
+                                                                    newIds.push(formData.subcategoryId); // migrate old selection
+                                                                }
+                                                                if (e.target.checked) {
+                                                                    if (!newIds.includes(sub.id)) newIds.push(sub.id);
+                                                                } else {
+                                                                    newIds = newIds.filter(id => id !== sub.id);
+                                                                }
+                                                                setFormData({...formData, subcategoryIds: newIds, subcategoryId: newIds.length > 0 ? newIds[0] : ''});
+                                                            }}
+                                                        />
+                                                        <span className="text-gray-400 font-bold text-[10px] uppercase">[{categories.find(c=>c.id === sub.categoryId)?.name}]</span> {sub.name}
+                                                    </label>
                                                 ))}
-                                            </select>
+                                            </div>
                                         </div>
                                     )}
 
@@ -860,7 +940,21 @@ export default function Destinations() {
                                         </div>
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-1">Nama Stasiun</label>
-                                            <input className="w-full border p-2 rounded-lg" value={formData.nearestStation} onChange={e => setFormData({ ...formData, nearestStation: e.target.value })} placeholder="e.g. Bundaran HI" />
+                                            <select
+                                                className="w-full border p-2 rounded-lg"
+                                                value={formData.nearestStation || ''}
+                                                onChange={e => setFormData({ ...formData, nearestStation: e.target.value })}
+                                            >
+                                                <option value="">-- Pilih Stasiun Terdekat --</option>
+                                                {/* Ensure the current value is visible even if not in tags */}
+                                                {formData.nearestStation && !stationTags.includes(formData.nearestStation) && formData.nearestStation !== "Lainnya" && (
+                                                    <option value={formData.nearestStation}>{formData.nearestStation}</option>
+                                                )}
+                                                {stationTags.map((tag, idx) => (
+                                                    <option key={idx} value={tag}>{tag}</option>
+                                                ))}
+                                                <option value="Lainnya">Lainnya</option>
+                                            </select>
                                         </div>
                                     </div>
 
