@@ -122,8 +122,8 @@ export default function DestinationDetail() {
 
     return (
         <div className="min-h-screen bg-grey-100 relative overflow-hidden">
-            {/* ========== STICKY HEADER ========== */}
-            <div className="sticky top-0 z-50 bg-white/95 backdrop-blur-[25px] shadow-sm overflow-hidden">
+            {/* ========== FIXED HEADER ========== */}
+            <div className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-[25px] shadow-sm overflow-hidden">
                 <div className="flex items-center justify-between py-[10px] h-[64px]">
                     <div className="flex items-center gap-[10px] flex-1 pl-[17px] pr-[15px]">
                         <button
@@ -158,7 +158,7 @@ export default function DestinationDetail() {
             </div>
 
             {/* ========== SCROLLABLE CONTENT ========== */}
-            <div className="pb-[30px]">
+            <div className="pt-[64px] pb-[30px]">
                 {/* Hero Image — sticky tepat di bawah header (64px) */}
                 <div className="sticky top-[64px] h-[250px] w-full bg-grey-200 overflow-hidden">
                     <img
