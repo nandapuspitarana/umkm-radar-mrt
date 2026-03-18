@@ -14,7 +14,7 @@ import { getImageUrl } from '../utils/api';
  *  - Distance chip: absolute bottom-right, bg grey-100, rounded-[7px], p-[5px],
  *    14px Inter semibold, grey-400, lowercase
  */
-export default function VendorCard({ vendor, onClick, fallbackEmoji = '🍽️' }) {
+export default function VendorCard({ vendor, onClick, fallbackEmoji = '📷' }) {
     return (
         <div
             onClick={onClick}

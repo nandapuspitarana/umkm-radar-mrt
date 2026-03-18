@@ -45,13 +45,20 @@ export default function Sarapan({ vendors, preSorted = false, onSelectVendor }) 
 
         const applyConfig = (data) => {
             const qaBanners = data.quick_access_banners || [];
+            const wfaBanners = data.wfa_banners || [];
+            const allBanners = [...qaBanners, ...wfaBanners];
+            
             // Find matched banner config by slug
-            const matched = qaBanners.find(b => b.isDynamicSubpage && b.slug === slug);
+            const matched = allBanners.find(b => b.isDynamicSubpage && b.slug === slug);
 
             if (matched) {
                 setPageConfig(matched);
-                if (matched.bannerSource) {
-                    const raw = data[matched.bannerSource] || [];
+                
+                // Jika undefined (baru dibuat dan belum diedit dropdownnya), defaultnya 'kuliner_banners' sesuai UI
+                const source = matched.bannerSource === undefined ? 'kuliner_banners' : matched.bannerSource;
+
+                if (source) {
+                    const raw = data[source] || [];
                     let extracted = [];
                     if (Array.isArray(raw)) extracted = raw;
                     else if (raw.banners && Array.isArray(raw.banners)) extracted = raw.banners;
@@ -265,7 +272,7 @@ export default function Sarapan({ vendors, preSorted = false, onSelectVendor }) 
                             <VendorCard
                                 key={vendor.id}
                                 vendor={vendor}
-                                fallbackEmoji="✨"
+                                fallbackEmoji="📷"
                                 onClick={() => onSelectVendor && onSelectVendor(vendor)}
                             />
                         ))
