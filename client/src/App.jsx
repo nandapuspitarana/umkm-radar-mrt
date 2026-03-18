@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import Home from './pages/Home';
 import Kuliner from './pages/Kuliner';
+import Sarapan from './pages/Sarapan';
 import Ngopi from './pages/Ngopi';
 import Publik from './pages/Publik';
 import Wisata from './pages/Wisata';
@@ -342,6 +343,39 @@ export default function App() {
       {showSplash && <SplashScreen onComplete={handleSplashComplete} />}
       <Routes>
         <Route path="/" element={<MainView />} />
+
+        {/* ── /sub-page/:slug (Dynamic Sub-page) ── */}
+        <Route path="/sub-page/:slug" element={
+          <div className="antialiased text-gray-800">
+            {currentVendor ? (
+              <VendorView onBack={() => setCurrentVendor(null)} />
+            ) : (
+              <Sarapan
+                vendors={vendors}
+                preSorted={false}
+                onSelectVendor={setCurrentVendor}
+              />
+            )}
+            <FloatingCart />
+            <CartLayer />
+          </div>
+        } />
+        {/* Support legacy /sarapan just in case */}
+        <Route path="/sarapan" element={
+          <div className="antialiased text-gray-800">
+            {currentVendor ? (
+              <VendorView onBack={() => setCurrentVendor(null)} />
+            ) : (
+              <Sarapan
+                vendors={vendors}
+                preSorted={false}
+                onSelectVendor={setCurrentVendor}
+              />
+            )}
+            <FloatingCart />
+            <CartLayer />
+          </div>
+        } />
 
         {/* ── /kuliner — menerima vendors yang sudah pre-sorted ── */}
         <Route path="/kuliner" element={

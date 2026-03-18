@@ -8,7 +8,7 @@ import StoryModal from '../components/StoryModal';
 
 // Fallback static data jika API belum memiliki data
 const FALLBACK_QUICK_ACCESS = [
-    { id: 1, image: 'https://images.unsplash.com/photo-1504754524776-8f4f37790ca0?w=400&h=400&fit=crop', title: 'Buat yang', subtitle: 'Belum Sarapan', link: '', type: 'medium' },
+    { id: 1, image: 'https://images.unsplash.com/photo-1504754524776-8f4f37790ca0?w=400&h=400&fit=crop', title: 'Buat yang', subtitle: 'Belum Sarapan', link: '/sub-page/sarapan', type: 'medium', isDynamicSubpage: true, slug: 'sarapan', subpageTitle: 'Rekomendasi Sarapan', vendorFilter: 'sarapan, nasi uduk, bubur, lontong' },
     { id: 2, image: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400&h=400&fit=crop', title: 'Butuh Ngopi', subtitle: 'Takeaway', link: '', type: 'medium' },
     { id: 3, image: 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=400&h=400&fit=crop', title: 'Parkir Seharian', subtitle: 'Tarif Flat', link: '', type: 'medium' },
     { id: 4, image: 'https://images.unsplash.com/photo-1584551246679-0daf3d275d0f?w=400&h=400&fit=crop', title: 'Masjid/', subtitle: 'Mushala', link: '', type: 'medium' },

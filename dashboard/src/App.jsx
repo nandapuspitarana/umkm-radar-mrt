@@ -19,6 +19,7 @@ import QuickAccessBanners from './pages/QuickAccessBanners';
 import WfaBanners from './pages/WfaBanners';
 import FavoriteBanners from './pages/FavoriteBanners';
 import RekomenBanners from './pages/RekomenBanners';
+import SarapanBanners from './pages/SarapanBanners';
 import StationCategories from './pages/StationCategories';
 import MainMenu from './pages/MainMenu';
 import TransportIcons from './pages/TransportIcons';
@@ -145,6 +146,14 @@ export default function App() {
           element={
             <PrivateRoute>
               <NgopiBanners />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/sarapan-banners"
+          element={
+            <PrivateRoute>
+              <SarapanBanners />
             </PrivateRoute>
           }
         />

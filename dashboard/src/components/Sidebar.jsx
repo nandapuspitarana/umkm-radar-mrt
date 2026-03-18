@@ -72,6 +72,7 @@ const ADMIN_MENU = [
             { icon: Globe, label: 'Story / Publik', path: '/publik-banner' },
             { icon: CreditCard, label: 'ATM', path: '/atm-banners' },
             { icon: Utensils, label: 'Kuliner', path: '/kuliner-banners' },
+            { icon: Coffee, label: 'Sarapan', path: '/sarapan-banners' },
             { icon: Coffee, label: 'Ngopi', path: '/ngopi-banners' },
             { icon: Landmark, label: 'Wisata', path: '/wisata-banner' },
         ],
