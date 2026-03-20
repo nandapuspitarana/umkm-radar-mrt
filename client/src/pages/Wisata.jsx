@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapPin } from 'lucide-react';
 import AppLayout from '../components/AppLayout';
@@ -184,6 +184,27 @@ export default function Wisata() {
 // Section Component with Subcategory Banner
 function DestinationSection({ section, subcategories }) {
     const [showAll, setShowAll] = useState(false);
+    const scrollRef = useRef(null);
+
+    useEffect(() => {
+        if (showAll || section.destinations.length <= 10) return;
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting) {
+                    setShowAll(true);
+                }
+            },
+            { root: scrollRef.current, threshold: 0.1 }
+        );
+
+        const lastChild = scrollRef.current?.querySelector('.last-item-sentinel');
+        if (lastChild) {
+            observer.observe(lastChild);
+        }
+
+        return () => observer.disconnect();
+    }, [showAll, section.destinations.length]);
 
     // Get subcategories for this section's category
     const sectionSubcats = subcategories.filter(s => s.categoryId === section.subcategories?.[0]?.categoryId);
@@ -194,7 +215,7 @@ function DestinationSection({ section, subcategories }) {
 
     return (
         <div className="py-1.5 pr-2.5">
-            {/* Subcategory Banner (if exists) */}
+            {/* ... (existing banner/header code) ... */}
             {sectionBanner && (
                 <div className="px-2.5 mb-2">
                     <div className="relative w-full h-32 rounded-[15px] overflow-hidden">
@@ -230,7 +251,6 @@ function DestinationSection({ section, subcategories }) {
                 </div>
             )}
 
-            {/* Section Header (if no banner) */}
             {!sectionBanner && (
                 <div className="flex items-center gap-1.5 px-5 pt-2.5 pb-2">
                     <h2 className="font-bold text-[15px] text-black capitalize flex-1">
@@ -240,26 +260,18 @@ function DestinationSection({ section, subcategories }) {
             )}
 
             {/* Horizontal Scroll Cards */}
-            <div className="overflow-x-auto no-scrollbar">
-                <div className="flex gap-1.5 px-2.5">
-                    {section.destinations.slice(0, showAll ? undefined : 10).map((dest) => (
-                        <DestinationCard key={dest.id} destination={dest} />
+            <div ref={scrollRef} className="overflow-x-auto no-scrollbar">
+                <div className="flex gap-1.5 px-2.5 pb-2">
+                    {section.destinations.slice(0, showAll ? undefined : 10).map((dest, idx, arr) => (
+                        <React.Fragment key={dest.id}>
+                            <DestinationCard destination={dest} />
+                            {!showAll && idx === arr.length - 1 && (
+                                <div className="last-item-sentinel w-10 h-1 flex-shrink-0" />
+                            )}
+                        </React.Fragment>
                     ))}
                 </div>
             </div>
-
-            {/* Show More Button */}
-            {section.destinations.length > 10 && !showAll && (
-                <div className="px-5 py-2">
-                    <button
-                        type="button"
-                        onClick={() => setShowAll(true)}
-                        className="text-primary text-sm font-medium"
-                    >
-                        Lihat Semua ({section.destinations.length})
-                    </button>
-                </div>
-            )}
         </div>
     );
 }

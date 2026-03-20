@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapPin } from 'lucide-react';
 import AppLayout from '../components/AppLayout';
@@ -217,6 +217,28 @@ export default function Publik() {
 // Section Component with Banner
 function DestinationSection({ section }) {
     const [showAll, setShowAll] = useState(false);
+    const scrollRef = useRef(null);
+
+    useEffect(() => {
+        if (showAll || section.destinations.length <= 10) return;
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting) {
+                    setShowAll(true);
+                }
+            },
+            { root: scrollRef.current, threshold: 0.1 }
+        );
+
+        const lastChild = scrollRef.current?.querySelector('.last-item-sentinel');
+        if (lastChild) {
+            observer.observe(lastChild);
+        }
+
+        return () => observer.disconnect();
+    }, [showAll, section.destinations.length]);
+
     const sectionBanner = section.bannerImage;
     const bannerVideoId = getYouTubeVideoId(sectionBanner);
 
@@ -268,26 +290,18 @@ function DestinationSection({ section }) {
             )}
 
             {/* Horizontal Scroll Cards */}
-            <div className="overflow-x-auto no-scrollbar">
-                <div className="flex gap-1.5 px-2.5">
-                    {section.destinations.slice(0, showAll ? undefined : 10).map((dest) => (
-                        <DestinationCard key={dest.id} destination={dest} />
+            <div ref={scrollRef} className="overflow-x-auto no-scrollbar">
+                <div className="flex gap-1.5 px-2.5 pb-2">
+                    {section.destinations.slice(0, showAll ? undefined : 10).map((dest, idx, arr) => (
+                        <React.Fragment key={dest.id}>
+                            <DestinationCard destination={dest} />
+                            {!showAll && idx === arr.length - 1 && (
+                                <div className="last-item-sentinel w-10 h-1 flex-shrink-0" />
+                            )}
+                        </React.Fragment>
                     ))}
                 </div>
             </div>
-
-            {/* Show More Button */}
-            {section.destinations.length > 10 && !showAll && (
-                <div className="px-5 py-2">
-                    <button
-                        type="button"
-                        onClick={() => setShowAll(true)}
-                        className="text-primary text-sm font-medium"
-                    >
-                        Lihat Semua ({section.destinations.length})
-                    </button>
-                </div>
-            )}
         </div>
     );
 }
