@@ -1,0 +1,120 @@
+﻿CAT id=1 slug=sejarah-museum type=wisata
+CAT id=2 slug=budaya-seni type=wisata
+CAT id=3 slug=religi type=wisata
+CAT id=4 slug=alam-ruang-terbuka type=wisata
+CAT id=5 slug=keluarga-rekreasi type=wisata
+CAT id=6 slug=edukasi type=wisata
+CAT id=7 slug=belanja type=wisata
+CAT id=12 slug=wisata-alam type=publik
+CAT id=13 slug=wisata-sejarah type=publik
+CAT id=14 slug=wisata-budaya type=publik
+CAT id=15 slug=wisata-keluarga type=publik
+CAT id=25 slug=belum-terkategori type=publik
+CAT id=26 slug=fasilitas-sosial type=publik
+CAT id=8 slug=ruang-terbuka-olahraga type=publik
+CAT id=9 slug=mall-plaza-terbuka type=publik
+CAT id=10 slug=infrastruktur-pejalan-transit type=publik
+CAT id=11 slug=fasilitas-keagamaan type=publik
+
+TOTAL DESTS: 101
+DEST id=9 name="Gereja Katedral Jakarta" category="religi" categoryId=3 active=true
+DEST id=119 name="Vihara Dharma Bhakti" category="religi" categoryId=3 active=true
+DEST id=11 name="Taman Lapangan Banteng" category="alam-ruang-terbuka" categoryId=4 active=true
+DEST id=5 name="Taman Ismail Marzuki (TIM)" category="budaya-seni" categoryId=2 active=true
+DEST id=7 name="Galeri Nasional Indonesia" category="budaya-seni" categoryId=2 active=true
+DEST id=6 name="Gedung Kesenian Jakarta" category="budaya-seni" categoryId=2 active=true
+DEST id=117 name="Masjid Al-Bina (GBK)" category="religi" categoryId=3 active=true
+DEST id=118 name="Gereja Sion" category="religi" categoryId=3 active=true
+DEST id=12 name="Taman Suropati" category="alam-ruang-terbuka" categoryId=4 active=true
+DEST id=127 name="Taman Ayodya" category="Ruang Terbuka & Olahraga" categoryId=8 active=true
+DEST id=10 name="Vihara Dharma Bhakti (Klenteng Jin De Yuan)" category="Wisata Religi" categoryId=3 active=true
+DEST id=85 name="Museum Nasional Indonesia" category="sejarah-museum" categoryId=1 active=true
+DEST id=87 name="Museum Nasional Indonesia" category="sejarah-museum" categoryId=1 active=true
+DEST id=31 name="Masjid Al-Bina Senayan (GBK)" category="Wisata Religi" categoryId=3 active=true
+DEST id=13 name="Gelora Bung Karno (GBK)" category="alam-ruang-terbuka" categoryId=4 active=true
+DEST id=16 name="Sea World Ancol" category="keluarga-rekreasi" categoryId=5 active=true
+DEST id=15 name="Dunia Fantasi (Dufan)" category="keluarga-rekreasi" categoryId=5 active=true
+DEST id=27 name="Skybridge MRT ΓÇô Blok M Plaza" category="infrastruktur-transit" categoryId=10 active=true
+DEST id=131 name="Little Tokyo" category="ruang-terbuka-olahraga" categoryId=8 active=true
+DEST id=19 name="Grand Indonesia" category="belanja" categoryId=7 active=true
+DEST id=104 name="Terowongan Kendal" category="infrastruktur-pejalan-transit" categoryId=10 active=true
+DEST id=132 name="Blok M Hub" category="mall-plaza-terbuka" categoryId=9 active=true
+DEST id=105 name="Sarinah Thamrin Plaza" category="mall-plaza-terbuka" categoryId=9 active=true
+DEST id=133 name="Skybridge Blok M" category="infrastruktur-pejalan-transit" categoryId=10 active=true
+DEST id=134 name="Underpass Pedestrian Blok M" category="infrastruktur-pejalan-transit" categoryId=10 active=true
+DEST id=17 name="Ragunan Zoo" category="Wisata Keluarga" categoryId=15 active=true
+DEST id=18 name="Pasar Baru" category="Wisata Belanja" categoryId=7 active=true
+DEST id=20 name="Plaza Indonesia" category="Wisata Belanja" categoryId=7 active=true
+DEST id=57 name="Museum Nasional (Museum Gajah)" category="sejarah-museum" categoryId=1 active=true
+DEST id=109 name="Museum Fatahillah" category="sejarah-museum" categoryId=1 active=true
+DEST id=60 name="Museum Wayang" category="sejarah-museum" categoryId=1 active=true
+DEST id=110 name="Museum Bank Indonesia" category="sejarah-museum" categoryId=1 active=true
+DEST id=111 name="Museum Bank Mandiri" category="sejarah-museum" categoryId=1 active=true
+DEST id=112 name="Museum Sumpah Pemuda" category="sejarah-museum" categoryId=1 active=true
+DEST id=1 name="Monumen Nasional (Monas)" category="alam-ruang-terbuka" categoryId=4 active=true
+DEST id=108 name="Masjid Al-Azhar" category="religi" categoryId=3 active=true
+DEST id=129 name="Museum Nasional (Museum Gajah)" category="" categoryId=13 active=true
+DEST id=106 name="Taman Bendera Pusaka (Taman Langsat)" category="mall-plaza-terbuka" categoryId=9 active=true
+DEST id=58 name="Monas & Taman Sekitarnya" category="Wisata Alam" categoryId=12 active=true
+DEST id=70 name="Gelora Bung Karno (GBK)" category="alam-ruang-terbuka" categoryId=4 active=true
+DEST id=71 name="Hutan Kota GBK" category="alam-ruang-terbuka" categoryId=4 active=true
+DEST id=84 name="Taman Menteng" category="alam-ruang-terbuka" categoryId=4 active=true
+DEST id=73 name="Taman Lapangan Banteng" category="alam-ruang-terbuka" categoryId=4 active=true
+DEST id=72 name="Tebet Eco Park" category="alam-ruang-terbuka" categoryId=4 active=true
+DEST id=75 name="Dunia Fantasi (Dufan)" category="keluarga-rekreasi" categoryId=5 active=true
+DEST id=83 name="Museum Nasional Indonesia" category="sejarah-museum" categoryId=1 active=true
+DEST id=77 name="Jakarta Aquarium" category="keluarga-rekreasi" categoryId=5 active=true
+DEST id=79 name="Planetarium Jakarta" category="edukasi" categoryId=6 active=true
+DEST id=80 name="KidZania Jakarta" category="edukasi" categoryId=6 active=true
+DEST id=63 name="Gedung Kesenian Jakarta" category="budaya-seni" categoryId=2 active=true
+DEST id=67 name="Gereja Katedral Jakarta" category="religi" categoryId=3 active=true
+DEST id=68 name="Masjid Sunda Kelapa" category="religi" categoryId=3 active=true
+DEST id=107 name="Masjid Nurul Iman Blok M" category="religi" categoryId=11 active=true
+DEST id=65 name="Balai Budaya" category="budaya-seni" categoryId=14 active=true
+DEST id=78 name="Taman Mini Indonesia Indah (TMII)" category="keluarga-rekreasi" categoryId=5 active=true
+DEST id=74 name="Ancol Dreamland" category="keluarga-rekreasi" categoryId=15 active=true
+DEST id=76 name="SeaWorld Ancol" category="keluarga-rekreasi" categoryId=15 active=true
+DEST id=69 name="Vihara Bahtera Bhakti" category="Wisata Religi" categoryId=3 active=true
+DEST id=114 name="Pelabuhan Sunda Kelapa" category="sejarah-museum" categoryId=1 active=true
+DEST id=62 name="Taman Ismail Marzuki (TIM)" category="budaya-seni" categoryId=2 active=true
+DEST id=64 name="Galeri Nasional Indonesia" category="budaya-seni" categoryId=2 active=true
+DEST id=115 name="Teater Jakarta" category="budaya-seni" categoryId=2 active=true
+DEST id=113 name="Museum Joang 45" category="sejarah-museum" categoryId=1 active=true
+DEST id=92 name="Taman Bendera Pusaka" category="Wisata Alam" categoryId=12 active=true
+DEST id=2 name="Museum Nasional (Museum Gajah)" category="sejarah-museum" categoryId=1 active=true
+DEST id=89 name="Taman & Pedestrian GBK" category="Wisata Alam" categoryId=12 active=true
+DEST id=90 name="Kantor Kelurahan Melawai" category="Wisata Religi" categoryId=3 active=true
+DEST id=91 name="Polsek Kebayoran Baru" category="Wisata Alam" categoryId=12 active=true
+DEST id=25 name="Blok M Square" category="mall-plaza-terbuka" categoryId=9 active=false
+DEST id=30 name="Masjid Nurul Iman Blok-M" category="sosial-keagamaan" categoryId=11 active=true
+DEST id=94 name="GOR Bulungan" category="Ruang Terbuka & Olahraga" categoryId=8 active=true
+DEST id=96 name="Terminal Blok M" category="Infrastruktur Pejalan & Transit" categoryId=10 active=true
+DEST id=99 name="Pasaraya Blok M" category="mall-plaza-terbuka" categoryId=9 active=true
+DEST id=98 name="Little Tokyo Melawai" category="Wisata Belanja" categoryId=7 active=true
+DEST id=28 name="Underpass Pedestrian" category="infrastruktur-transit" categoryId=10 active=true
+DEST id=116 name="Art:1 New Museum" category="budaya-seni" categoryId=2 active=true
+DEST id=8 name="Masjid Istiqlal" category="religi" categoryId=3 active=true
+DEST id=93 name="Taman Literasi Martha Tiahahu" category="Ruang Terbuka & Olahraga" categoryId=8 active=true
+DEST id=100 name="M Bloc Space" category="mall-plaza-terbuka" categoryId=9 active=true
+DEST id=24 name="Blok M Plaza" category="mall-plaza-terbuka" categoryId=9 active=true
+DEST id=3 name="Museum Fatahillah (Museum Sejarah Jakarta)" category="Wisata Sejarah" categoryId=13 active=true
+DEST id=4 name="Museum Wayang" category="sejarah-museum" categoryId=1 active=true
+DEST id=122 name="Taman Impian Jaya Ancol" category="keluarga-rekreasi" categoryId=5 active=true
+DEST id=123 name="Atlantis Water Adventure" category="keluarga-rekreasi" categoryId=5 active=true
+DEST id=124 name="Faunaland Ancol" category="keluarga-rekreasi" categoryId=5 active=true
+DEST id=125 name="Science Center TMII" category="edukasi" categoryId=6 active=true
+DEST id=126 name="Museum IPTEK TMII" category="edukasi" categoryId=6 active=true
+DEST id=128 name="Blok M Plaza" category="mall-plaza-terbuka" categoryId=9 active=false
+DEST id=82 name="Monumen Nasional (Monas)" category="alam-ruang-terbuka" categoryId=4 active=true
+DEST id=61 name="Museum Seni Rupa & Keramik" category="sejarah-museum" categoryId=1 active=true
+DEST id=14 name="Pantai Ancol" category="alam-ruang-terbuka" categoryId=4 active=true
+DEST id=120 name="Hutan Mangrove PIK" category="alam-ruang-terbuka" categoryId=4 active=true
+DEST id=121 name="Kepulauan Seribu (Pulau Tidung)" category="alam-ruang-terbuka" categoryId=4 active=true
+DEST id=21 name="GOR & Kolam Renang Bulungan" category="ruang-terbuka-olahraga" categoryId=8 active=true
+DEST id=95 name="Blok M Square" category="mall-plaza-terbuka" categoryId=9 active=true
+DEST id=81 name="Perpustakaan Nasional RI" category="edukasi" categoryId=6 active=true
+DEST id=59 name="Museum Fatahilah (Sejarah Jakarta)" category="sejarah-museum" categoryId=13 active=true
+DEST id=66 name="Masjid Istiqlal" category="religi" categoryId=3 active=true
+DEST id=86 name="Taman Menteng" category="alam-ruang-terbuka" categoryId=4 active=true
+DEST id=88 name="Taman Menteng" category="alam-ruang-terbuka" categoryId=4 active=true
+DEST id=23 name="Taman Bendera Pusaka" category="ruang-terbuka-olahraga" categoryId=8 active=true

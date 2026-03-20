@@ -61,7 +61,7 @@ export default function Publik() {
 
     const fetchDestinations = async () => {
         try {
-            const response = await fetch('/api/destinations');
+            const response = await fetch('/api/destinations?type=publik');
             const data = await response.json();
             setDestinations(data);
         } catch (error) {
@@ -71,15 +71,15 @@ export default function Publik() {
         }
     };
 
-    // Get publik category IDs
+    // All fetched destinations are already filtered as publik by API
     const publikCategoryIds = categories.map(c => c.id);
 
-    // Filter destinations that belong to publik categories
+    // All returned destinations belong to publik categories; keep them all
     const publikDestinations = destinations.filter(dest =>
+        publikCategoryIds.length === 0 || // fallback: show all if categories not loaded yet
         publikCategoryIds.includes(dest.categoryId) ||
-        (dest.categoryIds && dest.categoryIds.some(id => publikCategoryIds.includes(id))) ||
-        dest.category === 'Publik' ||
-        dest.category === 'Area Publik'
+        publikCategoryIds.includes(dest.category_id) ||
+        (dest.categoryIds && dest.categoryIds.some(id => publikCategoryIds.includes(id)))
     );
 
     // Group destinations by subcategory (for publik, subcategories are the main sections)
@@ -132,8 +132,8 @@ export default function Publik() {
         };
     }).filter(section => section.destinations.length > 0);
 
-    // Use subcategory sections if available, otherwise use category sections
-    const finalSections = destinationSections.length > 0 ? destinationSections : categorySections;
+    // Use category sections as the primary grouping to ensure all destinations are shown
+    const finalSections = categorySections;
 
     const videoId = getYouTubeVideoId(bannerImage);
 

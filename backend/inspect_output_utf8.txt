@@ -1,0 +1,71 @@
+﻿--- ALL CATEGORIES ---
+1	wisata	sejarah-museum	Wisata Sejarah & Museum
+2	wisata	budaya-seni	Wisata Budaya & Seni
+3	wisata	religi	Wisata Religi
+4	wisata	alam-ruang-terbuka	Wisata Alam & Ruang Terbuka
+5	wisata	keluarga-rekreasi	Wisata Keluarga & Rekreasi
+6	wisata	edukasi	Wisata Edukasi
+7	wisata	belanja	Wisata Belanja
+8	publik	ruang-terbuka-olahraga	Ruang Terbuka & Olahraga
+9	publik	mall-plaza-terbuka	Mall & Plaza Terbuka
+10	publik	infrastruktur-pejalan-transit	Infrastruktur Pejalan & Transit
+11	publik	fasilitas-keagamaan	Fasilitas Keagamaan
+12	publik	wisata-alam	Wisata Alam
+13	publik	wisata-sejarah	Wisata Sejarah
+14	publik	wisata-budaya	Wisata Budaya
+15	publik	wisata-keluarga	Wisata Keluarga
+25	publik	belum-terkategori	Belum Terkategori
+26	publik	fasilitas-sosial	Fasilitas Sosial
+
+--- DESTINATION COUNTS PER CATEGORY ---
+15	wisata	Wisata Alam & Ruang Terbuka
+6	publik	Infrastruktur Pejalan & Transit
+5	wisata	Wisata Edukasi
+1	publik	Wisata Budaya
+3	publik	Wisata Sejarah
+8	wisata	Wisata Budaya & Seni
+2	publik	Fasilitas Keagamaan
+9	publik	Mall & Plaza Terbuka
+4	wisata	Wisata Belanja
+3	publik	Wisata Keluarga
+4	publik	Wisata Alam
+13	wisata	Wisata Religi
+14	wisata	Wisata Sejarah & Museum
+8	wisata	Wisata Keluarga & Rekreasi
+6	publik	Ruang Terbuka & Olahraga
+
+--- PUBLIC DESTINATIONS ---
+127	8	Taman Ayodya
+27	10	Skybridge MRT ΓÇô Blok M Plaza
+131	8	Little Tokyo
+104	10	Terowongan Kendal
+132	9	Blok M Hub
+105	9	Sarinah Thamrin Plaza
+133	10	Skybridge Blok M
+134	10	Underpass Pedestrian Blok M
+17	15	Ragunan Zoo
+129	13	Museum Nasional (Museum Gajah)
+106	9	Taman Bendera Pusaka (Taman Langsat)
+58	12	Monas & Taman Sekitarnya
+107	11	Masjid Nurul Iman Blok M
+65	14	Balai Budaya
+74	15	Ancol Dreamland
+76	15	SeaWorld Ancol
+92	12	Taman Bendera Pusaka
+89	12	Taman & Pedestrian GBK
+91	12	Polsek Kebayoran Baru
+25	9	Blok M Square
+30	11	Masjid Nurul Iman Blok-M
+94	8	GOR Bulungan
+96	10	Terminal Blok M
+99	9	Pasaraya Blok M
+28	10	Underpass Pedestrian
+93	8	Taman Literasi Martha Tiahahu
+100	9	M Bloc Space
+24	9	Blok M Plaza
+3	13	Museum Fatahillah (Museum Sejarah Jakarta)
+128	9	Blok M Plaza
+21	8	GOR & Kolam Renang Bulungan
+95	9	Blok M Square
+59	13	Museum Fatahilah (Sejarah Jakarta)
+23	8	Taman Bendera Pusaka

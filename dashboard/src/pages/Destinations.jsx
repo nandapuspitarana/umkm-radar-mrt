@@ -29,9 +29,15 @@ export default function Destinations() {
     const [loading, setLoading] = useState(true);
     const [showMenu, setShowMenu] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
+    const [categoryFilter, setCategoryFilter] = useState('all');
+    const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' });
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [currentDest, setCurrentDest] = useState(null);
     const [saving, setSaving] = useState(false);
+
+    // Pagination
+    const ITEMS_PER_PAGE = 20;
+    const [currentPage, setCurrentPage] = useState(1);
 
     // Categories state
     const [categories, setCategories] = useState([]);
@@ -409,10 +415,55 @@ export default function Destinations() {
         }
     };
 
-    const filtered = destinations.filter(d =>
-        d.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (d.category || '').toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filtered = destinations.filter(d => {
+        const name = (d.name || '').toLowerCase();
+        const cat = (d.category || '').toLowerCase();
+        const term = searchTerm.toLowerCase();
+        
+        // Search term filter
+        const matchesSearch = name.includes(term) || cat.includes(term);
+        
+        // Category filter
+        const matchesCategory = categoryFilter === 'all' || 
+                              d.categoryId === parseInt(categoryFilter) || 
+                              (d.categoryIds && d.categoryIds.includes(parseInt(categoryFilter)));
+        
+        return matchesSearch && matchesCategory;
+    });
+
+    const sorted = [...filtered].sort((a, b) => {
+        const { key, direction } = sortConfig;
+        
+        let valA, valB;
+        if (key === 'name') {
+            valA = a.name.toLowerCase();
+            valB = b.name.toLowerCase();
+        } else if (key === 'category') {
+            valA = (a.category || '').toLowerCase();
+            valB = (b.category || '').toLowerCase();
+        } else if (key === 'station') {
+            valA = a.nearestStation.toLowerCase();
+            valB = b.nearestStation.toLowerCase();
+        } else {
+            valA = a[key];
+            valB = b[key];
+        }
+
+        if (valA < valB) return direction === 'asc' ? -1 : 1;
+        if (valA > valB) return direction === 'asc' ? 1 : -1;
+        return 0;
+    });
+
+    const handleSort = (key) => {
+        setSortConfig(prev => ({
+            key,
+            direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
+        }));
+    };
+
+    const totalPages = Math.max(1, Math.ceil(sorted.length / ITEMS_PER_PAGE));
+    const safePage = Math.min(currentPage, totalPages);
+    const paginated = sorted.slice((safePage - 1) * ITEMS_PER_PAGE, safePage * ITEMS_PER_PAGE);
 
     // Group subcategories by category for display
     const subcategoriesByCategory = categories.map(cat => ({
@@ -472,28 +523,72 @@ export default function Destinations() {
                             </button>
                         </header>
 
-                        {/* Search Bar */}
-                        <div className="mb-6 relative max-w-md">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-                            <input
-                                type="text"
-                                placeholder="Cari nama destinasi..."
-                                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                                value={searchTerm}
-                                onChange={e => setSearchTerm(e.target.value)}
-                            />
+                        {/* Search & Filter Bar */}
+                        <div className="mb-6 flex flex-wrap items-center gap-4">
+                            <div className="relative max-w-sm flex-1">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                                <input
+                                    type="text"
+                                    placeholder="Cari nama destinasi..."
+                                    className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                                    value={searchTerm}
+                                    onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                                />
+                            </div>
+                            
+                            <div className="flex items-center gap-2">
+                                <Tag size={16} className="text-gray-400" />
+                                <select 
+                                    className="border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                                    value={categoryFilter}
+                                    onChange={e => { setCategoryFilter(e.target.value); setCurrentPage(1); }}
+                                >
+                                    <option value="all">Semua Kategori</option>
+                                    {categories.map(cat => (
+                                        <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <span className="text-sm text-gray-400 font-medium ml-auto">
+                                {filtered.length} destinasi ditemukan
+                            </span>
                         </div>
 
                         {/* Table */}
                         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
                             <table className="w-full">
-                                <thead className="bg-gray-50 text-left text-xs text-gray-500 uppercase">
+                                <thead className="bg-gray-50 text-left text-xs text-gray-500 uppercase tracking-wider">
                                     <tr>
-                                        <th className="px-6 py-4">Image</th>
-                                        <th className="px-6 py-4">Nama Destinasi</th>
-                                        <th className="px-6 py-4">Kategori</th>
-                                        <th className="px-6 py-4">Stasiun Terdekat</th>
-                                        <th className="px-6 py-4 text-center">Aksi</th>
+                                        <th className="px-6 py-4 font-bold">Image</th>
+                                        <th 
+                                            className="px-6 py-4 font-bold cursor-pointer hover:bg-gray-100 transition"
+                                            onClick={() => handleSort('name')}
+                                        >
+                                            <div className="flex items-center gap-1">
+                                                Nama Destinasi
+                                                <ChevronDown size={14} className={`transition-transform ${sortConfig.key === 'name' && sortConfig.direction === 'desc' ? 'rotate-180' : ''} ${sortConfig.key === 'name' ? 'text-blue-600' : 'text-gray-300'}`} />
+                                            </div>
+                                        </th>
+                                        <th 
+                                            className="px-6 py-4 font-bold cursor-pointer hover:bg-gray-100 transition"
+                                            onClick={() => handleSort('category')}
+                                        >
+                                            <div className="flex items-center gap-1">
+                                                Kategori
+                                                <ChevronDown size={14} className={`transition-transform ${sortConfig.key === 'category' && sortConfig.direction === 'desc' ? 'rotate-180' : ''} ${sortConfig.key === 'category' ? 'text-blue-600' : 'text-gray-300'}`} />
+                                            </div>
+                                        </th>
+                                        <th 
+                                            className="px-6 py-4 font-bold cursor-pointer hover:bg-gray-100 transition"
+                                            onClick={() => handleSort('station')}
+                                        >
+                                            <div className="flex items-center gap-1">
+                                                Stasiun Terdekat
+                                                <ChevronDown size={14} className={`transition-transform ${sortConfig.key === 'station' && sortConfig.direction === 'desc' ? 'rotate-180' : ''} ${sortConfig.key === 'station' ? 'text-blue-600' : 'text-gray-300'}`} />
+                                            </div>
+                                        </th>
+                                        <th className="px-6 py-4 text-center font-bold">Aksi</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
@@ -508,7 +603,7 @@ export default function Destinations() {
                                         <tr>
                                             <td colSpan="5" className="px-6 py-8 text-center text-gray-500">Tidak ada data.</td>
                                         </tr>
-                                    ) : filtered.map(dest => (
+                                    ) : paginated.map(dest => (
                                         <tr key={dest.id} className="hover:bg-gray-50">
                                             <td className="px-6 py-4">
                                                 <div className="w-16 h-12 bg-gray-100 rounded-lg overflow-hidden border border-gray-200">
@@ -595,6 +690,65 @@ export default function Destinations() {
                                 </tbody>
                             </table>
                         </div>
+
+                        {/* Pagination */}
+                        {totalPages > 1 && (
+                            <div className="flex items-center justify-between mt-4 px-2">
+                                <span className="text-sm text-gray-500">
+                                    Halaman {safePage} dari {totalPages} &nbsp;·&nbsp; {filtered.length} destinasi
+                                </span>
+                                <div className="flex items-center gap-1">
+                                    <button
+                                        type="button"
+                                        onClick={() => setCurrentPage(1)}
+                                        disabled={safePage === 1}
+                                        className="px-2 py-1 rounded-lg border border-gray-200 text-xs font-bold disabled:opacity-30 hover:bg-gray-50 transition"
+                                    >«</button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                        disabled={safePage === 1}
+                                        className="px-3 py-1 rounded-lg border border-gray-200 text-xs font-bold disabled:opacity-30 hover:bg-gray-50 transition"
+                                    >‹ Prev</button>
+                                    {Array.from({ length: totalPages }, (_, i) => i + 1)
+                                        .filter(p => p === 1 || p === totalPages || Math.abs(p - safePage) <= 2)
+                                        .reduce((acc, p, idx, arr) => {
+                                            if (idx > 0 && p - arr[idx - 1] > 1) acc.push('...');
+                                            acc.push(p);
+                                            return acc;
+                                        }, [])
+                                        .map((p, idx) =>
+                                            p === '...' ? (
+                                                <span key={`ellipsis-${idx}`} className="px-2 text-gray-400 text-xs">...</span>
+                                            ) : (
+                                                <button
+                                                    key={p}
+                                                    type="button"
+                                                    onClick={() => setCurrentPage(p)}
+                                                    className={`px-3 py-1 rounded-lg text-xs font-bold transition border ${
+                                                        p === safePage
+                                                            ? 'bg-blue-600 text-white border-blue-600 shadow'
+                                                            : 'border-gray-200 hover:bg-gray-50 text-gray-700'
+                                                    }`}
+                                                >{p}</button>
+                                            )
+                                        )
+                                    }
+                                    <button
+                                        type="button"
+                                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                        disabled={safePage === totalPages}
+                                        className="px-3 py-1 rounded-lg border border-gray-200 text-xs font-bold disabled:opacity-30 hover:bg-gray-50 transition"
+                                    >Next ›</button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setCurrentPage(totalPages)}
+                                        disabled={safePage === totalPages}
+                                        className="px-2 py-1 rounded-lg border border-gray-200 text-xs font-bold disabled:opacity-30 hover:bg-gray-50 transition"
+                                    >»</button>
+                                </div>
+                            </div>
+                        )}
                     </>
                 )}
 

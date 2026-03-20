@@ -3294,7 +3294,60 @@ app.post('/api/cleanup-products', async (c) => {
 
 // ==================== DESTINATIONS API ====================
 
-// Get all destinations
+// GET /api/destinations — all active destinations, optional ?type=publik|wisata filter
+app.get('/api/destinations', async (c) => {
+    try {
+        const type = c.req.query('type'); // 'publik' | 'wisata' | undefined
+
+        let result;
+        if (type) {
+            // Join with destination_categories to filter by type
+            const rows = await pool.query(
+                `SELECT d.* FROM destinations d
+                 JOIN destination_categories dc ON dc.id = d.category_id
+                 WHERE d.is_active = true AND dc.type = $1
+                 ORDER BY d.id ASC`,
+                [type]
+            );
+            // Map snake_case DB columns -> camelCase to match Drizzle ORM output
+            result = rows.rows.map((r: any) => ({
+                id: r.id,
+                name: r.name,
+                description: r.description,
+                lat: r.lat,
+                lng: r.lng,
+                category: r.category,
+                subcategory: r.subcategory,
+                categoryId: r.category_id,
+                subcategoryId: r.subcategory_id,
+                categoryIds: r.category_ids,
+                subcategoryIds: r.subcategory_ids,
+                address: r.address,
+                image: r.image,
+                nearestStation: r.nearest_station,
+                stationType: r.station_type,
+                distanceFromStation: r.distance_from_station,
+                walkingTimeMinutes: r.walking_time_minutes,
+                openingHours: r.opening_hours,
+                ticketPrice: r.ticket_price,
+                contact: r.contact,
+                website: r.website,
+                transitHints: r.transit_hints,
+                isActive: r.is_active,
+                createdAt: r.created_at,
+                updatedAt: r.updated_at,
+            }));
+        } else {
+            result = await db.select().from(destinations).where(eq(destinations.isActive, true));
+        }
+
+        return c.json(result);
+    } catch (error) {
+        console.error('Error fetching destinations:', error);
+        return c.json({ error: 'Failed to fetch destinations' }, 500);
+    }
+});
+
 // Get destinations grouped by category (Cached)
 app.get('/api/destinations/grouped', async (c) => {
     try {
@@ -3314,10 +3367,11 @@ app.get('/api/destinations/grouped', async (c) => {
         // Group by category
         const grouped: Record<string, typeof result> = {};
         result.forEach(dest => {
-            if (!grouped[dest.category]) {
-                grouped[dest.category] = [];
+            const key = dest.category ?? 'uncategorized';
+            if (!grouped[key]) {
+                grouped[key] = [];
             }
-            grouped[dest.category].push(dest);
+            grouped[key].push(dest);
         });
 
         // Cache for 5 minutes
