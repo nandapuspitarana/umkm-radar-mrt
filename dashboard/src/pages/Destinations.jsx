@@ -20,6 +20,35 @@ const resolveImgUrl = (raw) => {
     return '/uploads/' + raw.replace(/^\//, '');
 };
 
+const DestinationImage = ({ src, name }) => {
+    const [failed, setFailed] = useState(false);
+    
+    if (!src || failed) {
+        return (
+            <div className="w-full h-full flex items-center justify-center text-gray-400 bg-gray-50">
+                <ImageIcon size={20} />
+            </div>
+        );
+    }
+
+    return (
+        <img
+            src={resolveImgUrl(src)}
+            alt={name}
+            className="w-full h-full object-cover"
+            onError={(e) => {
+                // Try raw src once if resolved fails
+                const resolved = resolveImgUrl(src);
+                if (e.target.src !== src && !src.startsWith('http')) {
+                    e.target.src = src;
+                } else {
+                    setFailed(true);
+                }
+            }}
+        />
+    );
+};
+
 export default function Destinations() {
     // Tab state
     const [activeTab, setActiveTab] = useState('destinations');
@@ -607,24 +636,7 @@ export default function Destinations() {
                                         <tr key={dest.id} className="hover:bg-gray-50">
                                             <td className="px-6 py-4">
                                                 <div className="w-16 h-12 bg-gray-100 rounded-lg overflow-hidden border border-gray-200">
-                                                    {dest.image ? (
-                                                        <img
-                                                            src={resolveImgUrl(dest.image)}
-                                                            alt={dest.name}
-                                                            className="w-full h-full object-cover"
-                                                            onError={(e) => {
-                                                                if (e.target.src !== dest.image) {
-                                                                    e.target.src = dest.image;
-                                                                } else {
-                                                                    e.target.style.display = 'none';
-                                                                }
-                                                            }}
-                                                        />
-                                                    ) : (
-                                                        <div className="w-full h-full flex items-center justify-center text-gray-400">
-                                                            <ImageIcon size={20} />
-                                                        </div>
-                                                    )}
+                                                    <DestinationImage src={dest.image} name={dest.name} />
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
