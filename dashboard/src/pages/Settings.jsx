@@ -235,7 +235,10 @@ export default function Settings() {
             id: Date.now(),
             image: '',
             title: '',
-            subtitle: ''
+            subtitle: '',
+            sponsorLogo: '',
+            sponsorName: '',
+            sponsorText: ''
         }]);
     };
 
@@ -469,6 +472,52 @@ export default function Settings() {
                                                 value={banner.subtitle}
                                                 onChange={(e) => updateBanner(index, 'subtitle', e.target.value)}
                                             />
+                                            <div className="pt-2 mt-2 border-t border-gray-200">
+                                                <label className="text-xs font-medium text-gray-500 mb-1 block">Sponsorship (Opsional)</label>
+                                                <div className="flex gap-2 mb-2">
+                                                    <input
+                                                        type="text"
+                                                        placeholder="URL Logo Sponsor..."
+                                                        className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                                                        value={banner.sponsorLogo || ''}
+                                                        onChange={(e) => updateBanner(index, 'sponsorLogo', e.target.value)}
+                                                    />
+                                                    <label className="px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors cursor-pointer flex items-center gap-1 text-sm font-medium">
+                                                        <Upload size={16} />
+                                                        <input
+                                                            type="file"
+                                                            accept="image/*"
+                                                            className="hidden"
+                                                            onChange={async (e) => {
+                                                                const file = e.target.files?.[0];
+                                                                if (!file) return;
+                                                                const formData = new FormData();
+                                                                formData.append('file', file);
+                                                                formData.append('category', 'logo');
+                                                                try {
+                                                                    const res = await fetch('/api/assets/upload', { method: 'POST', body: formData });
+                                                                    const data = await res.json();
+                                                                    if (data.directUrl) updateBanner(index, 'sponsorLogo', data.directUrl);
+                                                                } catch (err) { console.error(err); }
+                                                            }}
+                                                        />
+                                                    </label>
+                                                </div>
+                                                <input
+                                                    type="text"
+                                                    placeholder="Nama Sponsor (Default: UMKM Radar MRT)"
+                                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mb-2"
+                                                    value={banner.sponsorName || ''}
+                                                    onChange={(e) => updateBanner(index, 'sponsorName', e.target.value)}
+                                                />
+                                                <input
+                                                    type="text"
+                                                    placeholder="Subjudul Sponsor (Default: Sponsored)"
+                                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                                                    value={banner.sponsorText || ''}
+                                                    onChange={(e) => updateBanner(index, 'sponsorText', e.target.value)}
+                                                />
+                                            </div>
                                         </div>
 
                                         {/* Delete Button */}

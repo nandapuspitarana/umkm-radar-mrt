@@ -168,13 +168,21 @@ export default function StoryModal({ isOpen, onClose, story, stories = [], curre
                             <div className="flex items-center justify-between pointer-events-auto">
                                 <div className="flex items-center gap-2">
                                     <div className="w-8 h-8 rounded-full bg-primary/20 border border-white/20 p-0.5 backdrop-blur-sm overflow-hidden flex items-center justify-center">
-                                        <div className="bg-white w-full h-full rounded-full flex items-center justify-center text-[10px] font-bold text-primary">
-                                            UM
-                                        </div>
+                                        {activeStory.sponsorLogo ? (
+                                            <img
+                                                src={getImageUrl(activeStory.sponsorLogo, { w: 64, h: 64, resize: 'cover' })}
+                                                alt="Sponsor Logo"
+                                                className="w-full h-full rounded-full object-cover bg-white"
+                                            />
+                                        ) : (
+                                            <div className="bg-white w-full h-full rounded-full flex items-center justify-center text-[10px] font-bold text-primary">
+                                                UM
+                                            </div>
+                                        )}
                                     </div>
                                     <div className="flex flex-col">
-                                        <span className="text-white text-xs font-bold drop-shadow-md">UMKM Radar MRT</span>
-                                        <span className="text-white/80 text-[10px] drop-shadow-md">Sponsored</span>
+                                        <span className="text-white text-xs font-bold drop-shadow-md">{activeStory.sponsorName || 'UMKM Radar MRT'}</span>
+                                        <span className="text-white/80 text-[10px] drop-shadow-md">{activeStory.sponsorText || 'Sponsored'}</span>
                                     </div>
                                 </div>
 
