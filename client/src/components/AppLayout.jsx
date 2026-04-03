@@ -201,7 +201,7 @@ export default function AppLayout({
                                     <User size={20} />
                                     <span className="font-medium">Akun Saya</span>
                                 </a>
-                                <a href="#" className="flex items-center gap-3 px-4 py-3 text-grey-600 hover:bg-grey-100 hover:text-primary rounded-xl transition-colors">
+                                <a href="/my-orders" className="flex items-center gap-3 px-4 py-3 text-grey-600 hover:bg-grey-100 hover:text-primary rounded-xl transition-colors">
                                     <ShoppingBag size={20} />
                                     <span className="font-medium">Pesanan Saya</span>
                                 </a>

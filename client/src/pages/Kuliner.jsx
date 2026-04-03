@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import AppLayout from '../components/AppLayout';
 import VendorCard from '../components/VendorCard';
 import { useStationSort } from '../hooks/useStationSort';
+import { getImageUrl } from '../utils/api';
 
 const kulinerCategories = [
     'Semua Kategori',
@@ -150,7 +151,7 @@ export default function Kuliner({ vendors, preSorted = false, onSelectVendor }) 
                                     className={`w-[200px] h-[200px] rounded-[20px] overflow-hidden flex-shrink-0 relative group ${banner.link ? 'cursor-pointer hover:shadow-lg transition-shadow' : ''}`}
                                 >
                                     {banner.image && (
-                                        <img src={banner.image} alt={banner.title || 'Kuliner'} className="w-full h-full object-cover transition-transform group-hover:scale-105" onError={e => e.target.style.display = 'none'} />
+                                        <img src={getImageUrl(banner.image)} alt={banner.title || 'Kuliner'} className="w-full h-full object-cover transition-transform group-hover:scale-105" onError={e => e.target.style.display = 'none'} />
                                     )}
 
                                     {banner.title && (

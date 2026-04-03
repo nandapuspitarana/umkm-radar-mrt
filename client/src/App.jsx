@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useNavigate } from 'react-router-dom';
 import Home from './pages/Home';
 import Kuliner from './pages/Kuliner';
 import Sarapan from './pages/Sarapan';
@@ -11,7 +11,10 @@ import Atm from './pages/Atm';
 import Vendor from './pages/Vendor';
 import TransportasiUmum from './pages/TransportasiUmum';
 import CartSheet from './components/CartSheet';
-import { ShoppingBag } from 'lucide-react';
+import OrderSuccessSheet from './components/OrderSuccessSheet';
+import MyOrders from './pages/MyOrders';
+import { ShoppingBag, ClipboardList } from 'lucide-react';
+import { AnimatePresence } from 'framer-motion';
 
 import StaticPage from './pages/StaticPage';
 import SplashScreen from './pages/SplashScreen';
@@ -20,6 +23,7 @@ import SplashScreen from './pages/SplashScreen';
 const DEFAULT_STATION = 'Blok M';
 
 export default function App() {
+  const navigate = useNavigate();
   const [currentVendor, setCurrentVendor] = useState(null);
   const [vendors, setVendors] = useState([]);               // flat list — Home & legacy
   const [vendorsByCategory, setVendorsByCategory] = useState({ // ✅ pre-grouped per stasiun
@@ -32,6 +36,8 @@ export default function App() {
   const [products, setProducts] = useState([]);
   const [cart, setCart] = useState([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [successOrder, setSuccessOrder] = useState(null); // order shown in success sheet
+  const [waPayload, setWaPayload] = useState(null);       // {phone, message} for WA redirect
   const [stationCategory, setStationCategory] = useState(() => {
     return localStorage.getItem('umkm_station') || DEFAULT_STATION;
   });
@@ -252,8 +258,9 @@ export default function App() {
     message += `\n\nMohon konfirmasinya. Terima kasih!`;
 
     // Save Order to API
+    let savedOrder = null;
     try {
-      await fetch('/api/orders', {
+      const res = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -266,49 +273,95 @@ export default function App() {
           discount: discountValue || 0
         })
       });
+      if (res.ok) {
+        savedOrder = await res.json();
+        // Persist order ID to localStorage for My Orders page
+        const prev = JSON.parse(localStorage.getItem('umkm_order_ids') || '[]');
+        const updated = [savedOrder.id, ...prev.filter(id => id !== savedOrder.id)].slice(0, 50);
+        localStorage.setItem('umkm_order_ids', JSON.stringify(updated));
+      }
     } catch (err) {
       console.error('Failed to create order:', err);
-      alert('Gagal membuat pesanan di sistem, tapi akan lanjut ke WA.');
     }
 
-    // Clear & Close
+    // Clear cart
     setCart([]);
     setIsCartOpen(false);
 
-    // Redirect ke WA
+    // Build WA payload
     let phone = currentVendor.whatsapp || '6281234567890';
     phone = phone.replace(/\D/g, '');
     if (phone.startsWith('0')) phone = '62' + phone.slice(1);
-    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
+    const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+
+    // Show success sheet with queue number
+    if (savedOrder) {
+      setSuccessOrder({ ...savedOrder, vendorName: currentVendor.name, customer: name });
+      setWaPayload(waUrl);
+    } else {
+      // If save failed, open WA directly
+      window.open(waUrl, '_blank');
+    }
   };
 
   // ── Floating Cart Button (reusable) ─────────────────────────────────────
-  const FloatingCart = () => cart.length > 0 && !isCartOpen ? (
-    <div className="fixed bottom-6 left-0 right-0 px-4 flex justify-center z-40 pointer-events-none">
-      <button
-        onClick={() => setIsCartOpen(true)}
-        className="bg-primary hover:bg-primary-dark text-white pl-4 pr-6 py-3 rounded-full shadow-xl shadow-blue-900/30 flex items-center gap-3 transition-transform hover:scale-105 pointer-events-auto"
-      >
-        <div className="bg-white/20 px-2 py-0.5 rounded text-sm font-bold">
-          {cart.reduce((a, b) => a + b.qty, 0)}
-        </div>
-        <span className="font-bold text-sm">Lihat Keranjang</span>
-        <ShoppingBag size={18} />
-      </button>
-    </div>
-  ) : null;
+  const FloatingCart = () => {
+    const orderCount = JSON.parse(localStorage.getItem('umkm_order_ids') || '[]').length;
+
+    return (
+      <div className="fixed bottom-6 left-0 right-0 px-4 flex justify-between items-end z-40 pointer-events-none">
+        {/* My Orders icon button */}
+        {orderCount > 0 && (
+          <button
+            onClick={() => navigate('/my-orders')}
+            className="bg-white border border-gray-200 shadow-lg px-3 py-3 rounded-full flex items-center gap-2 pointer-events-auto relative"
+          >
+            <ClipboardList size={20} className="text-primary" />
+            <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-white text-[10px] font-black rounded-full flex items-center justify-center">
+              {orderCount > 9 ? '9+' : orderCount}
+            </span>
+          </button>
+        )}
+
+        {/* Cart button */}
+        {cart.length > 0 && !isCartOpen && (
+          <button
+            onClick={() => setIsCartOpen(true)}
+            className="bg-primary hover:bg-primary-dark text-white pl-4 pr-6 py-3 rounded-full shadow-xl shadow-blue-900/30 flex items-center gap-3 transition-transform hover:scale-105 pointer-events-auto ml-auto"
+          >
+            <div className="bg-white/20 px-2 py-0.5 rounded text-sm font-bold">
+              {cart.reduce((a, b) => a + b.qty, 0)}
+            </div>
+            <span className="font-bold text-sm">Lihat Keranjang</span>
+            <ShoppingBag size={18} />
+          </button>
+        )}
+      </div>
+    );
+  };
 
   const CartLayer = () => (
-    <CartSheet
-      isOpen={isCartOpen}
-      onClose={() => setIsCartOpen(false)}
-      cart={cart}
-      vendor={currentVendor}
-      onCheckout={handleCheckout}
-      onUpdateQty={handleUpdateQty}
-      onRemoveItem={handleRemoveItem}
-      onClearCart={handleClearCart}
-    />
+    <>
+      <CartSheet
+        isOpen={isCartOpen}
+        onClose={() => setIsCartOpen(false)}
+        cart={cart}
+        vendor={currentVendor}
+        onCheckout={handleCheckout}
+        onUpdateQty={handleUpdateQty}
+        onRemoveItem={handleRemoveItem}
+        onClearCart={handleClearCart}
+      />
+      <AnimatePresence>
+        {successOrder && (
+          <OrderSuccessSheet
+            order={successOrder}
+            onOpenWhatsApp={() => { window.open(waPayload, '_blank'); }}
+            onClose={() => { setSuccessOrder(null); setWaPayload(null); }}
+          />
+        )}
+      </AnimatePresence>
+    </>
   );
 
   const VendorView = ({ onBack }) => (
@@ -443,10 +496,41 @@ export default function App() {
           </div>
         } />
 
-        <Route path="/wisata" element={<div className="antialiased text-gray-800"><Wisata /></div>} />
-        <Route path="/wisata/:id" element={<div className="antialiased text-gray-800"><DestinationDetail /></div>} />
-        <Route path="/publik/:id" element={<div className="antialiased text-gray-800"><DestinationDetail /></div>} />
-        <Route path="/transportasi-umum" element={<div className="antialiased text-gray-800"><TransportasiUmum /></div>} />
+        <Route path="/wisata" element={
+          <div className="antialiased text-gray-800">
+            <Wisata />
+            <FloatingCart />
+            <CartLayer />
+          </div>
+        } />
+        <Route path="/wisata/:id" element={
+          <div className="antialiased text-gray-800">
+            <DestinationDetail />
+            <FloatingCart />
+            <CartLayer />
+          </div>
+        } />
+        <Route path="/publik/:id" element={
+          <div className="antialiased text-gray-800">
+            <DestinationDetail />
+            <FloatingCart />
+            <CartLayer />
+          </div>
+        } />
+        <Route path="/transportasi-umum" element={
+          <div className="antialiased text-gray-800">
+            <TransportasiUmum />
+            <FloatingCart />
+            <CartLayer />
+          </div>
+        } />
+        <Route path="/my-orders" element={
+          <div className="antialiased text-gray-800">
+            <MyOrders />
+            <FloatingCart />
+            <CartLayer />
+          </div>
+        } />
 
         <Route path="/terms" element={<StaticPage title="Syarat & Ketentuan" pageKey="page_terms" />} />
         <Route path="/about" element={<StaticPage title="Tentang Kami" pageKey="page_about" />} />

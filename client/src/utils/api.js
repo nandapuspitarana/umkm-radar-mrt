@@ -36,6 +36,15 @@ export function resolveImgUrl(raw) {
     if (raw.startsWith('uploads/')) {
         return `${API_BASE}/uploads/` + raw.slice('uploads/'.length);
     }
+    
+    // Fallback for older database formats containing '/api/raw/' prefix
+    if (raw.startsWith('/api/raw/')) {
+        return `${API_BASE}/uploads/` + raw.slice('/api/raw/'.length);
+    }
+    
+    if (raw.startsWith('api/raw/')) {
+        return `${API_BASE}/uploads/` + raw.slice('api/raw/'.length);
+    }
 
     // Bare path like  banners/a.jpg  or  /banners/a.jpg
     return `${API_BASE}/uploads/` + raw.replace(/^\//, '');
@@ -74,6 +83,15 @@ export function getAssetUrl(path) {
 
     if (path.startsWith('/uploads/')) return path;
     if (path.startsWith('uploads/')) return `${API_BASE}/uploads/` + path.slice('uploads/'.length);
+
+    // Fallback for older database formats containing '/api/raw/' prefix
+    if (path.startsWith('/api/raw/')) {
+        return `${API_BASE}/uploads/` + path.slice('/api/raw/'.length);
+    }
+    
+    if (path.startsWith('api/raw/')) {
+        return `${API_BASE}/uploads/` + path.slice('api/raw/'.length);
+    }
 
     return `${API_BASE}/uploads/` + path.replace(/^\//, '');
 }

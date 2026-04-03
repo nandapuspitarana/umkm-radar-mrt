@@ -532,6 +532,10 @@ export default function AdminVendors() {
     const [expandedVendorId, setExpandedVendorId] = useState(null);
     const [stationTags, setStationTags] = useState([]);
 
+    // Pagination states
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
+
     const initialForm = {
         name: '', whatsapp: '', category: 'Umum',
         address: '', lat: '', lng: '', locationTags: '', image: ''
@@ -779,6 +783,18 @@ export default function AdminVendors() {
         return matchesSearch && matchesCategory;
     });
 
+    // Reset pagination to page 1 whenever search/filter changes
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, filterCategory]);
+
+    // Apply pagination
+    const totalPages = Math.ceil(filteredVendors.length / itemsPerPage);
+    const paginatedVendors = filteredVendors.slice(
+        (currentPage - 1) * itemsPerPage,
+        currentPage * itemsPerPage
+    );
+
     return (
         <div className="min-h-screen bg-bg flex">
             <Sidebar />
@@ -891,9 +907,9 @@ export default function AdminVendors() {
                             <tbody className="divide-y divide-gray-100">
                                 {loading ? (
                                     <tr><td colSpan="6" className="text-center py-8">Loading...</td></tr>
-                                ) : filteredVendors.length === 0 ? (
+                                ) : paginatedVendors.length === 0 ? (
                                     <tr><td colSpan="6" className="text-center py-8 text-gray-500">Belum ada mitra ditemukan.</td></tr>
-                                ) : filteredVendors.map(vendor => (
+                                ) : paginatedVendors.map(vendor => (
                                     <React.Fragment key={vendor.id}>
                                         <tr className={`hover:bg-gray-50 transition ${expandedVendorId === vendor.id ? 'bg-blue-50/40' : ''}`}>
                                             <td className="px-6 py-4 text-sm font-bold text-gray-400">#{vendor.id}</td>
@@ -988,6 +1004,49 @@ export default function AdminVendors() {
                             </tbody>
                         </table>
                     </div>
+
+                    {/* Pagination Controls */}
+                    {totalPages > 1 && (
+                        <div className="p-4 border-t border-gray-100 flex items-center justify-between bg-gray-50/50">
+                            <span className="text-sm text-gray-500">
+                                Menampilkan {(currentPage - 1) * itemsPerPage + 1} - {Math.min(currentPage * itemsPerPage, filteredVendors.length)} dari {filteredVendors.length} mitra
+                            </span>
+                            <div className="flex gap-1 overflow-x-auto max-w-[50%] no-scrollbar">
+                                <button
+                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                    disabled={currentPage === 1}
+                                    className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed sticky left-0 z-10"
+                                >
+                                    Prev
+                                </button>
+                                {Array.from({ length: totalPages }).map((_, i) => {
+                                    // Pagination logic to hide too many pages
+                                    if (totalPages > 7) {
+                                        if (i !== 0 && i !== totalPages - 1 && Math.abs(currentPage - 1 - i) > 1) {
+                                            if (i === 1 || i === totalPages - 2) return <span key={i} className="px-2 py-1.5 text-gray-400">...</span>;
+                                            return null;
+                                        }
+                                    }
+                                    return (
+                                        <button
+                                            key={i}
+                                            onClick={() => setCurrentPage(i + 1)}
+                                            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${currentPage === i + 1 ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'}`}
+                                        >
+                                            {i + 1}
+                                        </button>
+                                    );
+                                })}
+                                <button
+                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                    disabled={currentPage === totalPages}
+                                    className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed sticky right-0 z-10"
+                                >
+                                    Next
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </main>
 

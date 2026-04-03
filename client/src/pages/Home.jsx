@@ -73,7 +73,7 @@ function StoryBanner({ story, onClick }) {
                     loop
                     playsInline
                     autoPlay
-                    preload="metadata"
+                    preload="auto"
                     onLoadedMetadata={() => setIsLoaded(true)}
                     onLoadedData={() => setIsLoaded(true)}
                     onError={(e) => {
@@ -325,7 +325,7 @@ export default function Home({ vendors, onSelectVendor, stationCategory = 'Blok 
                                     {mediumItems.map((item) => (
                                         <ContentCard
                                             key={item.id}
-                                            image={item.image}
+                                            image={item.image && (item.image.includes('images.unsplash.com') ? item.image : getImageUrl(item.image, { w: 400, resize: 'fill' }))}
                                             title={item.title}
                                             subtitle={item.subtitle}
                                             size="medium"
@@ -337,7 +337,7 @@ export default function Home({ vendors, onSelectVendor, stationCategory = 'Blok 
                                         .map(([grp, items]) => (
                                             <StackedCards
                                                 key={grp}
-                                                items={items}
+                                                items={items.map(i => ({...i, image: i.image && (i.image.includes('images.unsplash.com') ? i.image : getImageUrl(i.image, { w: 400, resize: 'fill' }))}))}
                                                 onClick={(item) => item.link && (window.location.href = item.link)}
                                             />
                                         ))
@@ -366,7 +366,7 @@ export default function Home({ vendors, onSelectVendor, stationCategory = 'Blok 
                         {favoritePlacesItems.map((item) => (
                             <FavoriteCard
                                 key={item.id}
-                                image={item.image}
+                                image={item.image && (item.image.includes('images.unsplash.com') ? item.image : getImageUrl(item.image, { w: 400, resize: 'fill' }))}
                                 title={item.title}
                                 distance={item.distance}
                                 onClick={() => item.link && (window.location.href = item.link)}

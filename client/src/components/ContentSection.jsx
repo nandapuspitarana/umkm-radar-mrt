@@ -52,6 +52,9 @@ export function ContentCard({
                     src={image}
                     alt={title}
                     className="absolute inset-0 w-full h-full object-cover transition-transform group-hover:scale-105"
+                    loading="eager"
+                    fetchPriority="high"
+                    decoding="async"
                 />
             ) : (
                 <div className="absolute inset-0 bg-grey-200 flex items-center justify-center">
@@ -103,6 +106,9 @@ export function FavoriteCard({
                     src={image}
                     alt={title}
                     className="absolute inset-0 w-full h-full object-cover transition-transform group-hover:scale-105"
+                    loading="eager"
+                    fetchPriority="high"
+                    decoding="async"
                 />
             ) : (
                 <div className="absolute inset-0 bg-grey-200 flex items-center justify-center">
@@ -150,6 +156,9 @@ export function StackedCards({
                             src={item.image}
                             alt={item.title}
                             className="absolute inset-0 w-full h-full object-cover transition-transform group-hover:scale-105"
+                            loading="eager"
+                            fetchPriority="high"
+                            decoding="async"
                         />
                     ) : (
                         <div className="absolute inset-0 bg-grey-200 flex items-center justify-center">

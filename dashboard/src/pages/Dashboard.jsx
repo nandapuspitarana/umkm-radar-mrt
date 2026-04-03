@@ -10,11 +10,23 @@ import {
     Package,
     QrCode,
     Search,
-    X
+    X,
+    XCircle,
+    Calendar,
+    MoreVertical
 } from 'lucide-react';
-// import { initialOrders, vendors } from '../data'; // Removed mock data import
 
 import Sidebar from '../components/Sidebar';
+
+const fmt = (n) => typeof n === 'number' ? new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n) : '-';
+
+const STATUS_OPTIONS = [
+    { value: 'pending', label: 'Menunggu', bg: 'bg-amber-100', text: 'text-amber-700', icon: Clock },
+    { value: 'processing', label: 'Diproses', bg: 'bg-blue-100', text: 'text-blue-700', icon: Package },
+    { value: 'ready', label: 'Siap Ambil', bg: 'bg-indigo-100', text: 'text-indigo-700', icon: CheckCircle },
+    { value: 'completed', label: 'Selesai', bg: 'bg-green-100', text: 'text-green-700', icon: CheckCircle },
+    { value: 'cancelled', label: 'Dibatalkan', bg: 'bg-red-100', text: 'text-red-700', icon: XCircle },
+];
 
 export default function Dashboard() {
     const navigate = useNavigate();
@@ -24,13 +36,18 @@ export default function Dashboard() {
     const [showPickupModal, setShowPickupModal] = useState(false);
     const [pickupInput, setPickupInput] = useState('');
     const [selectedOrder, setSelectedOrder] = useState(null);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [updatingId, setUpdatingId] = useState(null);
 
     // ... (fetch logic remains) ...
     useEffect(() => {
-        // Fetch orders from API
         const fetchOrders = async () => {
             try {
-                const res = await fetch('/api/orders');
+                let url = '/api/orders';
+                if (auth.role === 'vendor' && auth.vendorId) {
+                    url += `?vendorId=${auth.vendorId}`;
+                }
+                const res = await fetch(url);
                 if (res.ok) {
                     const data = await res.json();
                     setOrders(data);
@@ -119,15 +136,20 @@ export default function Dashboard() {
     };
 
     // Filter Logic
-    const myOrders = auth.role === 'admin'
-        ? orders
-        : orders.filter(o => o.vendorId === auth.vendorId);
+    const myOrders = orders;
 
-    const filteredOrders = filter === 'all'
+    const filteredByDateOrStatus = filter === 'all'
         ? myOrders
         : filter === 'processing'
             ? myOrders.filter(o => o.status === 'processing' || o.status === 'confirmed')
             : myOrders.filter(o => o.status === filter);
+
+    const filteredOrders = filteredByDateOrStatus.filter(o => {
+        if (!searchTerm) return true;
+        const matchesSearch = (o.customer || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                              (o.pickupCode || '').toLowerCase().includes(searchTerm.toLowerCase());
+        return matchesSearch;
+    });
 
     // Statistics
     const stats = {
@@ -174,81 +196,122 @@ export default function Dashboard() {
                 </div>
 
                 {/* Orders Section */}
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-                    <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mt-6">
+                    <div className="p-6 border-b border-gray-100 flex flex-col sm:flex-row justify-between sm:items-center gap-4">
                         <h2 className="font-bold text-lg text-gray-800">Daftar Pesanan</h2>
-                        <div className="flex gap-2">
-                            {['all', 'pending', 'processing', 'ready', 'completed', 'cancelled'].map(f => (
-                                <button
-                                    key={f}
-                                    onClick={() => setFilter(f)}
-                                    className={`px-3 py-1 rounded-lg text-sm font-medium capitalize transition-colors ${filter === f ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:bg-gray-50'}`}
-                                >
-                                    {f === 'processing' ? 'Disiapkan' : f === 'ready' ? 'Siap Diambil' : f === 'cancelled' ? 'Dibatalkan' : f}
-                                </button>
-                            ))}
+                        
+                        <div className="flex flex-col sm:flex-row gap-3">
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                                <input
+                                    type="text"
+                                    placeholder="Cari nama / PIN..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                />
+                            </div>
+                            <select
+                                value={filter}
+                                onChange={(e) => setFilter(e.target.value)}
+                                className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none capitalize font-medium text-gray-700"
+                            >
+                                <option value="all">Semua Status</option>
+                                {STATUS_OPTIONS.map(s => (
+                                    <option key={s.value} value={s.value}>{s.label}</option>
+                                ))}
+                            </select>
                         </div>
                     </div>
 
                     <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead className="bg-gray-50 text-left text-xs text-gray-500 uppercase">
-                                <tr>
-                                    <th className="px-6 py-4 font-medium">ID Pesanan</th>
-                                    <th className="px-6 py-4 font-medium">Pelanggan</th>
-                                    <th className="px-6 py-4 font-medium">Total</th>
-                                    <th className="px-6 py-4 font-medium">Status</th>
-                                    <th className="px-6 py-4 font-medium">Aksi</th>
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="bg-gray-50 border-b border-gray-100">
+                                    <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Antrian / PIN</th>
+                                    <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Pelanggan</th>
+                                    <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider min-w-[200px]">Detail Item</th>
+                                    <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Total</th>
+                                    <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Status</th>
+                                    <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
                                 {filteredOrders.length === 0 ? (
                                     <tr>
-                                        <td colSpan="5" className="px-6 py-8 text-center text-gray-500">
-                                            Tidak ada pesanan ditemukan.
+                                        <td colSpan={6} className="p-12 text-center text-gray-400">
+                                            <Package size={40} className="mx-auto text-gray-200 mb-3" />
+                                            <p>Tidak ada pesanan yang sesuai</p>
                                         </td>
                                     </tr>
-                                ) : filteredOrders.map(order => (
-                                    <tr key={order.id} className="hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => setSelectedOrder(order)}>
-                                        <td className="px-6 py-4 text-sm font-medium text-gray-900">#{order.id.toString().slice(-6)}</td>
-                                        <td className="px-6 py-4">
-                                            <div className="text-sm font-medium text-gray-900">{order.customer}</div>
-                                            <div className="text-xs text-gray-500">{order.items.length} Barang</div>
-                                        </td>
-                                        <td className="px-6 py-4 text-sm font-medium">
-                                            {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(order.total)}
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <StatusBadge status={order.status} />
-                                        </td>
-                                        <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
-                                            <div className="flex gap-2">
-                                                {order.status === 'pending' && (
-                                                    <>
-                                                        <ActionButton label="Konfirmasi" color="blue" onClick={() => updateStatus(order.id, 'processing')} />
-                                                        <ActionButton label="Batalkan" color="red" onClick={() => cancelOrder(order.id)} />
-                                                    </>
+                                ) : (
+                                    filteredOrders.map(order => (
+                                        <tr key={order.id} className="hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => setSelectedOrder(order)}>
+                                            <td className="p-4">
+                                                <span className="font-mono text-lg font-black text-blue-600 tracking-widest flex items-center gap-2">
+                                                    {order.pickupCode}
+                                                </span>
+                                                <div className="text-[10px] text-gray-400 mt-1 flex items-center gap-1">
+                                                    <Calendar size={10} />
+                                                    {new Date(order.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour:'2-digit', minute:'2-digit' })}
+                                                </div>
+                                            </td>
+                                            <td className="p-4 font-semibold text-gray-800">
+                                                {order.customer}
+                                                {order.voucherCode && (
+                                                    <div className="text-xs text-blue-500 mt-0.5 font-normal">Voucher: {order.voucherCode}</div>
                                                 )}
-                                                {(order.status === 'processing' || order.status === 'confirmed') && (
-                                                    <>
-                                                        <ActionButton label="Siap Diambil" color="yellow" onClick={() => updateStatus(order.id, 'ready')} />
-                                                    </>
+                                                {auth.role === 'admin' && (
+                                                    <div className="text-[11px] text-gray-500 mt-0.5 font-normal">
+                                                        Toko: {order.vendorName || '-'}
+                                                    </div>
                                                 )}
-                                                {order.status === 'ready' && (
-                                                    <>
-                                                        <ActionButton label="Selesai" color="green" onClick={() => updateStatus(order.id, 'completed')} />
-                                                    </>
+                                            </td>
+                                            <td className="p-4 text-sm text-gray-600">
+                                                <ul className="space-y-1">
+                                                    {(order.items || []).slice(0, 2).map((item, i) => (
+                                                        <li key={i} className="flex gap-2">
+                                                            <span className="font-bold text-gray-700">{item.qty}x</span>
+                                                            <span className="truncate max-w-[150px]" title={item.name}>{item.name}</span>
+                                                        </li>
+                                                    ))}
+                                                    {(order.items || []).length > 2 && (
+                                                        <li className="text-xs text-blue-500 italic">+ {(order.items || []).length - 2} item lainnya</li>
+                                                    )}
+                                                </ul>
+                                            </td>
+                                            <td className="p-4 font-bold text-gray-900">
+                                                {fmt(order.total)}
+                                                {order.discount > 0 && (
+                                                    <div className="text-[10px] text-green-500 font-medium line-through">
+                                                        {fmt(order.total + order.discount)}
+                                                    </div>
                                                 )}
-                                                {order.status === 'completed' && (
-                                                    <span className="text-xs text-gray-400">Arsip</span>
-                                                )}
-                                                {order.status === 'cancelled' && (
-                                                    <span className="text-xs text-red-500 font-medium">Dibatalkan</span>
-                                                )}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
+                                            </td>
+                                            <td className="p-4">
+                                                <StatusBadge status={order.status} />
+                                            </td>
+                                            <td className="p-4" onClick={(e) => e.stopPropagation()}>
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <select
+                                                        disabled={updatingId === order.id}
+                                                        value={order.status}
+                                                        onChange={async (e) => {
+                                                            setUpdatingId(order.id);
+                                                            await updateStatus(order.id, e.target.value);
+                                                            setUpdatingId(null);
+                                                        }}
+                                                        className={`text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500/20 ${updatingId === order.id ? 'opacity-50' : 'bg-white hover:bg-gray-50'}`}
+                                                    >
+                                                        {STATUS_OPTIONS.map(s => (
+                                                            <option key={s.value} value={s.value}>{s.label}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
                             </tbody>
                         </table>
                     </div>
@@ -338,17 +401,12 @@ function StatCard({ label, value, icon }) {
 }
 
 function StatusBadge({ status }) {
-    const styles = {
-        pending: "bg-orange-100 text-orange-700",
-        processing: "bg-blue-100 text-blue-700",
-        ready: "bg-yellow-100 text-yellow-700",
-        completed: "bg-blue-100 text-blue-700",
-        cancelled: "bg-red-100 text-red-700"
-    };
-
+    const config = STATUS_OPTIONS.find(s => s.value === status) || STATUS_OPTIONS[0];
+    const Icon = config.icon;
     return (
-        <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${styles[status]}`}>
-            {status}
+        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${config.bg} ${config.text}`}>
+            <Icon size={12} />
+            {config.label}
         </span>
     );
 }

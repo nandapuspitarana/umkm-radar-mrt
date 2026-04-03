@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { getAssetUrl } from '../utils/api';
 
 // Fallback hardcoded — dipakai bila API belum diset
 const FALLBACK_MENU = [
@@ -54,24 +55,7 @@ export default function CategorySidebar({ activeCategory }) {
         <div className="flex flex-col gap-6 py-4 px-2 bg-white h-full w-20 flex-shrink-0">
             {activeItems.map((item) => {
                 const isActive = currentActive === item.id;
-                const svgUrl = (() => {
-                    const p = item.svgPath && item.svgPath.trim();
-                    if (!p) return null;
-                    if (p.startsWith('http://') || p.startsWith('https://')) {
-                        try {
-                            const url = new URL(p);
-                            // pathname = /assets/general/xxx.svg
-                            // Backend /api/raw/ sudah menambahkan bucket 'assets/' sendiri,
-                            // jadi kita strip prefix 'assets/' dari pathname agar tidak double.
-                            let pathPart = url.pathname.replace(/^\//, ''); // 'assets/general/xxx.svg'
-                            pathPart = pathPart.replace(/^assets\//, '');   // 'general/xxx.svg'
-                            return `/api/raw/${pathPart}`;
-                        } catch {
-                            return null;
-                        }
-                    }
-                    return `/api/raw/${p.replace(/^\//, '')}`;
-                })();
+                const svgUrl = item.svgPath ? getAssetUrl(item.svgPath) : null;
 
                 return (
                     <button

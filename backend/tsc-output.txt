@@ -1,0 +1,4 @@
+src/routes/assets.ts(12,59): error TS2307: Cannot find module './storage' or its corresponding type declarations.
+src/routes/assets.ts(35,59): error TS2307: Cannot find module './storage' or its corresponding type declarations.
+src/routes/assets.ts(73,59): error TS2307: Cannot find module './storage' or its corresponding type declarations.
+src/routes/assets.ts(202,32): error TS2552: Cannot find name 'IMGPROXY_URL'. Did you mean 'imgproxyUrl'?

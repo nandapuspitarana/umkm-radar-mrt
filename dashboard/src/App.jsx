@@ -46,14 +46,6 @@ export default function App() {
           }
         />
         <Route
-          path="/orders"
-          element={
-            <PrivateRoute>
-              <Dashboard />
-            </PrivateRoute>
-          }
-        />
-        <Route
           path="/products"
           element={
             <PrivateRoute>

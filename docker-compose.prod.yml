@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  # Backend API Service
+  backend-prod:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: umkmradar/backend-prod:1.0.1
+    container_name: umkmradar_backend_prod
+    ports:
+      - "8183:3000" # Expose backend on port 8183
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgres://postgres:password@umkmradar_db:5432/umkmradar
+      - REDIS_URL=redis://umkmradar_redis:6379 
+      - ELASTICSEARCH_URL=http://umkmradar_es:9200
+      # Menyambungkan MinIO dan IMGProxy ke nama container yang sudah ada di docker-compose.yml
+      - MINIO_URL=http://minio:9000
+      - MINIO_ENDPOINT=minio
+      - MINIO_PORT=9000
+      - MINIO_ACCESS_KEY=umkmradar
+      - MINIO_SECRET_KEY=umkmradar123
+      - MINIO_USE_SSL=false
+      - PUBLIC_ASSET_URL=http://192.168.1.5:8183/uploads
+      - IMGPROXY_URL=http://imgproxy:8080
+    # Menambahkan koneksi ke network bawaan supaya bisa baca db/redis dari docker-compose utama
+    networks:
+      - default
+    restart: always
+
+  # Client (UI Web/User)
+  client-prod:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: http://192.168.1.5:8183
+        VITE_BACKEND_URL: http://192.168.1.5:8183
+    image: umkmradar/client-prod:1.0.1
+    container_name: umkmradar_client_prod
+    ports:
+      - "8185:80" # Expose UI client on port 8185
+    depends_on:
+      - backend-prod
+    networks:
+      - default
+    restart: always
+
+  # Dashboard (UI Admin/Vendor)
+  dashboard-prod:
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: http://192.168.1.5:8183
+        VITE_BACKEND_URL: http://192.168.1.5:8183
+    image: umkmradar/dashboard-prod:1.0.1
+    container_name: umkmradar_dashboard_prod
+    ports:
+      - "8184:80" # Expose UI dashboard on port 8184
+    depends_on:
+      - backend-prod
+    networks:
+      - default
+    restart: always
+
+# Gunakan network yang sudah ada dari docker-compose.yml (default network folder saat ini)
+networks:
+  default:
+    name: umkm-radar-mrt_default
+    external: true
