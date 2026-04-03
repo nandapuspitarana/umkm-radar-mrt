@@ -303,6 +303,9 @@ export default function Home({ vendors, onSelectVendor, stationCategory = 'Blok 
                                     <p className="text-xs">Kelola di Admin Dashboard → Settings</p>
                                 </div>
                             )}
+
+                            {/* Extra spacer to ensure the last item is not stuck to the right edge */}
+                            <div className="w-1 flex-shrink-0" />
                         </div>
                     </div>
 
