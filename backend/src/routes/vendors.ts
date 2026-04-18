@@ -117,16 +117,29 @@ router.get('/api/vendors', async (c) => {
 
         if (stationParam) {
             // Sort: vendors matching station locationTags first, then the rest
-            result = await db.select().from(vendors).orderBy(
-                sql`CASE WHEN LOWER(${vendors.locationTags}) LIKE ${`%${stationParam.toLowerCase()}%`} THEN 0 ELSE 1 END`
-            );
+            const query = `
+                SELECT v.*, u.name as owner_name
+                FROM vendors v
+                LEFT JOIN users u ON u.id = v.owner_id
+                ORDER BY CASE WHEN LOWER(v.location_tags) LIKE $1 THEN 0 ELSE 1 END, v.name ASC
+            `;
+            const dbRes = await pool.query(query, [`%${stationParam.toLowerCase()}%`]);
+            result = dbRes.rows;
         } else {
-            result = await db.select().from(vendors);
+            const query = `
+                SELECT v.*, u.name as owner_name
+                FROM vendors v
+                LEFT JOIN users u ON u.id = v.owner_id
+                ORDER BY v.name ASC
+            `;
+            const dbRes = await pool.query(query);
+            result = dbRes.rows;
         }
 
         // Transform data to match client expected format
         const transformedResult = result.map(v => ({
             ...v,
+            ownerName: v.owner_name,
             location: { lat: v.lat, lng: v.lng }
         }));
 
@@ -200,11 +213,15 @@ router.get('/api/vendors/grouped', async (c) => {
             return `${(meters / 1000).toFixed(1)} km`;
         }
 
-        // 3. Fetch all vendors
-        const allVendors = await db.select().from(vendors).orderBy(
-            sql`CASE WHEN LOWER(${vendors.locationTags}) LIKE ${`%${stationLower}%`} THEN 0 ELSE 1 END`,
-            sql`${vendors.name} ASC`
-        );
+        // 3. Fetch all vendors with owner info
+        const query = `
+            SELECT v.*, u.name as owner_name
+            FROM vendors v
+            LEFT JOIN users u ON u.id = v.owner_id
+            ORDER BY CASE WHEN LOWER(v.location_tags) LIKE $1 THEN 0 ELSE 1 END, v.name ASC
+        `;
+        const dbRes = await pool.query(query, [`%${stationLower}%`]);
+        const allVendors = dbRes.rows;
 
         // 4. Group by category slug + calculate distance
         const grouped: Record<string, any[]> = {
@@ -229,6 +246,7 @@ router.get('/api/vendors/grouped', async (c) => {
 
             const transformed = {
                 ...v,
+                ownerName: v.owner_name,
                 location: { lat: v.lat, lng: v.lng },
                 distanceMeters,
                 distanceLabel,
@@ -310,7 +328,11 @@ router.post('/api/vendors/bulk', async (c) => {
 router.post('/api/vendors', async (c) => {
     try {
         const body = await c.req.json();
-        const result = await db.insert(vendors).values(body).returning();
+        const vendorData = { ...body };
+        if (vendorData.ownerId === '') vendorData.ownerId = null;
+        else if (vendorData.ownerId) vendorData.ownerId = parseInt(vendorData.ownerId);
+
+        const result = await db.insert(vendors).values(vendorData).returning();
         const created = result[0];
 
         await writeAuditLog({
@@ -334,13 +356,16 @@ router.put('/api/vendors/:id', async (c) => {
     const id = c.req.param('id');
     try {
         const body = await c.req.json();
+        const vendorData = { ...body };
+        if (vendorData.ownerId === '') vendorData.ownerId = null;
+        else if (vendorData.ownerId) vendorData.ownerId = parseInt(vendorData.ownerId);
 
         // Fetch old data for audit
         const oldResult = await db.select().from(vendors).where(eq(vendors.id, parseInt(id)));
         const oldData = oldResult[0];
 
         const result = await db.update(vendors)
-            .set(body)
+            .set(vendorData)
             .where(eq(vendors.id, parseInt(id)))
             .returning();
 

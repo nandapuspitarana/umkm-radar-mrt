@@ -8,7 +8,7 @@ const transportData = [
         id: 1,
         name: 'TransJakarta',
         logoType: 'TiJe',
-        halte: 'Halte Bundaran Senayan',
+        halte: 'Terminal Blok M',
         jarak: '150 m dari posisi kamu',
         koridor: [
             'Koridor 1 Blok M - Kota',
@@ -23,11 +23,13 @@ const transportData = [
         id: 2,
         name: 'JakLingko (Mikrotrans)',
         logoType: 'JakLingko',
-        halte: 'Bus Stop Bundaran Senayan',
+        halte: 'Halte Blok M Plaza',
         jarak: '230 m dari posisi kamu',
         koridor: [
             'JAK 31: Blok M → Andara',
             'JAK 102: Blok M → Lebak Bulus',
+            'JAK 54: Blok M → Cipete',
+            'JAK 57: Blok M → Pondok Labu',
         ],
     },
 ];

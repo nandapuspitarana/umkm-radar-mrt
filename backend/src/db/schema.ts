@@ -29,6 +29,7 @@ export const vendors = pgTable('vendors', {
     rating: doublePrecision('rating').default(0),
     locationTags: text('location_tags'), // e.g. "Dekat MRT BNI, Dukuh Atas"
     description: text('description'), // e.g. "Nasi uduk, Ketupat sayur, Lontong"
+    ownerId: integer('owner_id').references((): any => users.id), // Owner of this vendor
 });
 
 export const products = pgTable('products', {

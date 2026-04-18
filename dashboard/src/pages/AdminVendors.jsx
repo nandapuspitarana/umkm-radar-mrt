@@ -531,6 +531,7 @@ export default function AdminVendors() {
     const [editingId, setEditingId] = useState(null);
     const [expandedVendorId, setExpandedVendorId] = useState(null);
     const [stationTags, setStationTags] = useState([]);
+    const [allUsers, setAllUsers] = useState([]);
 
     // Pagination states
     const [currentPage, setCurrentPage] = useState(1);
@@ -538,7 +539,8 @@ export default function AdminVendors() {
 
     const initialForm = {
         name: '', whatsapp: '', category: 'Umum',
-        address: '', lat: '', lng: '', locationTags: '', image: ''
+        address: '', lat: '', lng: '', locationTags: '', image: '',
+        ownerId: ''
     };
     const [formData, setFormData] = useState(initialForm);
     const [formErrors, setFormErrors] = useState({});
@@ -592,12 +594,16 @@ export default function AdminVendors() {
 
     const fetchVendors = async () => {
         try {
-            const [vendorRes, settingsRes] = await Promise.all([
+            const [vendorRes, settingsRes, usersRes] = await Promise.all([
                 fetch('/api/vendors'),
-                fetch('/api/settings')
+                fetch('/api/settings'),
+                fetch('/api/users')
             ]);
             const data = await vendorRes.json();
             if (Array.isArray(data)) setVendors(data);
+
+            const usersData = await usersRes.json();
+            if (Array.isArray(usersData)) setAllUsers(usersData);
 
             const settings = await settingsRes.json();
             const savedStations = settings.station_categories;
@@ -700,7 +706,8 @@ export default function AdminVendors() {
             name: vendor.name, whatsapp: vendor.whatsapp,
             category: vendor.category || 'Umum', address: vendor.address,
             lat: vendor.lat, lng: vendor.lng,
-            locationTags: vendor.locationTags || '', image: vendor.image || ''
+            locationTags: vendor.locationTags || '', image: vendor.image || '',
+            ownerId: vendor.ownerId || ''
         };
         setFormData(fd);
         setFormErrors(validateVendor(fd));
@@ -936,6 +943,11 @@ export default function AdminVendors() {
                                                     <div>
                                                         <div className="font-bold text-gray-800">{vendor.name}</div>
                                                         <div className="text-xs text-gray-500">{vendor.whatsapp}</div>
+                                                        {vendor.ownerName && (
+                                                            <div className="text-[10px] mt-1 flex items-center gap-1 text-purple-600 font-semibold bg-purple-50 px-1.5 py-0.5 rounded-md w-fit">
+                                                                <Users size={10} /> {vendor.ownerName}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </td>
@@ -1144,6 +1156,34 @@ export default function AdminVendors() {
                                         placeholder="08123456789"
                                     />
                                     {formTouched.whatsapp && <FieldError msg={formErrors.whatsapp} />}
+                                </div>
+
+                                {/* Owner / Kepemilikan */}
+                                <div>
+                                    <label htmlFor="ownerId" className="block text-sm font-medium text-gray-700 mb-1">
+                                        Kepemilikan (Owner)
+                                    </label>
+                                    <select
+                                        id="ownerId"
+                                        className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none transition bg-white"
+                                        value={formData.ownerId}
+                                        onChange={e => setVendorField('ownerId', e.target.value)}
+                                    >
+                                        <option value="">-- Pilih User (Admin/Mitra) --</option>
+                                        <optgroup label="Admin">
+                                            {allUsers.filter(u => u.role === 'admin').map(u => (
+                                                <option key={u.id} value={u.id}>🛡️ {u.name} ({u.email})</option>
+                                            ))}
+                                        </optgroup>
+                                        <optgroup label="Mitra Khusus">
+                                            {allUsers.filter(u => u.role === 'vendor').map(u => (
+                                                <option key={u.id} value={u.id}>🏪 {u.name} ({u.email})</option>
+                                            ))}
+                                        </optgroup>
+                                    </select>
+                                    <p className="text-[10px] text-gray-400 mt-1 italic">
+                                        Admin tetap memiliki hak akses meskipun kepemilikan diberikan ke user lain.
+                                    </p>
                                 </div>
                             </div>
 
